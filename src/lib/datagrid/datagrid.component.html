@@ -1,0 +1,262 @@
+<div class="d-flex justify-content-end mb-2" *ngIf="enableAdd">
+  <button
+    class="btn btn-sm btn-primary"
+    (click)="startAdd()"
+    [disabled]="addingNew"
+  >
+    + Add
+  </button>
+</div>
+<!-- Global filter -->
+<div class="mb-2" *ngIf="enableFiltering && enableGlobalFilter">
+  <input
+    class="form-control form-control-sm"
+    placeholder="Search all columns..."
+    [(ngModel)]="globalFilter"
+    (ngModelChange)="onGlobalFilterChange()"
+  />
+</div>
+
+<table class="table table-bordered">
+  <thead class="thead-light">
+    <tr>
+      <th
+        *ngFor="let col of columns"
+        [class.sortable]="enableSorting && col.sortable"
+        (click)="enableSorting && col.sortable && toggleSort(col.field)"
+      >
+        <span>{{ col.header }}</span>
+        <span
+          class="sort-indicator"
+          *ngIf="enableSorting && sort.active === col.field"
+        >
+          {{
+            sort.direction === 'asc'
+              ? '▲'
+              : sort.direction === 'desc'
+              ? '▼'
+              : ''
+          }}
+        </span>
+      </th>
+      <th
+        *ngIf="enableEdit || enableDelete"
+        class="text-center"
+        style="width: 1%"
+      >
+        Actions
+      </th>
+    </tr>
+
+    <!-- Per-column filters -->
+    <tr *ngIf="anyFilterable">
+      <th *ngFor="let col of columns">
+        <input
+          *ngIf="col.filterable"
+          class="form-control form-control-sm"
+          [placeholder]="'Filter ' + col.header"
+          [(ngModel)]="filters[col.field]"
+          (ngModelChange)="onColumnFilterChange()"
+        />
+      </th>
+      <th *ngIf="enableEdit || enableDelete"></th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr *ngIf="addingNew" [formGroup]="addForm">
+      <td *ngFor="let col of columns">
+        <ng-container [ngSwitch]="col.type">
+          <!-- boolean -->
+          <div
+            *ngSwitchCase="'boolean'"
+            class="form-check m-0"
+            [class.is-invalid]="(addForm.get(col.field)?.touched || saveAttemptedNew) && addForm.get(col.field)?.invalid"
+          >
+            <input
+              type="checkbox"
+              class="form-check-input"
+              [formControlName]="col.field"
+            />
+          </div>
+
+          <!-- number/email/date/text -->
+          <input
+            *ngSwitchDefault
+            class="form-control form-control-sm"
+            [class.is-invalid]="(addForm.get(col.field)?.touched || saveAttemptedNew) && addForm.get(col.field)?.invalid"
+
+            [attr.type]="
+              col.type === 'number'
+                ? 'number'
+                : col.type === 'email'
+                ? 'email'
+                : col.type === 'date'
+                ? 'date'
+                : 'text'
+            "
+            [formControlName]="col.field"
+          />
+        </ng-container>
+
+        <div
+          class="invalid-feedback d-block"
+         *ngIf="(addForm.get(col.field)?.touched || saveAttemptedNew) && addForm.get(col.field)?.errors as e">
+        >
+          <ng-container *ngIf="e['required']">Required</ng-container>
+          <ng-container *ngIf="e['email']">Invalid email</ng-container>
+          <ng-container *ngIf="e['number']">Invalid number</ng-container>
+          <ng-container *ngIf="e['date']">Invalid date</ng-container>
+        </div>
+      </td>
+
+      <td *ngIf="enableEdit || enableDelete" class="text-nowrap text-center">
+        <button
+          class="btn btn-sm btn-success me-1"
+          (click)="saveAdd()"
+          [disabled]="addForm.invalid"
+        >
+          Save
+        </button>
+        <button class="btn btn-sm btn-secondary" (click)="cancelAdd()">
+          Cancel
+        </button>
+      </td>
+    </tr>
+    <ng-container *ngFor="let row of paged; let i = index; trackBy: trackRow">
+      <tr *ngIf="editingIndex === i; else readRow" [formGroup]="editForm">
+        <td *ngFor="let col of columns">
+          <!-- Edit mode for editable columns -->
+          <ng-container [ngSwitch]="col.type">
+            <!-- boolean -->
+            <div
+              *ngSwitchCase="'boolean'"
+              class="form-check m-0"
+              [class.is-invalid]="(editForm.get(col.field)?.touched || saveAttemptedEdit) && editForm.get(col.field)?.invalid"
+
+            >
+              <input
+                type="checkbox"
+                class="form-check-input"
+                [formControlName]="col.field"
+              />
+            </div>
+
+            <!-- number/email/date/text -->
+            <input
+              *ngSwitchDefault
+              class="form-control form-control-sm"
+              [class.is-invalid]="(editForm.get(col.field)?.touched || saveAttemptedEdit) && editForm.get(col.field)?.invalid"
+
+              [attr.type]="
+                col.type === 'number'
+                  ? 'number'
+                  : col.type === 'email'
+                  ? 'email'
+                  : col.type === 'date'
+                  ? 'date'
+                  : 'text'
+              "
+              [formControlName]="col.field"
+            />
+
+            <div
+              class="invalid-feedback d-block"
+              *ngIf="(editForm.get(col.field)?.touched || saveAttemptedEdit) && editForm.get(col.field)?.errors as e">
+
+            >
+              <ng-container *ngIf="e['required']">Required</ng-container>
+              <ng-container *ngIf="e['email']">Invalid email</ng-container>
+              <ng-container *ngIf="e['number']">Invalid number</ng-container>
+              <ng-container *ngIf="e['date']">Invalid date</ng-container>
+            </div>
+          </ng-container>
+
+          <!-- Read-only cell -->
+          <ng-template #readCell>
+            <ng-container [ngSwitch]="col.type">
+              <span *ngSwitchCase="'boolean'">{{
+                row[col.field] ? 'Yes' : 'No'
+              }}</span>
+              <span *ngSwitchDefault>{{ row[col.field] }}</span>
+            </ng-container>
+          </ng-template>
+        </td>
+
+        <td class="text-nowrap text-center">
+          <button class="btn btn-sm btn-success me-1" (click)="saveEdit(i)" [disabled]="editForm.invalid">Save</button>
+          <button class="btn btn-sm btn-secondary" (click)="cancelEdit(i)">Cancel</button>
+        </td>
+      </tr>
+      <!-- READ-ONLY ROW -->
+      <ng-template #readRow>
+        <tr>
+          <td *ngFor="let col of columns">
+            <ng-container [ngSwitch]="col.type">
+              <span *ngSwitchCase="'boolean'">{{
+                row[col.field] ? 'Yes' : 'No'
+              }}</span>
+              <span *ngSwitchDefault>{{ row[col.field] }}</span>
+            </ng-container>
+          </td>
+          <td
+            class="text-nowrap text-center"
+            *ngIf="enableEdit || enableDelete"
+          >
+            <button
+              *ngIf="enableEdit"
+              class="btn btn-sm btn-outline-primary me-1"
+              (click)="startEdit(i)"
+            >
+              Edit
+            </button>
+            <button
+              *ngIf="enableDelete"
+              class="btn btn-sm btn-outline-danger"
+              (click)="deleteRow(i)"
+            >
+              Delete
+            </button>
+          </td>
+        </tr>
+      </ng-template>
+    </ng-container>
+  </tbody>
+</table>
+
+<!-- Footer (left = count, center = pagination, right = page size) -->
+<div *ngIf="enablePagination" class="d-flex align-items-center flex-wrap mt-2">
+  <div class="small text-muted flex-grow-1">
+    Showing {{ startIndex }}–{{ endIndex }} of {{ sorted.length }}
+  </div>
+
+  <div class="flex-grow-1 d-flex justify-content-center my-1">
+    <ngb-pagination
+      class="mb-0"
+      size="sm"
+      [collectionSize]="sorted.length"
+      [pageSize]="pageSize"
+      [(page)]="page"
+      (pageChange)="onPageChange($event)"
+      [maxSize]="5"
+      [ellipses]="false"
+      [rotate]="true"
+    >
+    </ngb-pagination>
+  </div>
+
+  <div class="flex-grow-1 d-flex justify-content-end align-items-center gap-2">
+    <label class="small mb-0" for="pageSize">Rows per page</label>
+    <select
+      id="pageSize"
+      class="form-select form-select-sm w-auto"
+      [(ngModel)]="pageSize"
+      (ngModelChange)="onPageSizeChange()"
+    >
+      <option [ngValue]="5">5</option>
+      <option [ngValue]="10">10</option>
+      <option [ngValue]="25">25</option>
+      <option [ngValue]="50">50</option>
+    </select>
+  </div>
+</div>
