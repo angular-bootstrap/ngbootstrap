@@ -1,9 +1,10 @@
 {
-  "name": "@ngbootstrap-workspace/datagrid",
+  "name": "@ngbootstrap/datagrid",
   "version": "0.0.1",
   "license": "MIT",
   "private": true,
-  "publishConfig": { "access": "restricted" },
+  "publishConfig": { "access": "public" },
+  "description": "Angular datagrid component for the @ngbootstrap scope",
   "scripts": {
     "build": "ng-packagr -p ng-package.json",
     "test": "echo \"(no tests yet)\""
