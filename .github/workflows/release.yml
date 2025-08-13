@@ -2,14 +2,15 @@ name: Release (npm)
 
 on:
   push:
-    tags: [ 'v*.*.*' ]   # push a tag like v0.0.1 to trigger
+    tags: ['v*']        # v0.0.1, v1.2.3, etc.
+  workflow_dispatch: {}
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write   # for --provenance; remove if you don't want it
+      id-token: write     # required for --provenance
     steps:
       - uses: actions/checkout@v4
 
@@ -18,13 +19,20 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Install (pnpm via npx)
+      # install & build (pnpm via npx so we don't need a pnpm setup step)
+      - name: Install deps
         run: npx -y pnpm@9 install --frozen-lockfile
 
       - name: Build
         run: npx -y pnpm@9 build
 
+      # sanity: confirm what we will publish
+      - name: Show publish target
+        run: node -e "const p=require('./dist/package.json'); console.log('Publishing:', p.name, p.version)"
+
+      # ✅ publish from inside ./dist
       - name: Publish to npm
-        run: npm publish dist --access public --provenance
+        working-directory: dist
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public --provenance
