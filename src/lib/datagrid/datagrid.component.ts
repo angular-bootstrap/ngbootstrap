@@ -24,6 +24,7 @@ type KeyOf<T> = Extract<keyof T, string>;
   templateUrl: './datagrid.component.html',
   imports: [CommonModule, FormsModule, NgbDgPaginationComponent, ReactiveFormsModule],
   styleUrls: ['./datagrid.component.scss'],
+  standalone:true,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class Datagrid<T = any> implements AfterContentInit, OnChanges {
