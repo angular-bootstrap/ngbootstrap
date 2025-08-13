@@ -2,26 +2,29 @@ name: Release (npm)
 
 on:
   push:
-    tags: [ 'v*.*.*' ]
+    tags: [ 'v*.*.*' ]   # push a tag like v0.0.1 to trigger
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
+      id-token: write   # for --provenance; remove if you don't want it
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: ../../pnpm-lock.yaml
           registry-url: 'https://registry.npmjs.org'
-      - run: corepack enable
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+
+      - name: Install (pnpm via npx)
+        run: npx -y pnpm@9 install --frozen-lockfile
+
+      - name: Build
+        run: npx -y pnpm@9 build
+
       - name: Publish to npm
-        run: npm publish dist --access public
+        run: npm publish dist --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
