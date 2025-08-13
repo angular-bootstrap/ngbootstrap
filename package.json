@@ -1,12 +1,23 @@
 {
   "name": "@ngbootstrap-workspace/datagrid",
   "version": "0.0.1",
+  "license": "MIT",
   "private":true,
   "publishConfig": { "access": "restricted" },
+  "files": ["dist"],
+  "scripts": {
+    "build": "ng-packagr -p ng-package.json",
+    "test": "echo \"(no tests yet)\""
+  },
   "peerDependencies": {
     "@angular/core": ">=17.0.0 <21.0.0",
     "@angular/common": ">=17.0.0 <21.0.0",
     "@angular/forms": ">=17.0.0 <21.0.0"
+  },
+  "devDependencies": {
+    "ng-packagr": "~20.1.0",
+    "typescript": "~5.8.2",
+    "tslib": "^2.3.0"
   },
   "sideEffects": false
 }
