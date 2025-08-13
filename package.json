@@ -1,7 +1,8 @@
 {
   "name": "@ngbootstrap-workspace/datagrid",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private":true,
+  "publishConfig": { "access": "restricted" },
   "peerDependencies": {
     "@angular/core": ">=17.0.0 <21.0.0",
     "@angular/common": ">=17.0.0 <21.0.0",
