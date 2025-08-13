@@ -14,7 +14,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
+          cache-dependency-path: ../../pnpm-lock.yaml
 
       # 👇 installs pnpm on the runner
       - uses: pnpm/action-setup@v4
