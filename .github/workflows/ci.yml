@@ -13,14 +13,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: ../../pnpm-lock.yaml
+          # You can keep cache off for simplicity with npx:
+          # cache: 'pnpm'
+          # cache-dependency-path: pnpm-lock.yaml
 
-      # 👇 installs pnpm on the runner
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
+      - name: Show tool versions
+        run: node -v && npm -v
 
-      - run: pnpm --version
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+      # Use pnpm via npx so we don't need it preinstalled
+      - name: Install deps (pnpm via npx)
+        run: npx -y pnpm@9 install --frozen-lockfile
+
+      - name: Build
+        run: npx -y pnpm@9 build
