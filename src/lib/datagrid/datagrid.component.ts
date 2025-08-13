@@ -1,8 +1,14 @@
-import { Component, Input, ChangeDetectionStrategy, EventEmitter, Output, inject } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy, EventEmitter, Output, inject, AfterContentInit, ContentChildren, QueryList, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ColumnDef } from '../models/column-def';
-import { NgbPaginationModule } from '@ng-bootstrap/ng-bootstrap';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, FormControl } from '@angular/forms';
+import {
+  NgbCellTemplate, NgbEditorTemplate, NgbFilterTemplate, NgbGlobalFilterTemplate,
+  CellCtx, EditCtx, FilterCtx
+} from '../directives/datagrid-templates.directive';
+import { ContentChild } from '@angular/core';
+import { NgbRowDetailTemplate } from '../directives/datagrid-templates.directive';
+import { NgbDgPaginationComponent } from '../pagination/pagination.component';
 
 type SortDir = 'asc' | 'desc' | '';
 
@@ -13,13 +19,14 @@ type Key<T> = Extract<keyof T, string>;
 type KeyOf<T> = Extract<keyof T, string>;
 
 @Component({
+  // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'ngb-datagrid',
   templateUrl: './datagrid.component.html',
-  imports: [CommonModule, FormsModule, NgbPaginationModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, NgbDgPaginationComponent, ReactiveFormsModule],
   styleUrls: ['./datagrid.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class Datagrid<T = any> {
+export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   /** Column definitions to render */
   @Input() columns: ColumnDef<T>[] = [];
 
@@ -31,11 +38,14 @@ export class Datagrid<T = any> {
   @Input() enablePagination = true;
   @Input() enableEdit = true;
   @Input() enableDelete = true;
+  @Input() pageSizeOptions: number[] = [5, 10, 25, 50];
 
   @Input() enableAdd = true;
   /** Optional defaults for new rows */
   @Input() newRowDefaults: | Partial<Record<KeyOf<T>, any>> | (() => Partial<Record<KeyOf<T>, any>>) | null = null;
   @Input() strictEmail = true; // turn off if needed (e.g., intranet emails)
+  @Input() editOnRowClick = false;
+  @Input() singleExpand = false;  // accordion mode: one row expanded at a time
 
   @Output() rowAdd = new EventEmitter<{ newRow: T }>();
 
@@ -49,7 +59,13 @@ export class Datagrid<T = any> {
   @Output() filtersChange = new EventEmitter<{ global: string; columns: Record<string, string> }>();
   @Output() pageChange = new EventEmitter<{ page: number; pageSize: number }>();
 
+  @ContentChild(NgbRowDetailTemplate) rowDetailTpl?: NgbRowDetailTemplate<T>;
+  expanded: Set<number> = new Set<number>();
+
   private fb = inject(FormBuilder);
+
+  public filterForm: FormGroup = this.fb.group({});
+  public globalFilterCtrl = new FormControl<string>('', { nonNullable: true });
 
   addingNew = false;
   draftNew: Partial<Record<KeyOf<T>, any>> | null = null;
@@ -166,6 +182,7 @@ export class Datagrid<T = any> {
     };
   }
 
+
   // pipeline respects toggles
   get filtered(): T[] {
     if (!this.enableFiltering) return this.data ?? [];
@@ -223,8 +240,16 @@ export class Datagrid<T = any> {
   get anyFilterable(): boolean {
     return this.enableFiltering && !!this.columns?.some(c => c.filterable);
   }
+
   get startIndex(): number { const total = this.sorted.length; return total ? (this.page - 1) * this.pageSize + 1 : 0; }
   get endIndex(): number { return Math.min(this.page * this.pageSize, this.sorted.length); }
+
+  get detailColspan(): number {
+    const actionCols = (this.enableEdit || this.enableDelete) ? 1 : 0;
+    const caretCol   = this.rowDetailTpl ? 1 : 0;
+    return this.columns.length + actionCols + caretCol;
+  }
+
 
   // Helpers to map from paged index → original data index
   // helper used above
@@ -232,6 +257,51 @@ export class Datagrid<T = any> {
     const row = this.paged[i];
     return this.data.indexOf(row);
   }
+
+  private rebuildFilterForm() {
+    const group: Record<string, any> = {};
+    for (const c of this.columns) if (c.filterable) group[c.field as string] = [''];
+    this.filterForm = this.fb.group(group);
+
+    this.filterForm.valueChanges.subscribe(v => {
+      this.page = 1;
+      this.filtersChange.emit({ global: this.globalFilterCtrl.value, columns: v as any });
+    });
+    this.globalFilterCtrl.valueChanges.subscribe(() => {
+      this.page = 1;
+      this.filtersChange.emit({ global: this.globalFilterCtrl.value, columns: this.filterForm.value as any });
+    });
+  }
+
+  @ContentChildren(NgbCellTemplate)   private cellTplQ!:   QueryList<NgbCellTemplate<T>>;
+  @ContentChildren(NgbEditorTemplate) private editTplQ!:   QueryList<NgbEditorTemplate<T>>;
+  @ContentChildren(NgbFilterTemplate) private filterTplQ!: QueryList<NgbFilterTemplate<T>>;
+  @ContentChildren(NgbGlobalFilterTemplate) private globalTplQ!: QueryList<NgbGlobalFilterTemplate>;
+
+  /** Internal lookup maps */
+  public cellTpls:   Record<string, NgbCellTemplate<T>> = {};
+  public editTpls:   Record<string, NgbEditorTemplate<T>> = {};
+  public filterTpls: Record<string, NgbFilterTemplate<T>> = {};
+  public globalTpl:  NgbGlobalFilterTemplate | null = null;
+
+  ngAfterContentInit(): void {
+    const rebuild = () => {
+      this.cellTpls   = Object.fromEntries(this.cellTplQ?.map(t => [t.field, t])   ?? []);
+      this.editTpls   = Object.fromEntries(this.editTplQ?.map(t => [t.field, t])   ?? []);
+      this.filterTpls = Object.fromEntries(this.filterTplQ?.map(t => [t.field, t]) ?? []);
+      this.globalTpl  = this.globalTplQ?.first ?? null;
+    };
+    rebuild();
+    this.cellTplQ?.changes.subscribe(rebuild);
+    this.editTplQ?.changes.subscribe(rebuild);
+    this.filterTplQ?.changes.subscribe(rebuild);
+    this.globalTplQ?.changes.subscribe(rebuild);
+  }
+
+  ngOnChanges(ch: SimpleChanges): void {
+    if (ch['columns']) this.rebuildFilterForm();
+  }
+
   startAdd() {
     if (!this.enableAdd || this.addingNew) return;
     this.page = 1;
@@ -371,6 +441,42 @@ export class Datagrid<T = any> {
 
   onPageSizeChange() {
     this.page = 1;
+    this.pageChange.emit({ page: this.page, pageSize: this.pageSize });
+  }
+
+  toggleExpand(i: number): void {
+    const isOpen = this.expanded.has(i);
+
+    if (this.singleExpand) {
+      this.expanded.clear();
+      if (!isOpen) this.expanded.add(i); // open the clicked row, or close all if it was open
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      isOpen ? this.expanded.delete(i) : this.expanded.add(i);
+    }
+  }
+
+  isExpanded(i: number): boolean {
+    return this.expanded.has(i);
+  }
+
+  onRowClick(ev: MouseEvent, i: number) {
+    if (!this.editOnRowClick) return;
+    if (this.addingNew || this.editingIndex === i) return;
+    const el = ev.target as HTMLElement;
+    if (el.closest('button, a, input, select, textarea, label, .no-edit-trigger')) return;
+    this.startEdit(i);
+  }
+
+  onPage(p: number): void {
+    if (p < 1) return;
+    this.page = p;
+    this.pageChange.emit({ page: this.page, pageSize: this.pageSize });
+  }
+
+  onPageSize(sz: number): void {
+    this.pageSize = Number(sz) || this.pageSize;
+    this.page = 1; // reset to first page when size changes
     this.pageChange.emit({ page: this.page, pageSize: this.pageSize });
   }
 

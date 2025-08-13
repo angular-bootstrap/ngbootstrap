@@ -1,9 +1,11 @@
 {
-  "name": "@ngbootstrap/datagrid",
-  "version": "0.0.1",
+  "name": "@ngbootstrap-workspace/datagrid",
+  "version": "0.1.0",
+  "private":true,
   "peerDependencies": {
-    "@angular/common": "^20.1.0",
-    "@angular/core": "^20.1.0"
+    "@angular/core": ">=17.0.0 <21.0.0",
+    "@angular/common": ">=17.0.0 <21.0.0",
+    "@angular/forms": ">=17.0.0 <21.0.0"
   },
   "sideEffects": false
 }

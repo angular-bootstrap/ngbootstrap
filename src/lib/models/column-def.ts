@@ -1,4 +1,4 @@
-export type ColumnType = 'text' | 'number' | 'email' | 'boolean' | 'date';
+export type ColumnType = 'text' | 'number' | 'email' | 'boolean' | 'date' | 'select';
 
 export interface ColumnDef<T = any> {
   /** key of the property on your row object */
@@ -11,5 +11,6 @@ export interface ColumnDef<T = any> {
   filterable?: boolean;
   editable?: boolean;      // (default true)
   type?: ColumnType; // editor type
+  options?: Array<{ label: string; value: any }>; // <-- needed for select
   required?: boolean;            // block save if empty/invalid
 }
