@@ -285,11 +285,22 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   public filterTpls: Record<string, NgbFilterTemplate<T>> = {};
   public globalTpl:  NgbGlobalFilterTemplate | null = null;
 
+  private toRecord<T extends { field: string }>(
+    items: readonly T[] | QueryList<T> | null | undefined
+  ): Record<string, T> {
+    const arr = Array.isArray(items)
+      ? items
+      : items instanceof QueryList
+        ? items.toArray()
+        : [];
+    return arr.reduce((acc, t) => (acc[t.field] = t, acc), {} as Record<string, T>);
+  }
+
   ngAfterContentInit(): void {
     const rebuild = () => {
-      this.cellTpls   = Object.fromEntries(this.cellTplQ?.map(t => [t.field, t])   ?? []);
-      this.editTpls   = Object.fromEntries(this.editTplQ?.map(t => [t.field, t])   ?? []);
-      this.filterTpls = Object.fromEntries(this.filterTplQ?.map(t => [t.field, t]) ?? []);
+      this.cellTpls   = this.toRecord(this.cellTplQ);
+      this.editTpls   = this.toRecord(this.editTplQ);
+      this.filterTpls = this.toRecord(this.filterTplQ);
       this.globalTpl  = this.globalTplQ?.first ?? null;
     };
     rebuild();
