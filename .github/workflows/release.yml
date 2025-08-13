@@ -15,20 +15,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
           registry-url: 'https://registry.npmjs.org'
-          cache: 'npm'
-      - run: npm ci
-
-      # Angular CLI:
-      - run: npm run build datagrid
-        if: ${{ hashFiles('angular.json') != '' }}
-      # Nx:
-      - run: npx nx build datagrid
-        if: ${{ hashFiles('nx.json') != '' }}
-
-      - name: Publish
-        run: |
-          cd dist/datagrid || cd dist/libs/datagrid
-          npm publish --access public
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Publish to npm
+        run: npm publish dist --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

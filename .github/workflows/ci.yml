@@ -1,33 +1,19 @@
-name: CI (datagrid)
+name: CI (ngbootstrap)
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  push: { branches: [ main ] }
+  pull_request: { branches: [ main ] }
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-
-      - run: npm ci
-
-      # ---- choose ONE build command ----
-      # Angular CLI:
-      - run: npm run build datagrid
-        if: ${{ hashFiles('angular.json') != '' }}
-
-      # Nx:
-      - run: npx nx build datagrid
-        if: ${{ hashFiles('nx.json') != '' }}
-
-      # Optional:
-      - run: npm run lint --if-present
-      - run: npm run test --if-present
+          cache: 'pnpm'                # <-- important
+          cache-dependency-path: pnpm-lock.yaml
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
