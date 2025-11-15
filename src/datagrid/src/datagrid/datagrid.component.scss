@@ -1,0 +1,48 @@
+:host { display: block; }
+.table { margin-bottom: .5rem; }
+th.sortable { cursor: pointer; user-select: none; }
+.sort-indicator { margin-left: .35rem; font-size: .75rem; }
+.expand {cursor: pointer;
+    font-size: 24px;
+    line-height: 18px;
+    display: block;}
+    /* Theme switches */
+.ngb-grid[data-theme='bootstrap'] { /* default uses your current Bootstrap look */ }
+
+.ngb-grid[data-theme='material'] {
+  --ngb-primary: #3f51b5;
+  .btn { border-color: var(--ngb-primary); }
+  table.table { th, td { border-bottom: 1px solid #e5e7eb; } }
+}
+
+.ngb-grid[data-theme='tailwind'] {
+  --ngb-primary: rgb(29 78 216);
+  .btn { border-color: var(--ngb-primary); border-radius: .75rem; }
+  table.table { th, td { border-bottom: 1px solid #e5e7eb; padding: .5rem; } }
+}
+
+/* Responsive “cards” on small screens */
+.ngb-responsive .table { width: 100%; }
+
+@media (max-width: 768px) {
+  .ngb-responsive thead { display: none; }
+  .ngb-responsive tbody tr {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: .5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: .75rem;
+    padding: .75rem;
+    margin-bottom: .75rem;
+  }
+  .ngb-responsive tbody td {
+    display: grid;
+    grid-template-columns: 8rem 1fr;
+  }
+  .ngb-responsive tbody td::before {
+    content: attr(data-title);
+    font-weight: 600;
+    opacity: .75;
+    padding-right: .5rem;
+  }
+}

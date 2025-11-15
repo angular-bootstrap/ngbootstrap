@@ -1,0 +1,39 @@
+/* Never intercept pointer so drop always reaches the host */
+.ngb-dnd-placeholder { pointer-events: none; }
+
+/* Base list appearance (you likely have this already) */
+.ngb-dnd-list {
+  border: 2px dashed var(--bs-border-color);
+  border-radius: .5rem;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+
+/* Hover highlight (compatible drop) */
+.ngb-dnd-list.ngb-dnd-over[data-drop-valid="true"] {
+  border-color: var(--bs-primary);
+  background-color: rgba(var(--bs-primary-rgb), .04);
+  box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb), .15);
+}
+
+/* Hover highlight (NOT compatible) */
+.ngb-dnd-list.ngb-dnd-over[data-drop-valid="false"] {
+  border-color: var(--bs-danger);
+  background-color: rgba(var(--bs-danger-rgb), .04);
+  box-shadow: 0 0 0 .2rem rgba(var(--bs-danger-rgb), .12);
+}
+
+/* Make the insertion placeholder more obvious */
+.ngb-dnd-placeholder {
+  border: 2px dashed var(--bs-primary);
+  background: rgba(var(--bs-primary-rgb), .06);
+  border-radius: .5rem;
+  min-height: 40px;
+  margin: .25rem 0;
+}
+
+table button.btn {
+    border-color: transparent !important;
+    text-decoration: none;
+    color: #000;
+    font-weight: bold;
+  }

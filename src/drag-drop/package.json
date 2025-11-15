@@ -1,0 +1,8 @@
+{
+  "name": "@ngbootstrap/drag-drop",
+  "ngPackage": {
+    "lib": {
+      "entryFile": "index.ts"
+    }
+  }
+}

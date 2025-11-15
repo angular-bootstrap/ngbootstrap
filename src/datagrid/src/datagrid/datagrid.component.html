@@ -1,0 +1,342 @@
+<!-- eslint-disable @angular-eslint/template/interactive-supports-focus -->
+<!-- eslint-disable @angular-eslint/template/click-events-have-key-events -->
+<div class="ngb-grid" [attr.data-theme]="theme" [class.ngb-responsive]="isResponsiveEnabled()">
+  <!-- Export toolbar -->
+  <div class="d-flex justify-content-end mb-2" *ngIf="exportOptions?.enabled">
+    <ng-container *ngIf="exportButtonTpl; else defaultExportBtns"
+                  [ngTemplateOutlet]="exportButtonTpl"
+                  [ngTemplateOutletContext]="{ $implicit: triggerExport }">
+    </ng-container>
+
+    <ng-template #defaultExportBtns>
+      <button type="button"
+              class="btn btn-sm btn-outline-secondary me-2"
+              *ngIf="exportOptions.type === 'pdf' || exportOptions.type === 'both'"
+              [disabled]="exporting"
+              (click)="export('pdf')"
+              [attr.aria-label]="exportAriaLabel('pdf')">
+        Export to PDF
+      </button>
+      <button type="button"
+              class="btn btn-sm btn-outline-secondary"
+              *ngIf="exportOptions.type === 'excel' || exportOptions.type === 'both'"
+              [disabled]="exporting"
+              (click)="export('excel')"
+              [attr.aria-label]="exportAriaLabel('excel')">
+        Export to Excel
+      </button>
+    </ng-template>
+  </div>
+  <div class="d-flex justify-content-end mb-2" *ngIf="enableAdd">
+    <button
+      type="button"
+      class="btn btn-sm btn-primary"
+      (click)="startAdd()"
+      [disabled]="addingNew"
+      [attr.aria-label]="addButtonAriaLabel || addButtonText"
+    >
+      {{ addButtonText }}
+    </button>
+  </div>
+  <!-- Global filter -->
+  <div class="mb-2" *ngIf="enableFiltering && enableGlobalFilter">
+    <ng-container
+      *ngIf="globalTpl; else defaultGlobalFilter"
+      [ngTemplateOutlet]="globalTpl?.template"
+      [ngTemplateOutletContext]="{ $implicit: globalFilterCtrl }"
+    >
+    </ng-container>
+
+    <ng-template #defaultGlobalFilter>
+      <input
+        type="search"
+        class="form-control form-control-sm"
+        placeholder="Search all columns..."
+        [formControl]="globalFilterCtrl"
+        [attr.aria-label]="globalFilterAriaLabel"
+      />
+    </ng-template>
+  </div>
+
+  <table class="table table-bordered"
+         role="grid"
+         [attr.aria-readonly]="(enableEdit || enableAdd) ? 'false' : 'true'">
+    <thead class="thead-light">
+      <tr>
+      <th *ngIf="rowDetailTpl" style="width:1%" scope="col" aria-hidden="true"></th>
+        <th
+          *ngFor="let col of columns"
+          [attr.data-title]="col.header"
+          [class.sortable]="enableSorting && col.sortable"
+          scope="col"
+          [attr.aria-sort]="enableSorting && col.sortable ? ariaSortFor(col.field) : null"
+        >
+          <ng-container *ngIf="enableSorting && col.sortable; else plainHeader">
+            <button
+              type="button"
+              class="btn btn-link p-0 text-start w-100"
+              (click)="toggleSort(col.field)"
+              [attr.aria-label]="sortButtonAriaLabel(col)"
+            >
+              <span>{{ col.header }}</span>
+              <span
+                class="sort-indicator"
+                *ngIf="enableSorting && sort.active === col.field"
+                aria-hidden="true"
+              >
+                {{
+                  sort.direction === 'asc'
+                    ? '▲'
+                    : sort.direction === 'desc'
+                    ? '▼'
+                    : ''
+                }}
+              </span>
+            </button>
+          </ng-container>
+          <ng-template #plainHeader>
+            <span>{{ col.header }}</span>
+          </ng-template>
+        </th>
+        <th
+          *ngIf="enableEdit || enableDelete"
+          class="text-center"
+          scope="col"
+          style="width: 1%"
+        >
+          Actions
+        </th>
+      </tr>
+
+      <!-- Per-column filters -->
+      <tr *ngIf="anyFilterable" [formGroup]="filterForm">
+        <th *ngFor="let col of columns" [attr.data-title]="col.header">
+          <ng-container *ngIf="col.filterable">
+            <ng-container *ngIf="filterTpls[col.field] as ft; else defaultFilter">
+              <ng-container
+                [ngTemplateOutlet]="ft.template"
+                [ngTemplateOutletContext]="{
+                  $implicit: filterForm.get(col.field),
+                  control: filterForm.get(col.field),
+                  col: col
+                }"
+              >
+              </ng-container>
+            </ng-container>
+            <ng-template #defaultFilter>
+              <input
+                type="text"
+                class="form-control form-control-sm"
+                [formControlName]="col.field"
+                [attr.aria-label]="columnFilterAriaLabel(col)"
+              />
+            </ng-template>
+          </ng-container>
+        </th>
+        <th *ngIf="enableEdit || enableDelete"></th>
+      </tr>
+    </thead>
+
+  <tbody>
+    <!-- ADD NEW ROW -->
+    <tr *ngIf="addingNew" [formGroup]="addForm">
+      <!-- blank caret cell to keep alignment when detail column is present -->
+      <td *ngIf="rowDetailTpl"></td>
+
+      <td *ngFor="let col of columns" [attr.data-title]="col.header">
+        <ng-container [ngSwitch]="col.type">
+          <!-- boolean -->
+          <div
+            *ngSwitchCase="'boolean'"
+            class="form-check m-0"
+            [class.is-invalid]="(addForm.get(col.field)?.touched || saveAttemptedNew) && addForm.get(col.field)?.invalid">
+            <input
+              type="checkbox"
+              class="form-check-input"
+              [formControlName]="col.field"
+              [attr.aria-label]="inputAriaLabel(col)"
+              [attr.aria-invalid]="(addForm.get(col.field)?.touched || saveAttemptedNew) && addForm.get(col.field)?.invalid ? 'true' : null"
+              [attr.aria-describedby]="(addForm.get(col.field)?.touched || saveAttemptedNew) && addForm.get(col.field)?.invalid ? 'add-error-' + col.field : null"
+            />
+          </div>
+
+          <!-- number/email/date/text -->
+          <input
+            *ngSwitchDefault
+            class="form-control form-control-sm"
+            [class.is-invalid]="(addForm.get(col.field)?.touched || saveAttemptedNew) && addForm.get(col.field)?.invalid"
+            [attr.type]="col.type === 'number' ? 'number' :
+                        col.type === 'email'  ? 'email'  :
+                        col.type === 'date'   ? 'date'   : 'text'"
+            [formControlName]="col.field"
+            [attr.aria-label]="inputAriaLabel(col)"
+            [attr.aria-invalid]="(addForm.get(col.field)?.touched || saveAttemptedNew) && addForm.get(col.field)?.invalid ? 'true' : null"
+            [attr.aria-describedby]="(addForm.get(col.field)?.touched || saveAttemptedNew) && addForm.get(col.field)?.invalid ? 'add-error-' + col.field : null"
+          />
+        </ng-container>
+
+        <div class="invalid-feedback d-block"
+            *ngIf="(addForm.get(col.field)?.touched || saveAttemptedNew) && addForm.get(col.field)?.errors as e"
+            [attr.id]="'add-error-' + col.field"
+            role="alert">
+          <ng-container *ngIf="e['required']">Required</ng-container>
+          <ng-container *ngIf="e['email']">Invalid email</ng-container>
+          <ng-container *ngIf="e['number']">Invalid number</ng-container>
+          <ng-container *ngIf="e['date']">Invalid date</ng-container>
+        </div>
+      </td>
+
+      <td *ngIf="enableEdit || enableDelete" class="text-nowrap text-center">
+        <button type="button" class="btn btn-sm btn-success me-1" (click)="saveAdd()" [disabled]="addForm.invalid">Save</button>
+        <button type="button" class="btn btn-sm btn-secondary" (click)="cancelAdd()">Cancel</button>
+      </td>
+    </tr>
+
+    <!-- DATA ROWS + DETAIL ROWS -->
+    <ng-container *ngFor="let row of paged; let i = index; trackBy: trackRow">
+
+      <!-- DATA ROW (click-to-edit supported) -->
+      <tr (click)="onRowClick($event, i)" [formGroup]="editForm">
+
+        <!-- caret/expander cell (left-most) -->
+        <td *ngIf="rowDetailTpl" class="text-center align-middle">
+            <button
+              type="button"
+              class="expand btn btn-link p-0"
+              (click)="$event.stopPropagation(); toggleExpand(i)"
+              [attr.aria-expanded]="isExpanded(i)"
+              [attr.aria-controls]="'dg-row-detail-' + i"
+              [attr.aria-label]="isExpanded(i) ? collapseRowAriaLabel : expandRowAriaLabel">
+              {{ isExpanded(i) ? '-' : '+' }}
+            </button>
+        </td>
+
+        <!-- DATA CELLS -->
+        <td *ngFor="let col of columns" [attr.data-title]="col.header">
+          <!-- EDIT MODE -->
+          <ng-container *ngIf="editingIndex === i && (col.editable ?? true); else readCell">
+            <!-- editor template override -->
+            <ng-container *ngIf="editTpls[col.field] as et; else defaultEditor"
+                          [ngTemplateOutlet]="et.template"
+                          [ngTemplateOutletContext]="{
+                            $implicit: editForm.get(col.field),
+                            control: editForm.get(col.field),
+                            row: row, col: col, form: editForm, index: i, isNew: false
+                          }">
+            </ng-container>
+
+            <!-- default editors -->
+            <ng-template #defaultEditor>
+              <ng-container [ngSwitch]="col.type">
+                <div *ngSwitchCase="'boolean'" class="form-check m-0">
+                  <input type="checkbox"
+                         class="form-check-input"
+                         [formControlName]="col.field"
+                         [attr.aria-label]="inputAriaLabel(col)"
+                         [attr.aria-invalid]="(editForm?.touched || saveAttemptedEdit) && editForm?.get(col.field)?.invalid ? 'true' : null"
+                         [attr.aria-describedby]="(editForm?.touched || saveAttemptedEdit) && editForm?.get(col.field)?.invalid ? 'edit-error-' + col.field : null" />
+                </div>
+                <select *ngSwitchCase="'select'"
+                        class="form-select form-select-sm"
+                        [formControlName]="col.field"
+                        [attr.aria-label]="inputAriaLabel(col)">
+                  <option *ngFor="let o of col.options ?? []" [ngValue]="o.value">{{ o.label }}</option>
+                </select>
+                <input *ngSwitchDefault
+                      class="form-control form-control-sm"
+                      [attr.type]="col.type === 'number' ? 'number' :
+                                    col.type === 'email'  ? 'email'  :
+                                    col.type === 'date'   ? 'date'   : 'text'"
+                      [formControlName]="col.field"
+                      [attr.aria-label]="inputAriaLabel(col)"
+                      [attr.aria-invalid]="(editForm?.touched || saveAttemptedEdit) && editForm?.get(col.field)?.invalid ? 'true' : null"
+                      [attr.aria-describedby]="(editForm?.touched || saveAttemptedEdit) && editForm?.get(col.field)?.invalid ? 'edit-error-' + col.field : null" />
+              </ng-container>
+
+              <div class="invalid-feedback d-block"
+                  *ngIf="(editForm?.touched || saveAttemptedEdit) && editForm?.get(col.field)?.errors as e"
+                  [attr.id]="'edit-error-' + col.field"
+                  role="alert">
+                <span *ngIf="e['required']">Required</span>
+                <span *ngIf="e['email']">Invalid email</span>
+                <span *ngIf="e['number']">Invalid number</span>
+                <span *ngIf="e['date']">Invalid date</span>
+              </div>
+            </ng-template>
+          </ng-container>
+
+          <!-- READ MODE (with optional cell template) -->
+          <ng-template #readCell>
+            <ng-container *ngIf="cellTpls[col.field] as ct; else defaultCell"
+                          [ngTemplateOutlet]="ct.template"
+                          [ngTemplateOutletContext]="{ $implicit: row[col.field], row: row, col: col, index: i }">
+            </ng-container>
+            <ng-template #defaultCell>
+              <ng-container [ngSwitch]="col.type">
+                <span *ngSwitchCase="'boolean'">{{ row[col.field] ? 'Yes' : 'No' }}</span>
+                <span *ngSwitchDefault>{{ row[col.field] }}</span>
+              </ng-container>
+            </ng-template>
+          </ng-template>
+        </td>
+
+        <!-- ACTIONS -->
+        <td *ngIf="enableEdit || enableDelete" class="text-nowrap text-center">
+          <ng-container *ngIf="editingIndex !== i; else editBtns">
+            <button type="button" *ngIf="enableEdit" class="btn btn-sm btn-outline-primary me-1 no-edit-trigger" (click)="startEdit(i)">Edit</button>
+            <button type="button" *ngIf="enableDelete" class="btn btn-sm btn-outline-danger no-edit-trigger" (click)="deleteRow(i)">Delete</button>
+          </ng-container>
+          <ng-template #editBtns>
+            <button type="button" class="btn btn-sm btn-success me-1" (click)="saveEdit(i)" [disabled]="editForm.invalid">Save</button>
+            <button type="button" class="btn btn-sm btn-secondary" (click)="cancelEdit(i)">Cancel</button>
+          </ng-template>
+        </td>
+      </tr>
+
+      <!-- DETAIL ROW (spans all columns) -->
+      <tr *ngIf="rowDetailTpl && isExpanded(i)" [attr.id]="'dg-row-detail-' + i">
+        <td [attr.colspan]="detailColspan" role="region">
+          <ng-container [ngTemplateOutlet]="rowDetailTpl.template"
+                        [ngTemplateOutletContext]="{ $implicit: row, index: i }">
+          </ng-container>
+        </td>
+      </tr>
+
+    </ng-container>
+  </tbody>
+
+  </table>
+
+  <!-- Footer (left = count, center = pagination, right = page size) -->
+  <div *ngIf="enablePagination" class="d-flex align-items-center justify-content-between mt-2">
+    <!-- left: count -->
+    <div class="small text-muted" aria-live="polite">
+        {{ startIndex }} - {{ endIndex }} of {{ sorted.length }}
+
+    </div>
+
+    <!-- center: pager -->
+    <div class="flex-grow-1 d-flex justify-content-center">
+      <ngb-pagination
+        [page]="page"
+        [pageSize]="pageSize"
+        [collectionSize]="sorted.length"
+        [maxSize]="5"
+        (pageChange)="onPage($event)">
+      </ngb-pagination>
+    </div>
+
+    <!-- right: rows per page -->
+    <div class="d-flex align-items-center gap-2">
+      <label class="form-label form-label-sm mb-0" for="pageSize">Rows:</label>
+      <select
+        id="pageSize"
+        class="form-select form-select-sm"
+        [(ngModel)]="pageSize"
+        (ngModelChange)="onPageSize($event)"
+        aria-label="Rows per page">
+        <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+      </select>
+    </div>
+  </div>
+</div>
