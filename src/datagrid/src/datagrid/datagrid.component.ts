@@ -78,7 +78,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     fileName: 'export'
   };
 
-  @Input() theme: NgbDataGridTheme = 'material';
+  @Input() theme: NgbDataGridTheme = 'bootstrap';
   @Input() responsive: NgbDataGridResponsiveOptions | boolean = false;
 
   // Data hooks for export

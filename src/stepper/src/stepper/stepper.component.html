@@ -1,0 +1,150 @@
+<div
+  class="ngb-stepper"
+  [class.horizontal]="orientation === 'horizontal'"
+  [class.vertical]="orientation === 'vertical'"
+  [class.ngb-responsive]="responsive"
+  [class.bootstrap]="theme === 'bootstrap'"
+  [class.material]="theme === 'material'"
+  [class.tailwind]="theme === 'tailwind'"
+  role="tablist"
+  [attr.aria-orientation]="orientation"
+>
+  <!-- HEADER / LABELS -->
+  <div class="ngb-stepper-header">
+    <ol class="ngb-stepper-steps" role="presentation">
+      <li
+        *ngFor="let step of steps; let i = index"
+        class="ngb-stepper-step"
+        [class.active]="i === selectedIndex"
+        [class.done]="i < selectedIndex && !isStepInError(i)"
+        [class.error]="isStepInError(i)"
+        [class.disabled]="step.disabled"
+        role="tab"
+        [attr.id]="stepId(i)"
+        [attr.aria-controls]="contentId(i)"
+        [attr.aria-selected]="i === selectedIndex"
+        [attr.aria-disabled]="step.disabled || (!allowRevisit && i < visitedFrom && i !== selectedIndex)"
+        tabindex="{{ i === selectedIndex ? 0 : -1 }}"
+        (click)="onHeaderClick(i)"
+        (keydown.enter)="onHeaderKeydown($event, i)"
+        (keydown.space)="onHeaderKeydown($event, i)"
+      >
+        <div
+          class="ngb-stepper-indicator"
+          [ngClass]="indicatorClass(i)"
+          aria-hidden="true"
+        >
+          <ng-container *ngIf="customIconTpl; else defaultIcon">
+            <ng-container
+              [ngTemplateOutlet]="customIconTpl"
+              [ngTemplateOutletContext]="{ index: i, state: stepState(i) }"
+            ></ng-container>
+          </ng-container>
+          <ng-template #defaultIcon>
+            {{ defaultIconForState(stepState(i), i) }}
+          </ng-template>
+        </div>
+
+        <div
+          class="ngb-stepper-label-container"
+          [ngClass]="labelPositionClass"
+        >
+          <div class="ngb-stepper-label" *ngIf="stepLabelTpl; else textLabel">
+            <ng-container
+              [ngTemplateOutlet]="stepLabelTpl"
+              [ngTemplateOutletContext]="{ index: i, step: step }"
+            ></ng-container>
+          </div>
+          <ng-template #textLabel>
+            <div class="ngb-stepper-label-text">
+              {{ step.label || ('Step ' + (i + 1)) }}
+            </div>
+          </ng-template>
+          <div class="ngb-stepper-optional" *ngIf="step.optional">
+            {{ optionalLabel }}
+          </div>
+        </div>
+      </li>
+    </ol>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="ngb-stepper-content" [class.ngb-stepper-content-top]="contentPosition === 'top'">
+    <ng-container *ngIf="lazy; else allContent">
+      <ng-container *ngFor="let index of [selectedIndex]">
+        <div
+          class="fade-step"
+          [style.--ngb-stepper-animation-duration]="(disableAnimation ? 0 : animationDuration) + 'ms'"
+          role="tabpanel"
+          [attr.aria-labelledby]="stepId(index)"
+          [attr.id]="contentId(index)"
+        >
+          <ng-container *ngTemplateOutlet="stepContentTpl; context: { index: index }"></ng-container>
+          <div
+            *ngIf="currentErrorMessage"
+            class="ngb-stepper-error"
+            role="alert"
+          >
+            {{ currentErrorMessage }}
+          </div>
+        </div>
+      </ng-container>
+    </ng-container>
+
+    <ng-template #allContent>
+      <div
+        class="fade-step"
+        [style.--ngb-stepper-animation-duration]="(disableAnimation ? 0 : animationDuration) + 'ms'"
+        role="tabpanel"
+        [attr.aria-labelledby]="stepId(selectedIndex)"
+        [attr.id]="contentId(selectedIndex)"
+      >
+        <ng-container *ngTemplateOutlet="stepContentTpl; context: { index: selectedIndex }"></ng-container>
+        <div
+          *ngIf="currentErrorMessage"
+          class="ngb-stepper-error"
+          role="alert"
+        >
+          {{ currentErrorMessage }}
+        </div>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="ngb-stepper-buttons">
+    <button
+      type="button"
+      class="btn btn-sm btn-outline-secondary"
+      (click)="onCancel()"
+    >
+      {{ cancelLabel }}
+    </button>
+
+    <button
+      type="button"
+      class="btn btn-sm btn-outline-secondary"
+      (click)="onReset()"
+    >
+      {{ resetLabel }}
+    </button>
+
+    <button
+      type="button"
+      class="btn btn-sm btn-outline-secondary"
+      (click)="prev()"
+      [disabled]="selectedIndex <= 0 || !allowRevisit"
+    >
+      {{ previousLabel }}
+    </button>
+
+    <button
+      type="button"
+      class="btn btn-sm btn-primary"
+      (click)="next()"
+      [disabled]="selectedIndex >= steps.length - 1 || steps[selectedIndex]?.disabled"
+    >
+      {{ nextLabel }}
+    </button>
+  </div>
+</div>
