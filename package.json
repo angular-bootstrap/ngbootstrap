@@ -1,7 +1,18 @@
 {
   "name": "@ngbootstrap",
   "version": "0.0.1",
-  "description": "Angular datagrid and drag-drop widgets packaged as a standalone library.",
+  "description": "Angular UI library providing datagrid, drag-and-drop, pagination, and stepper components with Bootstrap-friendly styling.",
+  "author": {
+    "name": "Harmeet Singh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/you-know-nothing-h/ngbootstrap.git"
+  },
+  "bugs": {
+    "url": "https://github.com/you-know-nothing-h/ngbootstrap/issues"
+  },
+  "homepage": "https://github.com/you-know-nothing-h/ngbootstrap#readme",
   "license": "MIT",
   "private": false,
   "publishConfig": {
@@ -10,6 +21,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "ng-packagr -p ng-package.json",
+    "build:release": "npm version patch --no-git-tag-version && ng-packagr -p ng-package.json",
     "lint": "eslint \"src/**/*.{ts,html}\"",
     "test": "jest",
     "clean": "rimraf dist"
