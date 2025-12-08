@@ -1,4 +1,4 @@
-# @ngbootstrap
+# ngbootstrap
 
 Angular UI library providing datagrid, drag‑and‑drop, pagination, and stepper components with Bootstrap‑friendly styling.
 
@@ -13,7 +13,7 @@ Angular UI library providing datagrid, drag‑and‑drop, pagination, and steppe
 ## Installation
 
 ```bash
-npm install @ngbootstrap
+npm install ngbootstrap
 ```
 
 Make sure your app:
@@ -33,7 +33,7 @@ All components are standalone, so you import them directly into your feature com
 
 ```ts
 import { Component } from '@angular/core';
-import { Datagrid } from '@ngbootstrap/datagrid';
+import { Datagrid } from 'ngbootstrap/datagrid';
 
 interface User {
   id: number;
@@ -87,7 +87,7 @@ Key datagrid capabilities:
 
 ```ts
 import { Component } from '@angular/core';
-import { NgbPaginationComponent } from '@ngbootstrap/pagination';
+import { NgbPaginationComponent } from 'ngbootstrap/pagination';
 
 @Component({
   standalone: true,
@@ -118,8 +118,8 @@ export class PagerComponent {
 
 ```ts
 import { Component } from '@angular/core';
-import { NgbStepperComponent } from '@ngbootstrap/stepper';
-import { NgbStepperStep } from '@ngbootstrap/stepper';
+import { NgbStepperComponent } from 'ngbootstrap/stepper';
+import { NgbStepperStep } from 'ngbootstrap/stepper';
 
 @Component({
   standalone: true,
@@ -172,7 +172,7 @@ Stepper highlights:
 
 ```ts
 import { Component } from '@angular/core';
-import { DndListDirective, DndItemDirective } from '@ngbootstrap/drag-drop';
+import { DndListDirective, DndItemDirective } from 'ngbootstrap/drag-drop';
 
 @Component({
   standalone: true,
@@ -223,4 +223,3 @@ Recommended release flow:
   - Run `npm version minor` or `npm version patch` to bump `package.json` and create the tag.
   - Push the commit and tag: `git push origin main --tags`.
 - GitHub Actions will build and publish that tagged version to npm.
-

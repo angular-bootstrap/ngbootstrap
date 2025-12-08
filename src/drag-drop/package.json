@@ -1,5 +1,5 @@
 {
-  "name": "@ngbootstrap/drag-drop",
+  "name": "ngbootstrap/drag-drop",
   "ngPackage": {
     "lib": {
       "entryFile": "index.ts"

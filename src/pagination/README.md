@@ -1,3 +1,3 @@
-# @ngbootstrap/datagrid
+# ngbootstrap/pagination
 
-Secondary entry point of `@ngbootstrap`. It can be used by importing from `@ngbootstrap/pagination`.
+Secondary entry point of `ngbootstrap`. It can be used by importing from `ngbootstrap/pagination`.

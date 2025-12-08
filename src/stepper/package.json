@@ -1,9 +1,8 @@
 {
-  "name": "@ngbootstrap/stepper",
+  "name": "ngbootstrap/stepper",
   "ngPackage": {
     "lib": {
       "entryFile": "index.ts"
     }
   }
 }
-

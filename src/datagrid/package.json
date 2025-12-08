@@ -1,5 +1,5 @@
 {
-  "name": "@ngbootstrap/datagrid",
+  "name": "ngbootstrap/datagrid",
   "ngPackage": {
     "lib": {
       "entryFile": "index.ts"

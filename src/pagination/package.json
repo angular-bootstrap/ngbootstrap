@@ -1,5 +1,5 @@
 {
-  "name": "@ngbootstrap/pagination",
+  "name": "ngbootstrap/pagination",
   "ngPackage": {
     "lib": {
       "entryFile": "index.ts"

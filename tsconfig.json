@@ -11,10 +11,10 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@ngbootstrap": ["src/index.ts"],
-      "@ngbootstrap/datagrid": ["./src/datagrid/index.ts"],
-      "@ngbootstrap/drag-drop": ["./src/drag-drop/index.ts"],
-      "@ngbootstrap/pagination": ["./src/datagrid/index.ts"]
+      "ngbootstrap": ["src/index.ts"],
+      "ngbootstrap/datagrid": ["./src/datagrid/index.ts"],
+      "ngbootstrap/drag-drop": ["./src/drag-drop/index.ts"],
+      "ngbootstrap/pagination": ["./src/pagination/index.ts"]
     }
   },
   "angularCompilerOptions": {
