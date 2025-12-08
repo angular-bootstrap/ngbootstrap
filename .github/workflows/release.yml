@@ -28,19 +28,7 @@ jobs:
         run: npm test
 
       - name: Build library
-        run: npm run build:release
-
-      - name: Create or update git tag for package version
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          TAG="v${VERSION}"
-          echo "Tagging release as ${TAG}"
-          # Create or update lightweight tag locally
-          git tag -f "${TAG}"
-          # Push tag to origin (may update existing tag)
-          git push origin "refs/tags/${TAG}" --force
+        run: npm run build
 
       - name: Publish to npm
         env:

@@ -21,7 +21,6 @@
   "sideEffects": false,
   "scripts": {
     "build": "ng-packagr -p ng-package.json",
-    "build:release": "npm version patch --no-git-tag-version && ng-packagr -p ng-package.json",
     "lint": "eslint \"src/**/*.{ts,html}\"",
     "test": "jest",
     "clean": "rimraf dist"

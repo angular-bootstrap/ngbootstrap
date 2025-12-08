@@ -214,6 +214,13 @@ Releases are automated via GitHub Actions:
 - Non‑`main` branches:
   - `.github/workflows/ci.yml` runs install, tests, build only.
 - `main` branch:
-  - `.github/workflows/release.yml` bumps the patch version (`npm run build:release`), tags the commit as `vX.Y.Z`, and publishes to npm using `NPM_TOKEN` from repository secrets.
+  - `.github/workflows/release.yml` runs install, tests, build and publishes to npm using `NPM_TOKEN` from repository secrets.
 
+Recommended release flow:
+
+- On your local machine:
+  - Decide the new version (e.g. `1.1.0`).
+  - Run `npm version minor` or `npm version patch` to bump `package.json` and create the tag.
+  - Push the commit and tag: `git push origin main --tags`.
+- GitHub Actions will build and publish that tagged version to npm.
 
