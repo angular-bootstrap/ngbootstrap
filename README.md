@@ -83,6 +83,12 @@ Key datagrid capabilities:
 - Inline add/edit/delete (`enableAdd`, `enableEdit`, `enableDelete`, `rowAdd`, `rowSave`, `rowDelete`).
 - Export to PDF/Excel via `exportOptions`.
 
+Export requires optional peer dependencies. Install only if you use export:
+
+```sh
+npm install jspdf jspdf-autotable xlsx
+```
+
 ### Pagination
 
 ```ts

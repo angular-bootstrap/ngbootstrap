@@ -1,9 +1,7 @@
 import type { Config } from 'jest';
 import { createEsmPreset } from 'jest-preset-angular/presets';
 
-const angularEsmPreset = createEsmPreset({
-  setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
-});
+const angularEsmPreset = createEsmPreset();
 
 const config: Config = {
   ...angularEsmPreset,

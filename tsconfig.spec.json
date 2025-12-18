@@ -2,10 +2,10 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist/out-tsc/spec",
-    "module": "Node16",
-    "target": "es2018",
+    "module": "ESNext",
+    "target": "ES2022",
     "types": ["jest", "node"],
-    "moduleResolution": "node16",
+    "moduleResolution": "bundler",
     "isolatedModules": true
   },
   "files": ["src/test-setup.ts"],
