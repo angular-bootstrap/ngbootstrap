@@ -19,6 +19,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Clear npmrc to enforce OIDC auth
+        run: |
+          rm -f ~/.npmrc
+          rm -f .npmrc
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -37,6 +42,5 @@ jobs:
         run: npm run build
 
       - name: Publish to npm
-        # Removed the 'env: NODE_AUTH_TOKEN' line entirely.
         # OIDC handles authentication automatically now.
         run: npm publish --provenance # Added --provenance as a 2025 best practice
