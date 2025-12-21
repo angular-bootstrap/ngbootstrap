@@ -43,4 +43,4 @@ jobs:
 
       - name: Publish to npm
         # OIDC handles authentication automatically now.
-        run: npm publish --provenance # Added --provenance as a 2025 best practice
+        run: npm publish dist/ngbootstrap --provenance # Added --provenance as a 2025 best practice
