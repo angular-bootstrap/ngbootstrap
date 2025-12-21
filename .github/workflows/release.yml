@@ -8,6 +8,10 @@ on:
 jobs:
   build-test-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # CRITICAL: This enables OIDC authentication
+      packages: write # Optional, if you also publish to GitHub Packages
 
     steps:
       - name: Checkout
@@ -31,6 +35,6 @@ jobs:
         run: npm run build
 
       - name: Publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish
+        # Removed the 'env: NODE_AUTH_TOKEN' line entirely.
+        # OIDC handles authentication automatically now.
+        run: npm publish --provenance # Added --provenance as a 2025 best practice
