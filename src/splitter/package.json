@@ -1,0 +1,8 @@
+{
+  "name": "ngbootstrap/splitter",
+  "ngPackage": {
+    "lib": {
+      "entryFile": "index.ts"
+    }
+  }
+}

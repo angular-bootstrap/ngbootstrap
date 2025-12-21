@@ -1,4 +1,4 @@
-# ngbootstrap
+# @angular-bootstrap/ngbootstrap
 
 Angular UI library providing datagrid, drag‑and‑drop, pagination, and stepper components with Bootstrap‑friendly styling.
 
@@ -8,12 +8,15 @@ Angular UI library providing datagrid, drag‑and‑drop, pagination, and steppe
 - Drag & drop – lightweight list and item directives with keyboard‑friendly a11y helpers.
 - Pagination – standalone Bootstrap‑styled pagination component.
 - Stepper – horizontal/vertical stepper with custom labels, error states, theming hooks, and keyboard support.
+- Splitter – resizable horizontal/vertical panes with collapsing, keyboard resizing, and ARIA semantics.
+- Tree – keyboard-accessible tree with optional checkboxes, JSON-style expanders, and expand/collapse helpers.
+- Typeahead – virtualized, debounced search with single/multi select, exact-match selection, and scroll hooks.
 - Angular + Bootstrap first – built for modern Angular (v17–20) and works with plain Bootstrap CSS; Material/Tailwind can be layered via custom styles.
 
 ## Installation
 
 ```bash
-npm install ngbootstrap
+npm install @angular-bootstrap/ngbootstrap
 ```
 
 Make sure your app:
@@ -33,7 +36,7 @@ All components are standalone, so you import them directly into your feature com
 
 ```ts
 import { Component } from '@angular/core';
-import { Datagrid } from 'ngbootstrap/datagrid';
+import { Datagrid } from '@angular-bootstrap/ngbootstrap/datagrid';
 
 interface User {
   id: number;
@@ -93,7 +96,7 @@ npm install jspdf jspdf-autotable xlsx
 
 ```ts
 import { Component } from '@angular/core';
-import { NgbPaginationComponent } from 'ngbootstrap/pagination';
+import { NgbPaginationComponent } from '@angular-bootstrap/ngbootstrap/pagination';
 
 @Component({
   standalone: true,
@@ -124,8 +127,36 @@ export class PagerComponent {
 
 ```ts
 import { Component } from '@angular/core';
-import { NgbStepperComponent } from 'ngbootstrap/stepper';
-import { NgbStepperStep } from 'ngbootstrap/stepper';
+import { NgbStepperComponent } from '@angular-bootstrap/ngbootstrap/stepper';
+import { NgbStepperStep } from '@angular-bootstrap/ngbootstrap/stepper';
+
+### Splitter
+
+```ts
+import { Component } from '@angular/core';
+import { NgbSplitterComponent, NgbSplitterPaneComponent } from '@angular-bootstrap/ngbootstrap/splitter';
+
+@Component({
+  standalone: true,
+  selector: 'app-splitter',
+  imports: [NgbSplitterComponent, NgbSplitterPaneComponent],
+  template: `
+    <ngb-splitter orientation="horizontal">
+      <ngb-splitter-pane size="30%" min="200px" [collapsible]="true" (collapsedChange)="onCollapse($event)">
+        <div class="p-3">Navigation</div>
+      </ngb-splitter-pane>
+      <ngb-splitter-pane>
+        <div class="p-3">Main content</div>
+      </ngb-splitter-pane>
+    </ngb-splitter>
+  `,
+})
+export class SplitterExampleComponent {
+  onCollapse(collapsed: boolean) {
+    // persist pane state if needed
+  }
+}
+```
 
 @Component({
   standalone: true,
@@ -178,7 +209,47 @@ Stepper highlights:
 
 ```ts
 import { Component } from '@angular/core';
-import { DndListDirective, DndItemDirective } from 'ngbootstrap/drag-drop';
+import { DndListDirective, DndItemDirective } from '@angular-bootstrap/ngbootstrap/drag-drop';
+
+### Tree
+
+```ts
+import { Component } from '@angular/core';
+import { NgbTreeComponent, NgbTreeNode } from '@angular-bootstrap/ngbootstrap/tree';
+
+@Component({
+  standalone: true,
+  selector: 'app-tree',
+  imports: [NgbTreeComponent],
+  template: `
+    <ngb-tree
+      [nodes]="nodes"
+      [showCheckbox]="true"
+      type="json"
+      (expand)="onExpand($event)"
+      (collapse)="onCollapse($event)"
+      (selectionChange)="onSelection($event)"
+    ></ngb-tree>
+  `,
+})
+export class TreeExampleComponent {
+  nodes: NgbTreeNode[] = [
+    {
+      id: 'parent',
+      label: 'Parent',
+      expanded: true,
+      children: [
+        { id: 'child-1', label: 'Child 1' },
+        { id: 'child-2', label: 'Child 2' },
+      ],
+    },
+  ];
+
+  onExpand(node: NgbTreeNode) {}
+  onCollapse(node: NgbTreeNode) {}
+  onSelection(selected: NgbTreeNode[]) {}
+}
+```
 
 @Component({
   standalone: true,

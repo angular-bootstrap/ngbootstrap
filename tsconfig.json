@@ -14,7 +14,10 @@
       "ngbootstrap": ["src/index.ts"],
       "ngbootstrap/datagrid": ["./src/datagrid/index.ts"],
       "ngbootstrap/drag-drop": ["./src/drag-drop/index.ts"],
-      "ngbootstrap/pagination": ["./src/pagination/index.ts"]
+      "ngbootstrap/pagination": ["./src/pagination/index.ts"],
+      "ngbootstrap/splitter": ["./src/splitter/index.ts"],
+      "ngbootstrap/typeahead": ["./src/typeahead/index.ts"],
+      "ngbootstrap/tree": ["./src/tree/index.ts"]
     }
   },
   "angularCompilerOptions": {

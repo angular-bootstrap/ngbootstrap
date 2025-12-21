@@ -1,0 +1,8 @@
+{
+  "name": "ngbootstrap/typeahead",
+  "ngPackage": {
+    "lib": {
+      "entryFile": "index.ts"
+    }
+  }
+}
