@@ -30,7 +30,6 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
           always-auth: true
-          auth-type: 'oidc'
 
       - name: Install dependencies
         run: npm install
@@ -43,4 +42,4 @@ jobs:
 
       - name: Publish to npm
         # OIDC handles authentication automatically now.
-        run: npm publish dist/ngbootstrap --provenance # Added --provenance as a 2025 best practice
+        run: npm publish ./dist/ngbootstrap --provenance # publish the built package only
