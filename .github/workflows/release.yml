@@ -1,5 +1,3 @@
-name: Release (main)
-
 on:
   push:
     branches:
@@ -11,6 +9,7 @@ jobs:
     permissions:
       contents: read
       id-token: write # CRITICAL: This enables OIDC authentication
+      packages: write
 
     steps:
       - name: Checkout
@@ -39,6 +38,7 @@ jobs:
         run: npm run build
 
       - name: Publish to npm
-        # OIDC handles authentication automatically now.
         working-directory: dist/ngbootstrap
-        run: npm publish --provenance --access public # publish the built package only
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public
