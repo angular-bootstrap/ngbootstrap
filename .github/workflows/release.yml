@@ -37,25 +37,8 @@ jobs:
       - name: Build library
         run: npm run build
 
-      # ---- Debugging steps (temporary) ----
-      - name: List built package folder
-        run: |
-          echo "Listing dist/ngbootstrap:"
-          ls -la dist/ngbootstrap || true
-
-      - name: Show package.json to be published
-        run: |
-          echo "dist/ngbootstrap/package.json contents:"
-          cat dist/ngbootstrap/package.json || true
-
-      - name: Check npm auth (whoami)
-        run: |
-          echo "npm whoami (shows authenticated identity if OIDC worked):"
-          npm whoami --registry=https://registry.npmjs.org || true
-          npm config list --userconfig /home/runner/work/_temp/.npmrc
-          npm config get //registry.npmjs.org/:_authToken --userconfig /home/runner/work/_temp/.npmrc
-      # -------------------------------------
-
       - name: Publish to npm
         working-directory: dist/ngbootstrap
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --provenance --access public
