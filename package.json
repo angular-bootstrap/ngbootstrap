@@ -1,6 +1,6 @@
 {
   "name": "@angular-bootstrap/ngbootstrap",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Angular UI library providing datagrid, drag-and-drop, pagination, and stepper components with Bootstrap-friendly styling.",
   "author": {
     "name": "Harmeet Singh"
