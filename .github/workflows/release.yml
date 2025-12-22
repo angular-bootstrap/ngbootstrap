@@ -52,6 +52,8 @@ jobs:
         run: |
           echo "npm whoami (shows authenticated identity if OIDC worked):"
           npm whoami --registry=https://registry.npmjs.org || true
+          npm config list --userconfig /home/runner/work/_temp/.npmrc
+          npm config get //registry.npmjs.org/:_authToken --userconfig /home/runner/work/_temp/.npmrc
       # -------------------------------------
 
       - name: Publish to npm
