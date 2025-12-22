@@ -41,4 +41,5 @@ jobs:
         working-directory: dist/ngbootstrap
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --provenance --access public
+          OTP: ${{ secrets.NPM_OTP }}
+        run: npm publish --provenance --access public --otp "$OTP"
