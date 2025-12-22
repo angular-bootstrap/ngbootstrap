@@ -18,13 +18,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Clear npm auth
-        run: |
-          rm -f ~/.npmrc
-          rm -f .npmrc
-          npm config delete //registry.npmjs.org/:_authToken || true
-          npm config delete _authToken || true
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -48,8 +41,4 @@ jobs:
       - name: Publish to npm
         # OIDC handles authentication automatically now.
         working-directory: dist/ngbootstrap
-        env:
-          NPM_CONFIG_USERCONFIG: /tmp/npmrc
-        run: |
-          : > /tmp/npmrc
-          npm publish --provenance --access public # publish the built package only
+        run: npm publish --provenance --access public # publish the built package only
