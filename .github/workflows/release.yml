@@ -11,7 +11,6 @@ jobs:
     permissions:
       contents: read
       id-token: write # CRITICAL: This enables OIDC authentication
-      packages: write # Optional, if you also publish to GitHub Packages
 
     steps:
       - name: Checkout
@@ -32,6 +31,7 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
           always-auth: true
+          scope: '@angular-bootstrap'
 
       - name: Clean dist
         run: rm -rf dist
