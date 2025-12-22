@@ -1,5 +1,3 @@
-name: Release (main)
-
 on:
   push:
     branches:
@@ -11,6 +9,7 @@ jobs:
     permissions:
       contents: read
       id-token: write # CRITICAL: This enables OIDC authentication
+      packages: write
 
     steps:
       - name: Checkout
@@ -38,7 +37,23 @@ jobs:
       - name: Build library
         run: npm run build
 
+      # ---- Debugging steps (temporary) ----
+      - name: List built package folder
+        run: |
+          echo "Listing dist/ngbootstrap:"
+          ls -la dist/ngbootstrap || true
+
+      - name: Show package.json to be published
+        run: |
+          echo "dist/ngbootstrap/package.json contents:"
+          cat dist/ngbootstrap/package.json || true
+
+      - name: Check npm auth (whoami)
+        run: |
+          echo "npm whoami (shows authenticated identity if OIDC worked):"
+          npm whoami --registry=https://registry.npmjs.org || true
+      # -------------------------------------
+
       - name: Publish to npm
-        # OIDC handles authentication automatically now.
         working-directory: dist/ngbootstrap
-        run: npm publish --provenance --access public # publish the built package only
+        run: npm publish --provenance --access public
