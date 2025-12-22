@@ -7,7 +7,7 @@ jobs:
   build-test-release:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write # CRITICAL: This enables OIDC authentication
       packages: write
 
@@ -41,5 +41,17 @@ jobs:
         working-directory: dist/ngbootstrap
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          OTP: ${{ secrets.NPM_OTP }}
-        run: npm publish --provenance --access public --otp "$OTP"
+        run: npm publish --provenance --access public
+
+      - name: Read version
+        id: pkg
+        run: echo "version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.pkg.outputs.version }}
+          release_name: v${{ steps.pkg.outputs.version }}
+          generate_release_notes: true
