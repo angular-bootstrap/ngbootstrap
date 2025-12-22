@@ -33,6 +33,9 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           always-auth: true
 
+      - name: Clean dist
+        run: rm -rf dist
+
       - name: Install dependencies
         run: npm install
 
@@ -44,4 +47,5 @@ jobs:
 
       - name: Publish to npm
         # OIDC handles authentication automatically now.
-        run: npm publish ./dist/ngbootstrap --provenance # publish the built package only
+        working-directory: dist/ngbootstrap
+        run: npm publish --provenance --access public # publish the built package only
