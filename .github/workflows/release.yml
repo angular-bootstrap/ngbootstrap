@@ -48,4 +48,8 @@ jobs:
       - name: Publish to npm
         # OIDC handles authentication automatically now.
         working-directory: dist/ngbootstrap
-        run: npm publish --provenance --access public # publish the built package only
+        env:
+          NPM_CONFIG_USERCONFIG: /tmp/npmrc
+        run: |
+          : > /tmp/npmrc
+          npm publish --provenance --access public # publish the built package only
