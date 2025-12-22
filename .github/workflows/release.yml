@@ -1,3 +1,5 @@
+name: Release (main)
+
 on:
   push:
     branches:
@@ -6,12 +8,9 @@ on:
 jobs:
   build-test-release:
     runs-on: ubuntu-latest
-    env:
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}    # make token available to all steps
     permissions:
       contents: read
       id-token: write # CRITICAL: This enables OIDC authentication
-      packages: write
 
     steps:
       - name: Checkout
@@ -39,21 +38,7 @@ jobs:
       - name: Build library
         run: npm run build
 
-      - name: Configure npm auth (for verification steps)
-        run: |
-          # write auth token into the runner userconfig so npm CLI will use it
-          # we avoid printing the token; GitHub masks secrets automatically
-          npm config set //registry.npmjs.org/:_authToken "${NODE_AUTH_TOKEN}" --userconfig /home/runner/work/_temp/.npmrc || true
-
-      - name: Verify npm auth + dry run
-        run: |
-          echo "whoami:"
-          npm whoami --registry=https://registry.npmjs.org || true
-          echo "--- npm config (userconfig) ---"
-          npm config list --userconfig /home/runner/work/_temp/.npmrc || true
-          echo "--- dry-run publish (will NOT publish) ---"
-          cd dist/ngbootstrap && npm publish --access public --dry-run || true
-
       - name: Publish to npm
+        # OIDC handles authentication automatically now.
         working-directory: dist/ngbootstrap
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public # publish the built package only
