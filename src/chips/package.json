@@ -1,0 +1,9 @@
+{
+  "name": "ngbootstrap/chips",
+  "ngPackage": {
+    "lib": {
+      "entryFile": "index.ts"
+    }
+  }
+}
+

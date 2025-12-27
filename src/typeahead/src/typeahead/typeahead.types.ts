@@ -9,4 +9,6 @@ export interface NgbTypeaheadI18n {
   placeholder?: string;
   noResults?: string;
   clearSelection?: string;
+  clear?: string;
+  dropdownButtonLabel?: string;
 }

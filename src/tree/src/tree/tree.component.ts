@@ -39,21 +39,22 @@ import { NgbTreeNode, NgbTreeType, NgbTreeI18n } from './tree.types';
         [attr.aria-expanded]="hasChildren(node) ? !!node.expanded : null"
         [attr.aria-level]="level"
       >
-        <button
-          #nodeBtn
-          type="button"
-          class="btn btn-sm btn-link px-1"
-          [disabled]="!hasChildren(node)"
-          (click)="toggleNode(node)"
-          (keydown)="onNodeKeydown($event, node)"
-          [attr.aria-label]="(node.expanded ? i18n?.collapse || 'Collapse' : i18n?.expand || 'Expand') + ' ' + node.label"
-        >
-          <span *ngIf="hasChildren(node)">
-            <span *ngIf="type === 'json'">{{ node.expanded ? '-' : '+' }}</span>
-            <span *ngIf="type !== 'json'">{{ node.expanded ? '▾' : '▸' }}</span>
-          </span>
-          <span *ngIf="!hasChildren(node)" class="text-muted">•</span>
-        </button>
+        <ng-container *ngIf="hasChildren(node); else leafSpacer">
+          <button
+            #nodeBtn
+            type="button"
+            class="btn btn-sm px-1"
+            (click)="toggleNode(node)"
+            (keydown)="onNodeKeydown($event, node)"
+            [attr.aria-label]="(node.expanded ? i18n?.collapse || 'Collapse' : i18n?.expand || 'Expand') + ' ' + node.label"
+          >
+            <span *ngIf="type === 'json'" class="bi" [ngClass]="node.expanded ? minusIcon : plusIcon" aria-hidden="true"></span>
+            <span *ngIf="type !== 'json'" class="bi" [ngClass]="node.expanded ? collapseIcon : expandIcon" aria-hidden="true"></span>
+          </button>
+        </ng-container>
+        <ng-template #leafSpacer>
+          <span class="d-inline-block px-1" style="width: 1.5rem;"></span>
+        </ng-template>
 
         <label class="form-check d-inline-flex align-items-center gap-2 flex-grow-1 mb-0">
           <input
@@ -86,6 +87,10 @@ export class NgbTreeComponent {
   @Input() type: NgbTreeType = 'text';
   @Input() showCheckbox = false;
   @Input() i18n?: NgbTreeI18n;
+  @Input() expandIcon = 'bi-caret-right-fill';
+  @Input() collapseIcon = 'bi-caret-down-fill';
+  @Input() plusIcon = 'bi-file-plus-fill';
+  @Input() minusIcon = 'bi-file-minus-fill';
 
   @Output() expand = new EventEmitter<NgbTreeNode>();
   @Output() collapse = new EventEmitter<NgbTreeNode>();

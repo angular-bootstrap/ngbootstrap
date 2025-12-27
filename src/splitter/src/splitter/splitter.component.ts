@@ -1,16 +1,18 @@
 import {
   AfterContentInit,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ContentChildren,
   ElementRef,
   HostListener,
   Input,
-  OnDestroy,
+  NgZone,
   OnChanges,
+  OnDestroy,
   QueryList,
-  ViewChild,
-  ChangeDetectionStrategy,
   SimpleChanges,
+  ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgbSplitterPaneComponent } from './splitter-pane.component';
@@ -28,250 +30,365 @@ type PaneState = {
   standalone: true,
   imports: [CommonModule, NgbSplitterPaneComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: [
+    `
+    :host { display: block; width: 100%; }
+    .splitter-container { display: flex; height: 100%; width: 100%; }
+    .splitter-container.vertical { flex-direction: column; }
+    .splitbar { background: #ccc; width: 5px; position: relative;
+    align-items: center;
+    justify-content: center; 
+    flex: 0 0 auto; z-index: 10;
+      &.resizable {
+        cursor: col-resize;
+      } 
+      &:hover {
+        filter: brightness(90%); /* Feedback when hovering bar */
+      }
+    }
+    .handle-line {
+      /* Thin white line in the middle */
+      border-radius: 2px;
+      opacity: 0.8;
+      left: 45%;
+      position: absolute;
+      top: 45%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* Horizontal Handle: Vertical Line */
+    .splitter-container:not(.vertical) .handle-line {
+      width: 2px;
+      height: 10px; /* Adjust height as needed */
+    }
+    .pane-wrapper {
+      position: relative;
+      /* CRITICAL: Allow the pane to shrink beyond its content size */
+      min-width: 0; 
+      min-height: 0;
+      
+      /* CRITICAL: Hide content that overflows during small sizes */
+      overflow: hidden; 
+      
+      flex-shrink: 1;
+    }
+    /* Vertical Handle: Horizontal Line */
+    .vertical .handle-line {
+      height: 2px;
+      width: 10px; /* Adjust width as needed */
+    }
+    .vertical .splitbar.resizable {
+      cursor: row-resize;
+    }
+    .splitter-container.vertical .splitter-container .splitbar.resizable {
+      cursor: col-resize;
+    }
+    .vertical .splitbar { width: 100%; }
+    .collapse-btn { cursor: pointer; background: #666; width: 10px; height: 10px; position: absolute; top: 50%; }
+    .collapse-arrow {
+      font-size: 0.95rem;
+      user-select: none;
+      cursor: pointer;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.25rem;
+      height: 1.25rem;
+      position:absolute;
+      top:100%;
+    }
+    `,
+  ],
   template: `
-    <div
-      #container
-      class="d-flex"
-      [class.flex-row]="orientation === 'horizontal'"
-      [class.flex-column]="orientation === 'vertical'"
-      role="group"
-    >
-      <ng-container *ngFor="let pane of panes.toArray(); let i = index">
-        <div
-          class="d-flex flex-column overflow-auto"
-          [attr.data-pane-id]="paneStates[i]?.id"
-          [class.d-none]="pane.collapsed"
-          [style.flex-basis.px]="paneStates[i]?.sizePx"
-          [style.min-width.px]="orientation === 'horizontal' ? paneStates[i]?.minPx : undefined"
-          [style.max-width.px]="orientation === 'horizontal' ? paneStates[i]?.maxPx : undefined"
-          [style.min-height.px]="orientation === 'vertical' ? paneStates[i]?.minPx : undefined"
-          [style.max-height.px]="orientation === 'vertical' ? paneStates[i]?.maxPx : undefined"
+    <div class="splitter-container" [class.vertical]="orientation === 'vertical'"
+      [style.min-height]="orientation === 'vertical' ? verticalMinHeight : null"
+      [style.height]="orientation === 'vertical' ? verticalMinHeight : null">
+      <!-- Iterate through the QueryList of panes -->
+      <ng-container *ngFor="let pane of panes; let i = index">
+        <div class="pane-wrapper" [style.flex]="getPaneFlex(pane)"
+        [style.min-width]="orientation === 'horizontal' ? (pane.min || '0px') : null"
+        [style.max-width]="orientation === 'horizontal' ? pane.max : null"
+        [style.min-height]="orientation === 'vertical' ? (pane.min || '0px') : null"
+        [style.max-height]="orientation === 'vertical' ? pane.max : null"
         >
-          <ng-container *ngTemplateOutlet="pane.templateRef"></ng-container>
+          <!-- Access the 'template' property we defined in the Pane component -->
+          <ng-container [ngTemplateOutlet]="pane.template"></ng-container>
         </div>
 
-        <button
-          *ngIf="i < panes.length - 1"
-          type="button"
-          class="bg-transparent border-0 p-0 d-flex align-items-center justify-content-center"
-          [style.width.px]="orientation === 'horizontal' ? handleThickness : undefined"
-          [style.height.px]="orientation === 'vertical' ? handleThickness : undefined"
-          [class.w-100]="orientation === 'vertical'"
-          [class.h-100]="orientation === 'horizontal'"
-          role="separator"
-          [attr.aria-orientation]="orientation"
-          [attr.aria-controls]="paneStates[i]?.id + ' ' + paneStates[i + 1]?.id"
-          tabindex="0"
-          (mousedown)="startResize(i, $event)"
-          (keydown)="onHandleKeydown(i, $event)"
-          (dblclick)="toggleFromHandle(i)"
-          aria-label="Splitter resize handle"
-        >
-          <span class="border bg-light" [style.width.px]="orientation === 'horizontal' ? 2 : handleThickness" [style.height.px]="orientation === 'vertical' ? 2 : handleThickness"></span>
-        </button>
+        <div *ngIf="i < panes.length - 1" class="splitbar" 
+        [class.resizable]="resizable"
+        [style.background-color]="barColor"
+        [style.width.px]="orientation === 'horizontal' ? handleThickness : '100%'" 
+        [style.height.px]="orientation === 'vertical' ? handleThickness : '100%'" 
+        role="separator"
+        tabindex="0"
+        [attr.aria-orientation]="getSeparatorAriaOrientation()"
+        [attr.aria-valuenow]="getHandleValueNow(i)"
+        [attr.aria-valuemin]="getHandleValueMin(i)"
+        [attr.aria-valuemax]="getHandleValueMax(i)"
+        (keydown)="onHandleKeyDown($event, i)"
+        (mousedown)="onMouseDown($event, i)">
+          <div class="handle-line" [style.background-color]="lineColor">
+            <span
+              *ngIf="pane.collapsible"
+              class="collapse-arrow bi"
+              [ngClass]="getCollapseIcon(pane)"
+              [style.color]="handleIconColor"
+              (click)="onHandleToggle($event, i)"
+              aria-hidden="true"
+            ></span>
+          </div>
+        </div>
       </ng-container>
     </div>
   `,
 })
-export class NgbSplitterComponent implements AfterContentInit, OnDestroy, OnChanges {
+export class NgbSplitterComponent {
   @ContentChildren(NgbSplitterPaneComponent) panes!: QueryList<NgbSplitterPaneComponent>;
-  @ViewChild('container', { static: true }) container!: ElementRef<HTMLElement>;
+  @Input() orientation: 'horizontal' | 'vertical' = 'horizontal';
+  @Input() handleThickness:number = 12;
+  @Input() handleIconColor: string = '#000';
+  @Input() verticalMinHeight: string = '280px';
 
-  @Input() orientation: NgbSplitterOrientation = 'horizontal';
-  @Input() handleThickness = 12;
+  @Input() resizable: boolean = true; // New Resize Input
+  @Input() barColor: string = '#ccc'; // Custom Bar Color
+  @Input() lineColor: string = '#000'; // Custom Line Color
 
-  paneStates: PaneState[] = [];
-  private resizeSub?: { move: any; up: any };
-  private currentDrag?: {
-    index: number;
-    startPos: number;
-    startSizes: [number, number];
-  };
+  private isDragging = false;
+  private currentHandleIndex = -1;
 
-  ngAfterContentInit(): void {
-    this.initStates();
-    this.panes.changes.subscribe(() => this.initStates());
+  constructor(private el: ElementRef){
+
   }
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['orientation'] && !changes['orientation'].firstChange) {
-      this.initStates();
-    }
+// Listeners for global mouse movement
+  @HostListener('window:mousemove', ['$event'])
+  onMouseMove(event: MouseEvent) {
+    if (!this.isDragging || !this.resizable) return;
+    this.resize(event);
   }
 
-  ngOnDestroy(): void {
-    this.detachDragListeners();
+  @HostListener('window:mouseup')
+  onMouseUp() {
+    this.isDragging = false;
+    document.body.style.cursor = 'default';
   }
 
-  @HostListener('window:resize')
-  onWindowResize() {
-    this.initStates();
-  }
-
-  startResize(index: number, event: MouseEvent) {
+  onMouseDown(event: MouseEvent, index: number) {
+    if (!this.resizable) return;
     event.preventDefault();
-    const total = this.getContainerSize();
-    const sizes = this.computePaneSizes(total);
-    this.currentDrag = {
-      index,
-      startPos: this.pointerPosition(event),
-      startSizes: [sizes[index], sizes[index + 1]],
-    };
-    const move = (e: MouseEvent) => this.onDrag(e);
-    const up = () => this.stopDrag();
-    document.addEventListener('mousemove', move);
-    document.addEventListener('mouseup', up, { once: true });
-    this.resizeSub = { move, up };
+    this.isDragging = true;
+    this.currentHandleIndex = index;
+    document.body.style.cursor = this.orientation === 'horizontal' ? 'col-resize' : 'row-resize';
   }
 
-  onHandleKeydown(index: number, event: KeyboardEvent) {
+  private resize(event: MouseEvent) {
+    const container = this.el.nativeElement.querySelector('.splitter-container');
+    const rect = container.getBoundingClientRect();
+    const paneArr = this.panes.toArray();
+    const paneWrappers = Array.from(this.el.nativeElement.querySelectorAll('.pane-wrapper')) as HTMLElement[];
+
+    const targetPane = paneArr[this.currentHandleIndex];
+    if (!targetPane || !paneWrappers.length) {
+      return;
+    }
+
     const isHorizontal = this.orientation === 'horizontal';
-    const delta = this.handleThickness;
-    if (
-      (isHorizontal && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) ||
-      (!isHorizontal && (event.key === 'ArrowUp' || event.key === 'ArrowDown'))
-    ) {
-      event.preventDefault();
-      const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
-      this.adjustPaneSizes(index, delta * direction);
-    }
-
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      this.toggleFromHandle(index);
-    }
-  }
-
-  toggleFromHandle(index: number) {
-    const panesArray = this.panes.toArray();
-    const target = panesArray[index].collapsible ? panesArray[index] : panesArray[index + 1];
-    if (target?.collapsible) {
-      target.toggleCollapsed();
-      this.initStates();
-    }
-  }
-
-  private onDrag(event: MouseEvent) {
-    if (!this.currentDrag) {
+    const totalPixels = isHorizontal ? rect.width : rect.height;
+    if (totalPixels <= 0) {
       return;
     }
+
+    const mousePos = isHorizontal ? event.clientX - rect.left : event.clientY - rect.top;
+
+    let consumed = 0;
+    for (let i = 0; i < this.currentHandleIndex; i++) {
+      const prevPaneElement = paneWrappers[i];
+      if (!prevPaneElement) {
+        continue;
+      }
+      const prevRect = prevPaneElement.getBoundingClientRect();
+      consumed += isHorizontal ? prevRect.width : prevRect.height;
+      consumed += this.handleThickness;
+    }
+
+    let newSizeValue = ((mousePos - consumed) / totalPixels) * 100;
+
+    const minPercent = this.sizeToPercent(targetPane.min, totalPixels);
+    const maxPercent = this.sizeToPercent(targetPane.max, totalPixels);
+
+    if (minPercent !== null) {
+      newSizeValue = Math.max(newSizeValue, minPercent);
+    }
+    if (maxPercent !== null) {
+      newSizeValue = Math.min(newSizeValue, maxPercent);
+    }
+
+    newSizeValue = Math.max(0, Math.min(100, newSizeValue));
+    targetPane.size = `${newSizeValue}%`;
+  }
+
+  onHandleToggle(event: Event, index: number) {
+    event.stopPropagation();
     event.preventDefault();
-    const delta = this.pointerPosition(event) - this.currentDrag.startPos;
-    this.adjustPaneSizes(this.currentDrag.index, delta, this.currentDrag.startSizes);
+    this.togglePane(index);
   }
 
-  private stopDrag() {
-    this.detachDragListeners();
-    this.currentDrag = undefined;
+  getCollapseIcon(pane: NgbSplitterPaneComponent): string {
+    if (!pane.collapsible) {
+      return '';
+    }
+    if (this.orientation === 'horizontal') {
+      return pane.collapsed ? 'bi-caret-right-fill' : 'bi-caret-left-fill';
+    }
+    return pane.collapsed ? 'bi-caret-down-fill' : 'bi-caret-up-fill';
   }
 
-  private adjustPaneSizes(index: number, delta: number, startSizes?: [number, number]) {
-    const total = this.getContainerSize();
-    const sizes = startSizes ?? this.computePaneSizes(total);
-    const panesArray = this.panes.toArray();
-    const first = panesArray[index];
-    const second = panesArray[index + 1];
+  getPaneFlex(pane: NgbSplitterPaneComponent) {
+    if (pane.collapsed) {
+      return '0 0 0px';
+    }
+    if (pane.size) {
+      return `0 0 ${pane.size}`;
+    }
+    return '1 1 0px';
+  }
 
-    if (first.collapsed || second.collapsed) {
+  private sizeToPercent(value: string | undefined, totalPixels: number): number | null {
+    if (!value) {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (trimmed.endsWith('%')) {
+      const percent = parseFloat(trimmed);
+      return Number.isFinite(percent) ? percent : null;
+    }
+
+    const numeric = parseFloat(trimmed);
+    if (!Number.isFinite(numeric)) {
+      return null;
+    }
+
+    if (trimmed.endsWith('px')) {
+      return totalPixels > 0 ? (numeric / totalPixels) * 100 : null;
+    }
+
+    return numeric;
+  }
+
+  togglePane(index: number) {
+    const pane = this.panes.toArray()[index];
+    pane.collapsed = !pane.collapsed;
+    pane.collapsedChange.emit(pane.collapsed);
+  }
+
+  getSeparatorAriaOrientation(): 'horizontal' | 'vertical' {
+    // For left/right panes, the separator is vertical. For top/bottom panes, it is horizontal.
+    return this.orientation === 'horizontal' ? 'vertical' : 'horizontal';
+  }
+
+  getHandleValueNow(index: number): number | null {
+    const container = this.el.nativeElement.querySelector('.splitter-container');
+    const rect = container.getBoundingClientRect();
+    const paneWrappers = Array.from(this.el.nativeElement.querySelectorAll('.pane-wrapper')) as HTMLElement[];
+    const target = paneWrappers[index];
+
+    const totalPixels = this.orientation === 'horizontal' ? rect.width : rect.height;
+    if (!target || totalPixels <= 0) {
+      return null;
+    }
+
+    const paneRect = target.getBoundingClientRect();
+    const panePixels = this.orientation === 'horizontal' ? paneRect.width : paneRect.height;
+    return Math.round((panePixels / totalPixels) * 100);
+  }
+
+  getHandleValueMin(index: number): number | null {
+    const pane = this.panes?.toArray?.()[index];
+    const container = this.el.nativeElement.querySelector('.splitter-container');
+    const rect = container.getBoundingClientRect();
+    const totalPixels = this.orientation === 'horizontal' ? rect.width : rect.height;
+    if (!pane || totalPixels <= 0) {
+      return null;
+    }
+    return this.sizeToPercent(pane.min, totalPixels);
+  }
+
+  getHandleValueMax(index: number): number | null {
+    const pane = this.panes?.toArray?.()[index];
+    const container = this.el.nativeElement.querySelector('.splitter-container');
+    const rect = container.getBoundingClientRect();
+    const totalPixels = this.orientation === 'horizontal' ? rect.width : rect.height;
+    if (!pane || totalPixels <= 0) {
+      return null;
+    }
+    return this.sizeToPercent(pane.max, totalPixels);
+  }
+
+  onHandleKeyDown(event: KeyboardEvent, index: number) {
+    if (event.key === 'Enter') {
+      const pane = this.panes.toArray()[index];
+      if (pane?.collapsible) {
+        event.preventDefault();
+        this.togglePane(index);
+      }
       return;
     }
 
-    let firstSize = sizes[0] + delta;
-    let secondSize = sizes[1] - delta;
-
-    const firstLimits = this.getLimits(first, total);
-    const secondLimits = this.getLimits(second, total);
-
-    firstSize = this.clamp(firstSize, firstLimits.minPx, firstLimits.maxPx);
-    secondSize = this.clamp(secondSize, secondLimits.minPx, secondLimits.maxPx);
-
-    if (firstSize + secondSize > 0) {
-      this.paneStates[index].sizePx = firstSize;
-      this.paneStates[index + 1].sizePx = secondSize;
+    const isHorizontal = this.orientation === 'horizontal';
+    const negativeKey = isHorizontal ? 'ArrowLeft' : 'ArrowUp';
+    const positiveKey = isHorizontal ? 'ArrowRight' : 'ArrowDown';
+    if (event.key !== negativeKey && event.key !== positiveKey) {
+      return;
     }
-  }
 
-  private initStates() {
-    const total = this.getContainerSize();
-    const sizes = this.computePaneSizes(total);
-    const panesArray = this.panes.toArray();
-
-    this.paneStates = panesArray.map((pane, idx) => {
-      const limits = this.getLimits(pane, total);
-      return {
-        id: `ngb-splitter-pane-${idx}`,
-        sizePx: pane.collapsed ? 0 : sizes[idx],
-        minPx: limits.minPx,
-        maxPx: limits.maxPx,
-      };
-    });
-  }
-
-  private computePaneSizes(total: number): number[] {
-    const panesArray = this.panes?.toArray() ?? [];
-    if (!panesArray.length) return [];
-
-    const resolved: Array<number | undefined> = panesArray.map((pane) =>
-      pane.collapsed ? 0 : this.resolveSize(pane.size, total)
-    );
-    const specifiedTotal = resolved.reduce((sum, val) => sum + (val ?? 0), 0);
-    const unspecified = resolved.filter((v) => v == null).length;
-    const remaining = Math.max(total - specifiedTotal, 0);
-    const autoSize = unspecified > 0 ? remaining / unspecified : 0;
-
-    return resolved.map((val) => {
-      if (val != null) {
-        return val;
-      }
-      if (autoSize) {
-        return autoSize;
-      }
-      return total / panesArray.length;
-    });
-  }
-
-  private resolveSize(value: string | undefined, total: number): number | undefined {
-    if (!value) return undefined;
-    const trimmed = value.trim();
-    if (trimmed.endsWith('%')) {
-      const pct = Number.parseFloat(trimmed.slice(0, -1));
-      return (pct / 100) * total;
+    if (!this.resizable) {
+      return;
     }
-    if (trimmed.endsWith('px')) {
-      return Number.parseFloat(trimmed.replace('px', ''));
+
+    event.preventDefault();
+    const delta = (event.shiftKey ? 5 : 2) * (event.key === positiveKey ? 1 : -1);
+    this.resizeByPercent(index, delta);
+  }
+
+  private resizeByPercent(index: number, deltaPercent: number) {
+    const container = this.el.nativeElement.querySelector('.splitter-container');
+    const rect = container.getBoundingClientRect();
+    const paneArr = this.panes.toArray();
+    const paneWrappers = Array.from(this.el.nativeElement.querySelectorAll('.pane-wrapper')) as HTMLElement[];
+
+    const targetPane = paneArr[index];
+    const targetWrapper = paneWrappers[index];
+    if (!targetPane || !targetWrapper) {
+      return;
     }
-    const asNumber = Number.parseFloat(trimmed);
-    return Number.isFinite(asNumber) ? asNumber : undefined;
-  }
 
-  private getLimits(pane: NgbSplitterPaneComponent, total: number) {
-    return {
-      minPx: pane.collapsed ? 0 : this.resolveSize(pane.min, total),
-      maxPx: pane.collapsed ? 0 : this.resolveSize(pane.max, total),
-    };
-  }
-
-  private clamp(value: number, min?: number, max?: number) {
-    let next = value;
-    if (min != null) next = Math.max(min, next);
-    if (max != null) next = Math.min(max, next);
-    return next;
-  }
-
-  private pointerPosition(event: MouseEvent) {
-    return this.orientation === 'horizontal' ? event.clientX : event.clientY;
-  }
-
-  private getContainerSize() {
-    const rect = this.container?.nativeElement.getBoundingClientRect();
-    return rect && this.orientation === 'horizontal' ? rect.width : rect?.height || 0;
-  }
-
-  private detachDragListeners() {
-    if (this.resizeSub) {
-      document.removeEventListener('mousemove', this.resizeSub.move);
-      document.removeEventListener('mouseup', this.resizeSub.up);
-      this.resizeSub = undefined;
+    const totalPixels = this.orientation === 'horizontal' ? rect.width : rect.height;
+    if (totalPixels <= 0) {
+      return;
     }
+
+    const wrapperRect = targetWrapper.getBoundingClientRect();
+    const currentPixels = this.orientation === 'horizontal' ? wrapperRect.width : wrapperRect.height;
+    let nextPercent = (currentPixels / totalPixels) * 100 + deltaPercent;
+
+    const minPercent = this.sizeToPercent(targetPane.min, totalPixels);
+    const maxPercent = this.sizeToPercent(targetPane.max, totalPixels);
+    if (minPercent !== null) {
+      nextPercent = Math.max(nextPercent, minPercent);
+    }
+    if (maxPercent !== null) {
+      nextPercent = Math.min(nextPercent, maxPercent);
+    }
+
+    nextPercent = Math.max(0, Math.min(100, nextPercent));
+    targetPane.size = `${nextPercent}%`;
   }
 }

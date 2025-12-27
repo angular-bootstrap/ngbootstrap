@@ -1,6 +1,6 @@
 # @angular-bootstrap/ngbootstrap
 
-Angular UI library providing datagrid, drag‑and‑drop, pagination, and stepper components with Bootstrap‑friendly styling.
+Angular UI library providing Datagrid, Drag‑and‑drop, Pagination, Stepper, Splitter, Tree, Typeahead, and Chips components with Bootstrap‑friendly styling.
 
 ## Features
 
@@ -10,8 +10,9 @@ Angular UI library providing datagrid, drag‑and‑drop, pagination, and steppe
 - Stepper – horizontal/vertical stepper with custom labels, error states, theming hooks, and keyboard support.
 - Splitter – resizable horizontal/vertical panes with collapsing, keyboard resizing, and ARIA semantics.
 - Tree – keyboard-accessible tree with optional checkboxes, JSON-style expanders, and expand/collapse helpers.
-- Typeahead – virtualized, debounced search with single/multi select, exact-match selection, and scroll hooks.
-- Angular + Bootstrap first – built for modern Angular (v17–20) and works with plain Bootstrap CSS; Material/Tailwind can be layered via custom styles.
+- Typeahead – Bootstrap dropdown overlay with debouncing, virtualization, single/multi select, chips/tags mode, custom templates, and Reactive Forms support.
+- Chips – small reusable chips/tags component used by Typeahead (can also be used standalone).
+- Angular + Bootstrap first – built for modern Angular (v21) and works with plain Bootstrap CSS; Material/Tailwind can be layered via custom styles.
 
 ## Installation
 
@@ -21,11 +22,12 @@ npm install @angular-bootstrap/ngbootstrap
 
 Make sure your app:
 
-- Uses Angular 17–20.
-- Includes Bootstrap CSS (for example in `angular.json` or global styles):
+- Uses Angular 21 (peer deps: `>=21 <22`).
+- Includes Bootstrap CSS + Bootstrap Icons (for example in `angular.json` or global styles):
 
 ```css
 @import 'bootstrap/dist/css/bootstrap.min.css';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
 ```
 
 ## Usage overview
@@ -130,34 +132,6 @@ import { Component } from '@angular/core';
 import { NgbStepperComponent } from '@angular-bootstrap/ngbootstrap/stepper';
 import { NgbStepperStep } from '@angular-bootstrap/ngbootstrap/stepper';
 
-### Splitter
-
-```ts
-import { Component } from '@angular/core';
-import { NgbSplitterComponent, NgbSplitterPaneComponent } from '@angular-bootstrap/ngbootstrap/splitter';
-
-@Component({
-  standalone: true,
-  selector: 'app-splitter',
-  imports: [NgbSplitterComponent, NgbSplitterPaneComponent],
-  template: `
-    <ngb-splitter orientation="horizontal">
-      <ngb-splitter-pane size="30%" min="200px" [collapsible]="true" (collapsedChange)="onCollapse($event)">
-        <div class="p-3">Navigation</div>
-      </ngb-splitter-pane>
-      <ngb-splitter-pane>
-        <div class="p-3">Main content</div>
-      </ngb-splitter-pane>
-    </ngb-splitter>
-  `,
-})
-export class SplitterExampleComponent {
-  onCollapse(collapsed: boolean) {
-    // persist pane state if needed
-  }
-}
-```
-
 @Component({
   standalone: true,
   selector: 'app-wizard',
@@ -205,11 +179,29 @@ Stepper highlights:
 - Controlled navigation (`allowRevisit`, `next()`, `prev()`, `reset()` and events).
 - Theming hooks via `theme` and CSS classes (`bootstrap`, `material`, `tailwind`).
 
-### Drag & drop
+### Splitter
 
 ```ts
 import { Component } from '@angular/core';
-import { DndListDirective, DndItemDirective } from '@angular-bootstrap/ngbootstrap/drag-drop';
+import { NgbSplitterComponent, NgbSplitterPaneComponent } from '@angular-bootstrap/ngbootstrap/splitter';
+
+@Component({
+  standalone: true,
+  selector: 'app-splitter',
+  imports: [NgbSplitterComponent, NgbSplitterPaneComponent],
+  template: `
+    <ngb-splitter orientation="horizontal" [handleThickness]="10">
+      <ngb-splitter-pane size="25%" collapsible>
+        <div class="p-3">Navigation</div>
+      </ngb-splitter-pane>
+      <ngb-splitter-pane>
+        <div class="p-3">Main content</div>
+      </ngb-splitter-pane>
+    </ngb-splitter>
+  `,
+})
+export class SplitterExampleComponent {}
+```
 
 ### Tree
 
@@ -222,34 +214,72 @@ import { NgbTreeComponent, NgbTreeNode } from '@angular-bootstrap/ngbootstrap/tr
   selector: 'app-tree',
   imports: [NgbTreeComponent],
   template: `
-    <ngb-tree
-      [nodes]="nodes"
-      [showCheckbox]="true"
-      type="json"
-      (expand)="onExpand($event)"
-      (collapse)="onCollapse($event)"
-      (selectionChange)="onSelection($event)"
-    ></ngb-tree>
+    <ngb-tree [nodes]="nodes" type="default"></ngb-tree>
   `,
 })
 export class TreeExampleComponent {
   nodes: NgbTreeNode[] = [
-    {
-      id: 'parent',
-      label: 'Parent',
-      expanded: true,
-      children: [
-        { id: 'child-1', label: 'Child 1' },
-        { id: 'child-2', label: 'Child 2' },
-      ],
-    },
+    { id: 'a', label: 'Parent', expanded: true, children: [{ id: 'a-1', label: 'Child 1' }] },
   ];
-
-  onExpand(node: NgbTreeNode) {}
-  onCollapse(node: NgbTreeNode) {}
-  onSelection(selected: NgbTreeNode[]) {}
 }
 ```
+
+### Typeahead
+
+```ts
+import { Component } from '@angular/core';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { NgbTypeaheadComponent, NgbTypeaheadItem } from '@angular-bootstrap/ngbootstrap/typeahead';
+
+@Component({
+  standalone: true,
+  selector: 'app-typeahead',
+  imports: [ReactiveFormsModule, NgbTypeaheadComponent],
+  template: `
+    <ngb-typeahead [data]="countries" [showDropdownButton]="true" [multiSelect]="true" [chips]="true"></ngb-typeahead>
+    <ngb-typeahead [data]="countries" [showDropdownButton]="true" [formControl]="country"></ngb-typeahead>
+  `,
+})
+export class TypeaheadExampleComponent {
+  country = new FormControl<string | null>('IN');
+  countries: NgbTypeaheadItem[] = [
+    { id: 'IN', label: 'India', value: 'IN' },
+    { id: 'US', label: 'United States', value: 'US' },
+  ];
+}
+```
+
+### Chips
+
+```ts
+import { Component } from '@angular/core';
+import { NgbChipsComponent } from '@angular-bootstrap/ngbootstrap/chips';
+
+@Component({
+  standalone: true,
+  selector: 'app-chips',
+  imports: [NgbChipsComponent],
+  template: `
+    <ngb-chips [items]="items" (remove)="onRemove($event)"></ngb-chips>
+  `,
+})
+export class ChipsExampleComponent {
+  items = [
+    { id: 1, label: 'One' },
+    { id: 2, label: 'Two' },
+  ];
+
+  onRemove(item: { id: number; label: string }) {
+    this.items = this.items.filter((x) => x.id !== item.id);
+  }
+}
+```
+
+### Drag & drop
+
+```ts
+import { Component } from '@angular/core';
+import { DndListDirective, DndItemDirective } from '@angular-bootstrap/ngbootstrap/drag-drop';
 
 @Component({
   standalone: true,
