@@ -9,18 +9,23 @@ import { NgbTypeaheadItem } from './typeahead.types';
   standalone: true,
   imports: [NgbTypeaheadComponent],
   template: `
+    <div>
     <ngb-typeahead
       [data]="items"
       [multiSelect]="multi"
       [chips]="chips"
       [updateOnTab]="updateOnTab"
       [limit]="limit"
+      [vScroll]="vScroll"
+      [vItemSize]="vItemSize"
       [debounceTime]="0"
       [characterTyped]="characterTyped"
       (selectedItems)="selected = $event"
       (selectionChange)="selectionChanges = selectionChanges + 1"
       (onScrollEvent)="scrolled = true"
     ></ngb-typeahead>
+    <button type="button" class="btn btn-sm btn-secondary ms-2" id="after-typeahead">After</button>
+    </div>
   `,
 })
 class HostComponent {
@@ -31,6 +36,8 @@ class HostComponent {
     { id: 3, label: 'UAE', value: 'uae' },
   ];
   limit = 10;
+  vScroll = false;
+  vItemSize = 40;
   multi = false;
   chips = false;
   updateOnTab = true;
@@ -218,6 +225,28 @@ describe('NgbTypeaheadComponent', () => {
     expect(duration).toBeLessThan(150);
   });
 
+  it('virtualizes rendered options when vScroll is enabled', () => {
+    host.items = Array.from({ length: 10000 }, (_, i) => ({
+      id: i,
+      label: `Item ${i}`,
+      value: i,
+    }));
+    host.limit = 0;
+    host.vScroll = true;
+    host.vItemSize = 40;
+    fixture.detectChanges();
+
+    const input = fixture.debugElement.query(By.css('input')).nativeElement as HTMLInputElement;
+    input.value = 'Item';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(host.typeahead.filtered.length).toBe(10000);
+    const buttons = fixture.debugElement.queryAll(By.css('button.dropdown-item'));
+    expect(buttons.length).toBeGreaterThan(0);
+    expect(buttons.length).toBeLessThan(30);
+  });
+
   it('keeps focus on input when updateOnTab adds a chip', () => {
     host.multi = true;
     host.chips = true;
@@ -236,6 +265,71 @@ describe('NgbTypeaheadComponent', () => {
 
     expect(host.selected.map((s) => s.label)).toEqual(['foo']);
     expect(document.activeElement).toBe(input);
+  });
+
+  it('supports keyboard navigation and selection keys', () => {
+    const input = fixture.debugElement.query(By.css('input')).nativeElement as HTMLInputElement;
+    input.focus();
+    input.value = 'a';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(host.typeahead.overlayVisible).toBe(true);
+    expect(host.typeahead.activeIndex).toBe(0);
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    fixture.detectChanges();
+    expect(host.typeahead.activeIndex).toBe(1);
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    fixture.detectChanges();
+    expect(host.typeahead.activeIndex).toBe(2);
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' }));
+    fixture.detectChanges();
+    expect(host.typeahead.activeIndex).toBe(0);
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'End' }));
+    fixture.detectChanges();
+    expect(host.typeahead.activeIndex).toBeGreaterThanOrEqual(0);
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    fixture.detectChanges();
+    expect(host.selected.length).toBe(1);
+    expect(host.typeahead.overlayVisible).toBe(false);
+  });
+
+  it('selects the highlighted item and closes on Tab without preventing default', () => {
+    const input = fixture.debugElement.query(By.css('input')).nativeElement as HTMLInputElement;
+    input.focus();
+    input.value = 'a';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    fixture.detectChanges();
+
+    const tabEvent = new KeyboardEvent('keydown', { key: 'Tab' });
+    input.dispatchEvent(tabEvent);
+    fixture.detectChanges();
+
+    expect(tabEvent.defaultPrevented).toBe(false);
+    expect(host.selected.length).toBe(1);
+    expect(host.typeahead.overlayVisible).toBe(false);
+  });
+
+  it('hides the popup on Escape', () => {
+    const input = fixture.debugElement.query(By.css('input')).nativeElement as HTMLInputElement;
+    input.focus();
+    input.value = 'a';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(host.typeahead.overlayVisible).toBe(true);
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    fixture.detectChanges();
+    expect(host.typeahead.overlayVisible).toBe(false);
   });
 
   it('supports formControlName (single select)', fakeAsync(() => {

@@ -97,7 +97,6 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
         align-items: center;
         gap: 0.5rem;
       }
-
       .typeahead-item-checkbox {
         display: inline-flex;
         align-items: center;
@@ -189,7 +188,7 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
         role="listbox"
         (scroll)="onScroll($event)"
       >
-        <div [style.height.px]="beforePadding"></div>
+        <div *ngIf="vScroll" [style.height.px]="beforePadding"></div>
 
         <button
           *ngFor="let item of visible; trackBy: trackById; let idx = index"
@@ -231,7 +230,7 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
           </div>
         </button>
 
-        <div [style.height.px]="afterPadding"></div>
+        <div *ngIf="vScroll" [style.height.px]="afterPadding"></div>
 
         <div *ngIf="showNoResults" class="dropdown-item text-muted text-center">
           {{ i18n?.noResults || 'No results' }}
@@ -261,6 +260,8 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
   @Input() updateOnTab = true;
   @Input() separator: string | string[] = ',';
   @Input() chips = false;
+  @Input() vScroll = false;
+  @Input() vItemSize = 40;
   // `TemplateRef` types can become non-assignable in monorepo setups with multiple Angular installations.
   // Using `any` keeps the API flexible while still supporting Angular templates at runtime.
   @Input() itemTemplate?: any;
@@ -310,6 +311,7 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
   itemHeight = 40;
   beforePadding = 0;
   afterPadding = 0;
+  private viewportStartIndex = 0;
   private debounceId?: ReturnType<typeof setTimeout>;
 
   private onControlChange: (value: any) => void = () => {};
@@ -322,6 +324,11 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['vScroll'] || changes['vItemSize']) {
+      const nextSize = Number(this.vItemSize);
+      this.itemHeight = Number.isFinite(nextSize) && nextSize > 0 ? nextSize : 40;
+      this.updateViewport(this.scroller?.nativeElement.scrollTop || 0);
+    }
     if (changes['data'] && !changes['data'].firstChange) {
       this.applyFilter(this.query);
     }
@@ -532,13 +539,34 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
       this.focusInput();
       return;
     }
+    if (event.key === 'Tab' && this.overlayVisible) {
+      const active = this.visible[this.activeIndex];
+      if (active) {
+        this.selectItem(active);
+        this.hideOverlay(event);
+      }
+      return;
+    }
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       this.moveActive(event.key === 'ArrowDown' ? 1 : -1);
+    } else if (event.key === 'Home') {
+      if (this.overlayVisible) {
+        event.preventDefault();
+        this.setActiveGlobalIndex(0);
+      }
+    } else if (event.key === 'End') {
+      if (this.overlayVisible) {
+        event.preventDefault();
+        this.setActiveGlobalIndex(this.filtered.length - 1);
+      }
     } else if (event.key === 'Enter') {
       event.preventDefault();
       const active = this.visible[this.activeIndex] || this.visible[0];
-      if (active) this.selectItem(active);
+      if (active) {
+        this.selectItem(active);
+        this.hideOverlay(event);
+      }
     } else if (event.key === 'Escape') {
       if (this.overlayVisible) {
         event.preventDefault();
@@ -735,6 +763,14 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
   }
 
   private updateViewport(scrollTop: number) {
+    if (!this.vScroll) {
+      this.beforePadding = 0;
+      this.afterPadding = 0;
+      this.visible = this.filtered;
+      this.viewportStartIndex = 0;
+      this.activeIndex = this.visible.length ? Math.min(this.activeIndex, this.visible.length - 1) : -1;
+      return;
+    }
     const total = this.filtered.length;
     const visibleCount = Math.ceil(this.viewportHeight / this.itemHeight) + 2;
     const start = Math.max(Math.floor(scrollTop / this.itemHeight), 0);
@@ -742,6 +778,7 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
     this.beforePadding = start * this.itemHeight;
     this.afterPadding = Math.max(total - end, 0) * this.itemHeight;
     this.visible = this.filtered.slice(start, end);
+    this.viewportStartIndex = start;
     this.activeIndex = this.visible.length ? Math.min(this.activeIndex, this.visible.length - 1) : -1;
   }
 
@@ -777,13 +814,49 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
     if (!this.overlayVisible) {
       this.showOverlay();
     }
-    if (!this.visible.length) return;
+    if (!this.filtered.length) return;
+    const currentGlobal = this.activeGlobalIndex();
+    const total = this.filtered.length;
+    const nextGlobal = currentGlobal < 0 ? 0 : (currentGlobal + direction + total) % total;
+    this.setActiveGlobalIndex(nextGlobal);
+  }
 
-    const nextIndex = this.activeIndex < 0 ? 0 : (this.activeIndex + direction + this.visible.length) % this.visible.length;
-    this.activeIndex = nextIndex;
+  private activeGlobalIndex(): number {
+    if (this.activeIndex < 0) return -1;
+    return this.viewportStartIndex + this.activeIndex;
+  }
 
-    const buttons = this.scroller?.nativeElement.querySelectorAll<HTMLButtonElement>('button.dropdown-item');
-    buttons?.[this.activeIndex]?.focus();
+  private setActiveGlobalIndex(globalIndex: number) {
+    if (!this.filtered.length) {
+      this.activeIndex = -1;
+      return;
+    }
+    const clamped = Math.max(0, Math.min(globalIndex, this.filtered.length - 1));
+    const scroller = this.scroller?.nativeElement;
+    if (!scroller) {
+      this.activeIndex = 0;
+      return;
+    }
+
+    const itemTop = clamped * this.itemHeight;
+    const itemBottom = itemTop + this.itemHeight;
+    const viewTop = scroller.scrollTop;
+    const viewBottom = viewTop + (scroller.clientHeight || this.viewportHeight);
+
+    let nextScrollTop = viewTop;
+    if (itemTop < viewTop) {
+      nextScrollTop = itemTop;
+    } else if (itemBottom > viewBottom) {
+      nextScrollTop = Math.max(0, itemBottom - (scroller.clientHeight || this.viewportHeight));
+    }
+
+    if (nextScrollTop !== viewTop) {
+      scroller.scrollTop = nextScrollTop;
+    }
+
+    this.updateViewport(scroller.scrollTop);
+    this.activeIndex = Math.max(0, Math.min(clamped - this.viewportStartIndex, this.visible.length - 1));
+    this.cdr.markForCheck();
   }
 
   private validateItem(item: NgbTypeaheadItem) {
