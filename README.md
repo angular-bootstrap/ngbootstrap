@@ -337,7 +337,3 @@ Recommended release flow:
   - Run `npm version minor` or `npm version patch` to bump `package.json` and create the tag.
   - Push the commit and tag: `git push origin main --tags`.
 - GitHub Actions will build and publish that tagged version to npm.
-
-## Keywords
-
-Keywords: ngbootstrap, angular bootstrap, bootstrap 5, angular components, UI library, datagrid, data grid, table, pagination, stepper, wizard, splitter, resizable panes, tree view, typeahead, autocomplete, chips, tags input, drag and drop, dnd, accessibility, a11y, ARIA, reactive forms, standalone components.

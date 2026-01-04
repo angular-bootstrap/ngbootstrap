@@ -1,10 +1,11 @@
 {
   "name": "@angular-bootstrap/ngbootstrap",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "Angular UI library providing datagrid, drag-and-drop, pagination, stepper, splitter, typeahead and chips components with Bootstrap-friendly styling.",
   "author": {
     "name": "Harmeet Singh"
   },
+  "keywords": ["ngbootstrap", "angular bootstrap", "bootstrap 5", "angular components", "UI library", "datagrid", "data grid", "table", "pagination", "stepper", "wizard", "splitter", "resizable panes", "tree view", "typeahead", "autocomplete", "chips", "tags" "input", "drag and drop", "dnd", "accessibility", "a11y", "ARIA", "reactive forms", "standalone components."],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/angular-bootstrap/ngbootstrap.git"
