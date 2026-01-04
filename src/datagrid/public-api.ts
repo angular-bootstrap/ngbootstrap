@@ -13,3 +13,4 @@ export * from './src/datagrid.types'
 
 //service
 export * from './src/services/export.services'
+export * from './src/services/editing.service'

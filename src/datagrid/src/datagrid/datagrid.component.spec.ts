@@ -203,13 +203,14 @@ describe('Datagrid', () => {
     component.enableEdit = true;
     component.startEdit(0);
     const emitSpy = jest.spyOn(component.rowSave, 'emit');
+    const originalRow = component.data[0];
 
     component.editForm.patchValue({ name: 'Alice Cooper' });
     component.saveEdit(0);
 
     expect(emitSpy).toHaveBeenCalledWith({
-      original: component.data[0],
-      updated: { ...component.data[0], name: 'Alice Cooper' },
+      original: originalRow,
+      updated: { ...originalRow, name: 'Alice Cooper' },
       index: 0
     });
     expect(component.editingIndex).toBeNull();
@@ -243,10 +244,75 @@ describe('Datagrid', () => {
     component.enableDelete = true;
     component.pageSize = 3; // ensure paged contains third entry
     const emitSpy = jest.spyOn(component.rowDelete, 'emit');
+    const deleted = component.data[2];
 
     component.deleteRow(2);
 
-    expect(emitSpy).toHaveBeenCalledWith({ row: component.data[2], index: 2 });
+    expect(emitSpy).toHaveBeenCalledWith({ row: deleted, index: 2 });
+    expect(component.data.find(r => r.id === deleted.id)).toBeDefined();
+  });
+
+  it('uses trackBy callback when provided', () => {
+    const row = component.data[0];
+    expect(component.trackRow(0, row)).toBe(0);
+
+    component.trackBy = (_i, r) => (r as any).id;
+    expect(component.trackRow(0, row)).toBe(1);
+  });
+
+  it('uses the custom editService when provided', () => {
+    const assignValues = jest.fn((row: any, patch: any) => ({ ...row, ...patch }));
+    const create = jest.fn(() => []);
+    const update = jest.fn(() => []);
+    const remove = jest.fn(() => []);
+    const saveChanges = jest.fn(() => []);
+    const cancelChanges = jest.fn(() => []);
+
+    component.editService = {
+      create,
+      update,
+      remove,
+      assignValues,
+      isNew: () => false,
+      hasChanges: () => false,
+      saveChanges,
+      cancelChanges,
+    } as any;
+
+    component.enableAdd = true;
+    component.startAdd();
+    expect(create).toHaveBeenCalled();
+    component.addForm.setValue({
+      id: 4,
+      name: 'Dana',
+      email: 'dana@example.com',
+      score: 50,
+      active: true,
+      created: '2024-04-01'
+    });
+    component.saveAdd();
+    expect(saveChanges).toHaveBeenCalled();
+    component.startAdd();
+    component.cancelAdd();
+    expect(cancelChanges).toHaveBeenCalled();
+
+    component.enableEdit = true;
+    component.startEdit(0);
+    component.editForm.patchValue({ name: 'Alice Cooper' });
+    component.saveEdit(0);
+
+    expect(assignValues).toHaveBeenCalled();
+    expect(update).toHaveBeenCalled();
+    expect(saveChanges).toHaveBeenCalled();
+
+    component.startEdit(0);
+    component.cancelEdit(0);
+    expect(cancelChanges).toHaveBeenCalled();
+
+    component.enableDelete = true;
+    component.pageSize = 3;
+    component.deleteRow(2);
+    expect(remove).toHaveBeenCalled();
   });
 
   it('cycles sort direction and emits sortChange', () => {
@@ -317,11 +383,13 @@ describe('Datagrid', () => {
   it('starts editing when row clicked outside interactive targets', () => {
     component.enableEdit = true;
     component.editOnRowClick = true;
+    const editSpy = jest.spyOn(component, 'startEdit');
     const target = document.createElement('div');
     const event = createEventForTarget(target);
 
     component.onRowClick(event, 0);
 
+    expect(editSpy).toHaveBeenCalledWith(0);
     expect(component.editingIndex).toBe(0);
   });
 
@@ -351,6 +419,16 @@ describe('Datagrid', () => {
 
     component.responsive = { enabled: false } as any;
     expect(component.isResponsiveEnabled()).toBe(false);
+  });
+
+  it('validates email input with a safe check (guards extremely long values)', () => {
+    const emailCol = component.columns.find(c => c.field === 'email')!;
+    const draft: any = { email: '!@!.' + '!.'.repeat(20000) };
+    const errors: any = {};
+
+    component.validateInto(emailCol, draft, errors);
+
+    expect(errors.email).toBe('Invalid email');
   });
 
   it('delegates export via triggerExport', () => {

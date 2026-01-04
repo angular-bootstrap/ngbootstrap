@@ -39,6 +39,7 @@ All components are standalone, so you import them directly into your feature com
 ```ts
 import { Component } from '@angular/core';
 import { Datagrid } from '@angular-bootstrap/ngbootstrap/datagrid';
+import { NgbDatagridDefaultEditService } from '@angular-bootstrap/ngbootstrap/datagrid';
 
 interface User {
   id: number;
@@ -54,6 +55,8 @@ interface User {
     <ngb-datagrid
       [columns]="columns"
       [data]="rows"
+      [trackBy]="trackById"
+      [editService]="editService"
       [enableSorting]="true"
       [enableFiltering]="true"
       [enablePagination]="true"
@@ -63,6 +66,8 @@ interface User {
   `,
 })
 export class UsersComponent {
+  trackById = (_: number, row: User) => row.id;
+  editService = new NgbDatagridDefaultEditService<User>();
   columns = [
     { field: 'id', header: 'ID', sortable: true },
     { field: 'name', header: 'Name', sortable: true, filterable: true },
@@ -86,6 +91,8 @@ Key datagrid capabilities:
 - Column/global filtering (`enableFiltering`, `enableGlobalFilter`, `filtersChange`).
 - Pagination (`enablePagination`, `pageSize`, `pageChange`).
 - Inline add/edit/delete (`enableAdd`, `enableEdit`, `enableDelete`, `rowAdd`, `rowSave`, `rowDelete`).
+- Stable row identity via `trackBy` (defaults to index).
+- Pluggable editing logic via `editService` (implement `NgbDatagridEditService`).
 - Export to PDF/Excel via `exportOptions`.
 
 Export requires optional peer dependencies. Install only if you use export:
@@ -330,3 +337,7 @@ Recommended release flow:
   - Run `npm version minor` or `npm version patch` to bump `package.json` and create the tag.
   - Push the commit and tag: `git push origin main --tags`.
 - GitHub Actions will build and publish that tagged version to npm.
+
+## Keywords
+
+Keywords: ngbootstrap, angular bootstrap, bootstrap 5, angular components, UI library, datagrid, data grid, table, pagination, stepper, wizard, splitter, resizable panes, tree view, typeahead, autocomplete, chips, tags input, drag and drop, dnd, accessibility, a11y, ARIA, reactive forms, standalone components.

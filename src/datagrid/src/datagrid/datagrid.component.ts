@@ -12,6 +12,7 @@ import { NgbPaginationComponent } from '../../../pagination';
 import { firstValueFrom, isObservable, Observable } from 'rxjs';
 import { NgbDataGridExportOptions, NgbDataGridTheme, NgbDataGridResponsiveOptions } from '../datagrid.types';
 import { ExcelExportAdapter, NgbExportService, PdfExportAdapter } from '../services/export.services';
+import { NgbDatagridDefaultEditService, NgbDatagridEditService, NgbDatagridTrackByFn } from '../services/editing.service';
 import { JsPdfAdapter } from '../adapters/jsdf.adapter';
 import { XlsxAdapter } from '../adapters/xlsx.adapter';
 
@@ -19,11 +20,27 @@ import { ExportButtonDirective, ExportButtonContext } from '../directives/export
 
 type SortDir = 'asc' | 'desc' | '';
 
-const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 type Key<T> = Extract<keyof T, string>;
 
 type KeyOf<T> = Extract<keyof T, string>;
+
+const MAX_EMAIL_LENGTH = 254;
+
+const isReasonableEmail = (value: unknown): boolean => {
+  if (value == null) return false;
+  const str = String(value);
+  if (!str || str.length > MAX_EMAIL_LENGTH) return false;
+  // Basic, linear-time check: one "@", non-empty local part, and a domain with at least one ".".
+  const at = str.indexOf('@');
+  if (at <= 0) return false;
+  if (str.indexOf('@', at + 1) !== -1) return false;
+  if (at === str.length - 1) return false;
+  if (/\s/.test(str)) return false;
+  const dot = str.lastIndexOf('.');
+  if (dot <= at + 1) return false;
+  if (dot === str.length - 1) return false;
+  return true;
+};
 
 @Component({
   selector: 'ngb-datagrid',
@@ -80,6 +97,8 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   @Input() theme: NgbDataGridTheme = 'bootstrap';
   @Input() responsive: NgbDataGridResponsiveOptions | boolean = false;
+  @Input() trackBy?: NgbDatagridTrackByFn<T>;
+  @Input() editService?: NgbDatagridEditService<T>;
 
   // Data hooks for export
   @Input() dataProviderAll?: () => Observable<any[]> | Promise<any[]> | any[]; // used when pages='all'
@@ -130,6 +149,9 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   addForm:  FormGroup = this.fb.group({});
   saveAttemptedNew = false;
+  private addDraftRowId: any = null;
+
+  private readonly defaultEditService = new NgbDatagridDefaultEditService<T>();
 
   private norm(v: unknown): string {
     return (v ?? '').toString().toLowerCase().trim();
@@ -137,22 +159,6 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   private keyOf(col: ColumnDef<T>): KeyOf<T> {
     return col.field as KeyOf<T>;
-  }
-
-  private passesRowFilters(row: T): boolean {
-    // per-column
-    for (const col of this.columns) {
-      if (!col.filterable) continue;
-      const key = col.field as string;
-      const q = this.norm(this.filters[key]);
-      if (!q) continue;
-      const cell = this.norm((row as any)[col.field]);
-      if (!cell.includes(q)) return false;
-    }
-    // global
-    const g = this.norm(this.globalFilter);
-    if (!g) return true;
-    return this.columns.some(c => this.norm((row as any)[c.field]).includes(g));
   }
 
   private getDefaults(): Partial<Record<KeyOf<T>, any>> {
@@ -209,20 +215,13 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     return this.fb.group(group);
   }
 
-  private rowIsValidAgainst(targetErrors: Partial<Record<KeyOf<T>, string>>): boolean {
-    for (const col of this.columns) {
-      if (col.editable === false) continue;
-      const key = this.keyOf(col);
-      if (targetErrors[key]) return false;
-    }
-    return true;
-  }
   private strictEmailValidator() {
     // simple, pragmatic: local@domain.tld (tld >= 2)
     const rx = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
     return (c: AbstractControl) => {
       const v = c.value;
       if (v === null || v === undefined || v === '') return null; // let "required" handle empties
+      if (`${v}`.length > MAX_EMAIL_LENGTH) return { email: true };
       return rx.test(String(v)) ? null : { email: true };
     };
   }
@@ -251,16 +250,6 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       }
       return true;
     });
-  }
-
-  private compare(a: any, b: any): number {
-    if (a == null && b == null) return 0;
-    if (a == null) return -1;
-    if (b == null) return 1;
-    if (typeof a === 'string' && typeof b === 'string') {
-      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-    }
-    return a < b ? -1 : a > b ? 1 : 0;
   }
 
   get sorted(): T[] {
@@ -435,6 +424,14 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     if (ch['columns']) this.rebuildFilterForm();
   }
 
+  private getRowId(rowIndex: number, row: T): any {
+    return this.trackBy ? this.trackBy(rowIndex, row) : rowIndex;
+  }
+
+  private getEditService(): NgbDatagridEditService<T> {
+    return this.editService ?? this.defaultEditService;
+  }
+
   startAdd() {
     if (!this.enableAdd || this.addingNew) return;
     this.page = 1;
@@ -442,6 +439,12 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.addingNew = true;
     this.addForm = this.buildFormFromRow(); // defaults
     this.saveAttemptedNew = false;
+
+    // Register a draft row with the edit service so implementations can track "new" state.
+    const service = this.getEditService();
+    const draft = service.assignValues({} as T, this.addForm.value as any);
+    this.addDraftRowId = Symbol('ngb-datagrid-new-row');
+    service.create(this.data ?? [], draft, this.data.length, this.addDraftRowId);
   }
 
   saveAdd() {
@@ -452,18 +455,28 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
     if (this.addForm.invalid) return;
 
-    const newRow = { ...(this.addForm.value as any) } as T;
+    const service = this.getEditService();
+    const newRow = service.assignValues({} as T, this.addForm.value as any);
+    const rowIndex = this.data.length;
+    const rowId = this.addDraftRowId ?? this.getRowId(rowIndex, newRow);
+    service.create(this.data ?? [], newRow, rowIndex, rowId);
+    service.saveChanges(this.data ?? [], rowIndex, rowId, newRow);
     this.rowAdd.emit({ newRow });
 
     this.addingNew = false;
     this.addForm = this.fb.group({});;
     this.saveAttemptedNew = false;
+    this.addDraftRowId = null;
   }
 
   cancelAdd() {
+    if (this.addDraftRowId != null) {
+      this.getEditService().cancelChanges(this.data ?? [], this.data.length, this.addDraftRowId);
+    }
     this.addingNew = false;
     this.addForm = this.fb.group({});;
     this.saveAttemptedNew = false;
+    this.addDraftRowId = null;
   }
 
   startEdit(i: number) {
@@ -474,6 +487,9 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.editForm = this.buildFormFromRow(this.paged[i] as any);
     this.saveAttemptedEdit = false;
     const di = this.data.indexOf(row);
+    const rowId = this.getRowId(di, this.data[di]);
+    // Start tracking baseline for the row (service can snapshot original state).
+    this.getEditService().update(this.data ?? [], this.data[di], di, rowId);
     this.rowEdit.emit({ row: this.data[di], index: di });
   }
 
@@ -487,7 +503,11 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
     const di = this.data.indexOf(this.paged[i]);
     const original = this.data[di];
-    const updated = { ...(original as any), ...(this.editForm.value as any) } as T;
+    const rowId = this.getRowId(di, original);
+    const service = this.getEditService();
+    const updated = service.assignValues(original, this.editForm.value as any);
+    service.update(this.data ?? [], updated, di, rowId);
+    service.saveChanges(this.data ?? [], di, rowId, updated);
 
     this.rowSave.emit({ original, updated, index: di });
 
@@ -498,6 +518,8 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   cancelEdit(i: number) {
     const di = this.data.indexOf(this.paged[i]);
+    const rowId = this.getRowId(di, this.data[di]);
+    this.getEditService().cancelChanges(this.data ?? [], di, rowId);
     this.rowCancel.emit({ row: this.data[di], index: di });
     this.editingIndex = null;
     this.editForm = this.fb.group({});   // empty group
@@ -506,6 +528,10 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   // For the "Add row" draft
   onNewDraftChange(col: ColumnDef<T>) {
+    if (this.draftNew) {
+      const key = this.keyOf(col);
+      this.draftNew = this.getEditService().assignValues(this.draftNew as any, { [key]: (this.draftNew as any)[key] } as any) as any;
+    }
     this.validateInto(col, this.draftNew, this.errorsNew);
   }
 
@@ -524,8 +550,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       if (empty) err = 'Required';
     }
     // type checks
-    const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!err && col.type === 'email' && val && !EMAIL_RX.test(String(val))) err = 'Invalid email';
+    if (!err && col.type === 'email' && val && !isReasonableEmail(val)) err = 'Invalid email';
     if (!err && col.type === 'number' && val !== '' && val != null && Number.isNaN(Number(val))) err = 'Invalid number';
     if (!err && col.type === 'date' && val && Number.isNaN(Date.parse(String(val)))) err = 'Invalid date';
     if (!err && col.type === 'boolean' && col.required && val !== true && val !== false) err = 'Required';
@@ -536,11 +561,18 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   deleteRow(i: number) {
     if (!this.enableDelete) return;
     const di = this.dataIndexFromPaged(i);
-    this.rowDelete.emit({ row: this.data[di], index: di });
+    const row = this.data[di];
+    const rowId = this.getRowId(di, row);
+    this.getEditService().remove(this.data ?? [], di, rowId);
+    this.rowDelete.emit({ row, index: di });
   }
 
   // (optional) better *ngFor performance
-  trackRow = (_: number, row: T) => row;
+  trackRow = (index: number, row: T) => {
+    const di = this.data.indexOf(row);
+    const rowIndex = di >= 0 ? di : index;
+    return this.trackBy ? this.trackBy(rowIndex, row) : rowIndex;
+  };
 
   toggleSort(field: Extract<keyof T, string>) {
     if (!this.enableSorting) return;
