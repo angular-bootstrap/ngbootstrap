@@ -6,6 +6,65 @@ th.sortable { cursor: pointer; user-select: none; }
     font-size: 24px;
     line-height: 18px;
     display: block;}
+.sticky-toggle { display: inline-flex; align-items: center; justify-content: center; gap: .15rem; }
+
+.table-wrapper { position: relative; }
+.table-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+.table-wrapper .table {
+  table-layout: fixed;
+  width: 100%;
+  margin-bottom: 0;
+}
+.table-header {
+  overflow-x: auto; overflow-y: hidden;
+}
+.table-body {
+  max-height: 60vh;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.table-header th,
+.table-body td {
+  min-width: 40px;
+  max-width: 320px;
+  word-break: break-word;
+}
+.table-header th { white-space: nowrap; }
+.table-body td { white-space: normal; }
+.table-header col,
+.table-body col {
+  min-width: 40px;
+  max-width: 320px;
+}
+.table-wrapper.sticky-header thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #ccc;
+}
+.table-wrapper.sticky-footer .grid-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: #ffffff;
+    border-top: 1px solid #e2e2e2;
+    border-left: 1px solid #e2e2e2;
+    border-right: 1px solid #e2e2e2;
+    padding: 5px 20px;
+}
+.sticky-row {
+  position: sticky;
+  background: #ccc;
+  z-index: 4;
+}
+.sticky-row td { background: #ccc; }
+.row-selected { background-color: #e7f1ff; }
+.row-highlight { background-color: var(--bs-warning-bg-subtle, #fff3cd); }
+.row-highlight td { background-color: inherit; }
+.cell-highlight { background-color: var(--bs-info-bg-subtle, #cff4fc); }
     /* Theme switches */
 .ngb-grid[data-theme='bootstrap'] { /* default uses your current Bootstrap look */ }
 

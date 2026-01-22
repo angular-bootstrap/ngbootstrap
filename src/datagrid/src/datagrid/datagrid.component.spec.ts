@@ -380,6 +380,71 @@ describe('Datagrid', () => {
     expect(component.isExpanded(1)).toBe(true);
   });
 
+  it('toggles sticky rows and pins them to the top', () => {
+    component.stickyRows = true;
+    component.enablePagination = false;
+    fixture.detectChanges();
+    const targetRow = component.paged[1];
+
+    component.toggleStickyRow(1);
+
+    expect(component.isRowSticky(targetRow, 1)).toBe(true);
+    expect(component.stickyIcon(targetRow, 1)).toBe('pin-angle-fill');
+    expect(component.sorted[0]).toBe(targetRow);
+
+    component.toggleStickyRow(0);
+
+    expect(component.isRowSticky(targetRow, 0)).toBe(false);
+    expect(component.stickyIcon(targetRow, 0)).toBe('pin-fill');
+    expect(component.sorted[0]).toBe(component.filtered[0]);
+  });
+
+  it('computes sticky offsets and enables scrolling when pagination is off', () => {
+    component.stickyRows = true;
+    component.enablePagination = false;
+    component.scrollable = true;
+    component.stickyRowHeight = 50;
+    component.stickyHeaderHeight = 40;
+    fixture.detectChanges();
+
+    component.toggleStickyRow(0);
+    component.toggleStickyRow(1);
+
+    expect(component.shouldEnableScroll).toBe(true);
+    expect(component.stickyTop(component.paged[0], 0)).toBe(0);
+    expect(component.stickyTop(component.paged[1], 1)).toBe(50);
+  });
+
+  it('stacks sticky rows based on sticky order rather than index', () => {
+    component.stickyRows = true;
+    component.enablePagination = false;
+    component.scrollable = true;
+    component.stickyRowHeight = 40;
+    component.stickyHeaderHeight = 40;
+    component.pageSize = 3;
+    fixture.detectChanges();
+
+    component.toggleStickyRow(0);
+    component.toggleStickyRow(1);
+
+    expect(component.stickyTop(component.paged[0], 0)).toBe(0);
+    expect(component.stickyTop(component.paged[1], 1)).toBe(40);
+  });
+
+  it('computes sticky header/footer flags based on configuration', () => {
+    component.enablePagination = false;
+    component.scrollable = true;
+    component.stickyHeader = true;
+    component.stickyFooter = true;
+    expect(component.isHeaderSticky).toBe(true);
+    expect(component.isFooterSticky).toBe(true);
+
+    component.stickyHeader = false;
+    component.stickyFooter = false;
+    expect(component.isHeaderSticky).toBe(false);
+    expect(component.isFooterSticky).toBe(false);
+  });
+
   it('starts editing when row clicked outside interactive targets', () => {
     component.enableEdit = true;
     component.editOnRowClick = true;
@@ -498,5 +563,76 @@ describe('Datagrid', () => {
       rows: selection,
       options: undefined
     });
+  });
+
+  it('applies Bootstrap-like table options to header/body and wrapper', () => {
+    component.tableOptions = {
+      stripedRows: true,
+      stripedColumns: true,
+      hoverRows: true,
+      bordered: true,
+      small: true,
+      groupDividers: true,
+      align: 'middle',
+      caption: 'My Caption',
+      captionSide: 'bottom',
+      responsive: 'lg'
+    };
+    fixture.detectChanges();
+
+    const wrapper = fixture.nativeElement.querySelector('.table-wrapper') as HTMLElement;
+    const headerTable = fixture.nativeElement.querySelector('.table-header table') as HTMLElement;
+    const bodyTable = fixture.nativeElement.querySelector('.table-body table') as HTMLElement;
+    const caption = headerTable.querySelector('caption') as HTMLElement | null;
+
+    expect(wrapper.classList.contains('table-responsive-lg')).toBe(true);
+
+    ['table', 'table-striped', 'table-striped-columns', 'table-hover', 'table-bordered', 'table-sm', 'table-group-divider', 'align-middle']
+      .forEach(cls => {
+        expect(headerTable.classList.contains(cls)).toBe(true);
+        expect(bodyTable.classList.contains(cls)).toBe(true);
+      });
+
+    expect(headerTable.classList.contains('table-borderless')).toBe(false);
+
+    expect(caption?.textContent?.trim()).toBe('My Caption');
+    expect(caption?.classList.contains('caption-top')).toBe(false);
+  });
+
+  it('supports row selection modes including select-all and range', () => {
+    component.enablePagination = false;
+    component.selectionMode = 'multiple';
+    component.selectionBehavior = 'both';
+    component.selectionKeyMode = 'desktop';
+    component.selectionDisabledFn = (_r, idx) => idx === 1;
+    fixture.detectChanges();
+
+    component.toggleSelectAllCurrentPage();
+    expect(component.selectedRowIds.size).toBe(2); // skips disabled row
+
+    component.selectedRowIds.clear();
+    component.toggleSelection(0, new MouseEvent('click'));
+    component.toggleSelection(2, new MouseEvent('click', { shiftKey: true }));
+    expect(component.selectedRowIds.size).toBe(2); // indexes 0 and 2 (1 disabled)
+    expect(component.isPageAllSelected()).toBe(false);
+  });
+
+  it('highlights rows and cells using provided highlight indices', () => {
+    component.highlightRowKey = (row: Person) => row.id;
+    component.highlightColKey = (_col: ColumnDef<Person>) => _col.field;
+    component.highlightedIndex = [
+      { row: 2 },
+      { row: 2, columnKey: 'score' }
+    ];
+    component.updateHighlightCache();
+    fixture.detectChanges();
+
+    const rows = fixture.nativeElement.querySelectorAll('.table-body tbody tr') as NodeListOf<HTMLElement>;
+    const highlightedRow = rows[1];
+    const cells = highlightedRow.querySelectorAll('td') as NodeListOf<HTMLElement>;
+
+    expect(highlightedRow.classList.contains('row-highlight')).toBe(true);
+    expect(cells[3].classList.contains('cell-highlight')).toBe(true); // score column
+    expect(cells[0].classList.contains('cell-highlight')).toBe(false);
   });
 });

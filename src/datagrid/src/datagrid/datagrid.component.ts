@@ -1,4 +1,4 @@
-import { Component, Input, ChangeDetectionStrategy, EventEmitter, Output, inject, AfterContentInit, ContentChildren, QueryList, OnChanges, SimpleChanges, TemplateRef } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy, EventEmitter, Output, inject, AfterContentInit, ContentChildren, QueryList, OnChanges, SimpleChanges, TemplateRef, ElementRef, ViewChild, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ColumnDef } from '../models/column-def';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, FormControl } from '@angular/forms';
@@ -17,6 +17,8 @@ import { JsPdfAdapter } from '../adapters/jsdf.adapter';
 import { XlsxAdapter } from '../adapters/xlsx.adapter';
 
 import { ExportButtonDirective, ExportButtonContext } from '../directives/export-button.directive';
+import { NgbGridHighlightDirective, HighlightItem } from './directives/grid-highlight.directive';
+import { NgbSyncColgroupDirective } from './directives/colgroup-sync.directive';
 
 type SortDir = 'asc' | 'desc' | '';
 
@@ -25,6 +27,38 @@ type Key<T> = Extract<keyof T, string>;
 type KeyOf<T> = Extract<keyof T, string>;
 
 const MAX_EMAIL_LENGTH = 254;
+
+export type NgbTableResponsive = true | false | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+export interface NgbTableOptions {
+  stripedRows?: boolean;
+  stripedColumns?: boolean;
+  hoverRows?: boolean;
+  activeRows?: boolean;
+  bordered?: boolean;
+  borderless?: boolean;
+  small?: boolean;
+  groupDividers?: boolean;
+  align?: 'top' | 'middle' | 'bottom';
+  caption?: string;
+  captionSide?: 'top' | 'bottom';
+  responsive?: NgbTableResponsive;
+  stickyHeader?: boolean;
+  stickyFooter?: boolean;
+  stickyRows?: boolean;
+}
+
+export type NgbSelectionMode = 'none' | 'single' | 'multiple';
+export type NgbSelectionBehavior = 'row' | 'checkbox' | 'both';
+export type NgbSelectionKeyMode = 'desktop' | 'mobile';
+export type NgbRowKey = string | ((row: any, rowIndex: number) => any);
+export type NgbColKey = string | ((column: any, columnIndex: number) => any);
+
+export interface NgbSelectionLabels {
+  selectAll?: string;
+  unselectAll?: string;
+  selectRow?: string;
+  unselectRow?: string;
+}
 
 const isReasonableEmail = (value: unknown): boolean => {
   if (value == null) return false;
@@ -45,7 +79,7 @@ const isReasonableEmail = (value: unknown): boolean => {
 @Component({
   selector: 'ngb-datagrid',
   templateUrl: './datagrid.component.html',
-  imports: [CommonModule, FormsModule, NgbPaginationComponent, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, NgbPaginationComponent, ReactiveFormsModule, NgbSyncColgroupDirective, NgbGridHighlightDirective],
   styleUrls: ['./datagrid.component.scss'],
   providers: [
     { provide: PdfExportAdapter, useClass: JsPdfAdapter },
@@ -54,7 +88,7 @@ const isReasonableEmail = (value: unknown): boolean => {
   standalone:true,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class Datagrid<T = any> implements AfterContentInit, OnChanges {
+export class Datagrid<T = any> implements AfterContentInit, AfterViewInit, OnChanges {
   /** Column definitions to render */
   @Input() columns: ColumnDef<T>[] = [];
 
@@ -73,6 +107,41 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   @Input() addButtonAriaLabel: string | null = 'Add row';
   /** Visible text rendered inside the add-row button. */
   @Input() addButtonText = '+ Add';
+  /** Shows sticky toggle column and keeps pinned rows at the top of the list. */
+  @Input() stickyRows = false;
+  /** Enables sticky column header when scrolling. */
+  @Input() stickyHeader = false;
+  /** Enables sticky footer when scrolling. */
+  @Input() stickyFooter = false;
+  /** Enables scroll container (used when pagination is off). */
+  @Input() scrollable = true;
+  /** Row height used to stack multiple sticky rows without overlap (px). */
+  @Input() stickyRowHeight = 40;
+  /** Header height (px) used to offset sticky rows below the header. */
+  @Input() stickyHeaderHeight = 40;
+  /** Footer height (px) used to offset scrollable area. */
+  @Input() stickyFooterHeight = 56;
+  /** Bootstrap-like table styling options. */
+  @Input() tableOptions: NgbTableOptions = {};
+  /** Selection mode for rows. */
+  @Input() selectionMode: NgbSelectionMode = 'none';
+  /** Selection activation: row click, checkbox only, or both. */
+  @Input() selectionBehavior: NgbSelectionBehavior = 'row';
+  /** Keyboard modifier rules for multi-select. */
+  @Input() selectionKeyMode: NgbSelectionKeyMode = 'desktop';
+  /** Enable header select-all checkbox for multiple mode. */
+  @Input() selectAllEnabled = true;
+  /** A11y labels for selection controls. */
+  @Input() selectionA11yLabels: NgbSelectionLabels = {};
+  /** Disable selection for specific rows. */
+  @Input() selectionDisabledFn?: (row: T, index: number) => boolean;
+  /** Highlight items (row/cell). */
+  @Input() highlightedIndex: HighlightItem[] = [];
+  /** Row key for highlighting. */
+  @Input() highlightRowKey: NgbRowKey | null = null;
+  /** Column key for highlighting. */
+  @Input() highlightColKey: NgbColKey | null = null;
+  scrollbarWidth = 0;
   /** Accessible label for the global filter input. */
   @Input() globalFilterAriaLabel = 'Search all columns';
   /** Accessible label announced when expanding a row. */
@@ -106,6 +175,9 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   
   // Grab the directive and its TemplateRef
   @ContentChild(ExportButtonDirective) exportButtonDir?: ExportButtonDirective;
+  @ViewChild('bodyScroller') bodyScroller?: ElementRef<HTMLElement>;
+  @ViewChild('headerScroller') headerScroller?: ElementRef<HTMLElement>;
+  colgroupSyncId = `dg-col-${Math.random().toString(36).slice(2, 8)}`;
 
   exporting = false;
   
@@ -120,6 +192,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   @Output() sortChange = new EventEmitter<{ active: string | null; direction: 'asc' | 'desc' | '' }>();
   @Output() filtersChange = new EventEmitter<{ global: string; columns: Record<string, string> }>();
   @Output() pageChange = new EventEmitter<{ page: number; pageSize: number }>();
+  @Output() selectionChange = new EventEmitter<{ selected: T[]; lastAction: { row: T; index: number; selected: boolean } | null }>();
 
   @ContentChild(NgbRowDetailTemplate) rowDetailTpl?: NgbRowDetailTemplate<T>;
   private exporter = inject(NgbExportService); // instead of constructor(private exporter: NgbExportService) {}
@@ -136,6 +209,10 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   errorsNew: Partial<Record<KeyOf<T>, string>> = {};
   // --- sorting (from previous step)
   sort: { active: Extract<keyof T, string> | null; direction: SortDir } = { active: null, direction: '' };
+  stickyRowIds: Set<any> = new Set<any>();
+  selectedRowIds: Set<any> = new Set<any>();
+  private selectionAnchor: number | null = null;
+  private highlightRowMap: Map<any, HighlightItem[]> = new Map();
   // --- filtering
   globalFilter = '';
   filters: Record<string, string> = {};  // per-column text
@@ -152,6 +229,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   private addDraftRowId: any = null;
 
   private readonly defaultEditService = new NgbDatagridDefaultEditService<T>();
+  private cdr = inject(ChangeDetectorRef);
 
   private norm(v: unknown): string {
     return (v ?? '').toString().toLowerCase().trim();
@@ -253,17 +331,21 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   get sorted(): T[] {
-    if (!this.enableSorting || !this.sort.active || !this.sort.direction) return this.filtered;
-    const copy = [...this.filtered];
-    const { active, direction } = this.sort;
-    copy.sort((a: any, b: any) => {
-      const av = a?.[active]; const bv = b?.[active];
-      const cmp = typeof av === 'string' && typeof bv === 'string'
-        ? av.localeCompare(bv, undefined, { numeric: true, sensitivity: 'base' })
-        : av < bv ? -1 : av > bv ? 1 : 0;
-      return direction === 'asc' ? cmp : -cmp;
-    });
-    return copy;
+    const base = (!this.enableSorting || !this.sort.active || !this.sort.direction)
+      ? [...this.filtered]
+      : (() => {
+        const copy = [...this.filtered];
+        const { active, direction } = this.sort;
+        copy.sort((a: any, b: any) => {
+          const av = a?.[active]; const bv = b?.[active];
+          const cmp = typeof av === 'string' && typeof bv === 'string'
+            ? av.localeCompare(bv, undefined, { numeric: true, sensitivity: 'base' })
+            : av < bv ? -1 : av > bv ? 1 : 0;
+          return direction === 'asc' ? cmp : -cmp;
+        });
+        return copy;
+      })();
+    return this.withStickyRowsFirst(base);
   }
   // pagination (filled in next step)
 
@@ -281,10 +363,55 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   get startIndex(): number { const total = this.sorted.length; return total ? (this.page - 1) * this.pageSize + 1 : 0; }
   get endIndex(): number { return Math.min(this.page * this.pageSize, this.sorted.length); }
 
+  get shouldEnableScroll(): boolean {
+    return this.scrollable;
+  }
+
+  get isHeaderSticky(): boolean {
+    return this.stickyHeaderEnabled && this.shouldEnableScroll;
+  }
+
+  get isFooterSticky(): boolean {
+    return this.stickyFooterEnabled && this.shouldEnableScroll;
+  }
+
   get detailColspan(): number {
     const actionCols = (this.enableEdit || this.enableDelete) ? 1 : 0;
     const caretCol   = this.rowDetailTpl ? 1 : 0;
-    return this.columns.length + actionCols + caretCol;
+    const stickyCol  = this.stickyRowsEnabled ? 1 : 0;
+    const selectionCol = this.isSelectionEnabled() ? 1 : 0;
+    return this.columns.length + actionCols + caretCol + stickyCol + selectionCol;
+  }
+
+  get tableClassList(): string[] {
+    const opts = this.tableOptions || {};
+    const cls: string[] = ['table'];
+    if (opts.stripedRows) cls.push('table-striped');
+    if (opts.stripedColumns) cls.push('table-striped-columns');
+    if (opts.hoverRows) cls.push('table-hover');
+    if (opts.bordered) cls.push('table-bordered');
+    if (opts.borderless) cls.push('table-borderless');
+    if (opts.small) cls.push('table-sm');
+    if (opts.groupDividers) cls.push('table-group-divider');
+    if (opts.align === 'middle') cls.push('align-middle');
+    if (opts.align === 'bottom') cls.push('align-bottom');
+    return cls;
+  }
+
+  get responsiveWrapperClasses(): string[] {
+    const r = this.tableOptions?.responsive;
+    if (r === false) return [];
+    if (r === true || r === undefined) return ['table-responsive'];
+    return [`table-responsive-${r}`];
+  }
+
+  updateHighlightCache(): void {
+    this.highlightRowMap.clear();
+    (this.highlightedIndex || []).forEach(item => {
+      const rowKey = item.row;
+      if (!this.highlightRowMap.has(rowKey)) this.highlightRowMap.set(rowKey, []);
+      this.highlightRowMap.get(rowKey)?.push(item);
+    });
   }
 
   headerText(col: ColumnDef<T>): string {
@@ -320,6 +447,19 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   exportAriaLabel(kind: 'pdf'|'excel'): string {
     return kind === 'pdf' ? this.exportPdfAriaLabel : this.exportExcelAriaLabel;
+  }
+  private withStickyRowsFirst(rows: T[]): T[] {
+    if (!this.stickyRows || this.stickyRowIds.size === 0) return rows;
+    const sticky: T[] = [];
+    const rest: T[] = [];
+
+    rows.forEach(r => {
+      const di = this.data.indexOf(r);
+      const id = this.getRowId(di >= 0 ? di : 0, r);
+      (this.stickyRowIds.has(id) ? sticky : rest).push(r);
+    });
+
+    return [...sticky, ...rest];
   }
 
 
@@ -419,9 +559,13 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.filterTplQ?.changes.subscribe(rebuild);
     this.globalTplQ?.changes.subscribe(rebuild);
   }
+  ngAfterViewInit(): void {
+    queueMicrotask(() => this.syncScrollbarWidth());
+  }
 
   ngOnChanges(ch: SimpleChanges): void {
     if (ch['columns']) this.rebuildFilterForm();
+    if (ch['highlightedIndex']) this.updateHighlightCache();
   }
 
   private getRowId(rowIndex: number, row: T): any {
@@ -574,6 +718,32 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     return this.trackBy ? this.trackBy(rowIndex, row) : rowIndex;
   };
 
+  private rowKeyValue(row: T, rowIndex: number): any {
+    const key = this.highlightRowKey;
+    if (typeof key === 'function') return (key as any)(row, rowIndex);
+    if (typeof key === 'string') return (row as any)?.[key];
+    return rowIndex;
+  }
+
+  private colKeyValue(column: ColumnDef<T>, colIndex: number): any {
+    const key = this.highlightColKey;
+    if (typeof key === 'function') return (key as any)(column, colIndex);
+    if (typeof key === 'string') return (column as any)?.[key];
+    return colIndex;
+  }
+
+  isRowHighlighted(row: T, rowIndex: number): boolean {
+    const key = this.rowKeyValue(row, rowIndex);
+    return this.highlightRowMap.has(key) && this.highlightRowMap.get(key)?.some(h => h.columnKey === undefined) === true;
+  }
+
+  isCellHighlighted(row: T, rowIndex: number, column: ColumnDef<T>, colIndex: number): boolean {
+    const key = this.rowKeyValue(row, rowIndex);
+    const colKey = this.colKeyValue(column, colIndex);
+    const items = this.highlightRowMap.get(key);
+    return !!items?.some(h => h.columnKey === colKey);
+  }
+
   toggleSort(field: Extract<keyof T, string>) {
     if (!this.enableSorting) return;
 
@@ -656,6 +826,194 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   isResponsiveEnabled(): boolean {
     const r = this.responsive;
     return r === true || (!!r && (r as NgbDataGridResponsiveOptions).enabled === true);
+  }
+
+  isRowSticky(row: T, pagedIndex: number): boolean {
+    if (!this.stickyRows) return false;
+    const di = this.data.indexOf(row);
+    const id = this.getRowId(di >= 0 ? di : pagedIndex, row);
+    return this.stickyRowIds.has(id);
+  }
+
+  toggleStickyRow(pagedIndex: number): void {
+    if (!this.stickyRows) return;
+    const row = this.paged[pagedIndex];
+    if (!row) return;
+    const di = this.data.indexOf(row);
+    const id = this.getRowId(di >= 0 ? di : pagedIndex, row);
+    if (this.stickyRowIds.has(id)) this.stickyRowIds.delete(id);
+    else this.stickyRowIds.add(id);
+  }
+
+  stickyIcon(row: T, pagedIndex: number): string {
+    return this.isRowSticky(row, pagedIndex) ? 'pin-angle-fill' : 'pin-fill';
+  }
+
+  stickyTop(row: T, pagedIndex: number): number | null {
+    if (!this.isRowSticky(row, pagedIndex)) return null;
+    const stickyBefore = this.paged
+      .slice(0, pagedIndex)
+      .filter((r, idx) => this.isRowSticky(r, idx)).length;
+    return stickyBefore * this.stickyRowHeight;
+  }
+
+  // Selection helpers
+  get stickyRowsEnabled(): boolean {
+    return this.tableOptions?.stickyRows ?? this.stickyRows;
+  }
+
+  get stickyHeaderEnabled(): boolean {
+    return this.tableOptions?.stickyHeader ?? this.stickyHeader;
+  }
+
+  get stickyFooterEnabled(): boolean {
+    return this.tableOptions?.stickyFooter ?? this.stickyFooter;
+  }
+
+  isSelectionEnabled(): boolean {
+    return this.selectionMode !== 'none';
+  }
+
+  isCheckboxOnly(): boolean {
+    return this.selectionBehavior === 'checkbox';
+  }
+
+  isSelectionDisabled(row: T, pagedIndex: number): boolean {
+    if (!this.selectionDisabledFn) return false;
+    const di = this.data.indexOf(this.paged[pagedIndex]);
+    return this.selectionDisabledFn(row, di >= 0 ? di : pagedIndex);
+  }
+
+  isRowSelected(row: T, pagedIndex: number): boolean {
+    const di = this.data.indexOf(this.paged[pagedIndex]);
+    const id = this.getRowId(di >= 0 ? di : pagedIndex, row);
+    return this.selectedRowIds.has(id);
+  }
+
+  toggleSelection(pagedIndex: number, event?: Event): void {
+    if (!this.isSelectionEnabled()) return;
+    const row = this.paged[pagedIndex];
+    if (!row || this.isSelectionDisabled(row, pagedIndex)) return;
+
+    const di = this.data.indexOf(row);
+    const id = this.getRowId(di >= 0 ? di : pagedIndex, row);
+    const currentlySelected = this.selectedRowIds.has(id);
+    const isMulti = this.selectionMode === 'multiple';
+    const desktop = this.selectionKeyMode === 'desktop';
+    const shift = desktop && !!(event && 'shiftKey' in event && (event as any).shiftKey);
+    const meta = desktop && !!(event && (('metaKey' in event && (event as any).metaKey) || ('ctrlKey' in event && (event as any).ctrlKey)));
+
+    if (!isMulti) {
+      this.selectedRowIds.clear();
+      this.selectedRowIds.add(id);
+      this.selectionAnchor = pagedIndex;
+      this.emitSelection(row, di, true);
+      return;
+    }
+
+    if (shift && this.selectionAnchor != null) {
+      const start = Math.min(this.selectionAnchor, pagedIndex);
+      const end = Math.max(this.selectionAnchor, pagedIndex);
+      this.selectedRowIds.clear();
+      for (let i = start; i <= end; i++) {
+        const r = this.paged[i];
+        if (!r || this.isSelectionDisabled(r, i)) continue;
+        const rid = this.getRowId(this.data.indexOf(r), r);
+        this.selectedRowIds.add(rid);
+      }
+      this.emitSelection(row, di, true);
+      return;
+    }
+
+    if (meta || !desktop) {
+      if (currentlySelected) this.selectedRowIds.delete(id);
+      else this.selectedRowIds.add(id);
+    } else {
+      this.selectedRowIds.clear();
+      this.selectedRowIds.add(id);
+    }
+
+    this.selectionAnchor = pagedIndex;
+    this.emitSelection(row, di, !currentlySelected || (!meta && desktop));
+  }
+
+  private emitSelection(row: T, dataIndex: number, selected: boolean) {
+    this.selectionChange.emit({
+      selected: this.data.filter((r, idx) => this.selectedRowIds.has(this.getRowId(idx, r))),
+      lastAction: { row, index: dataIndex, selected }
+    });
+  }
+
+  toggleSelectAllCurrentPage(): void {
+    if (this.selectionMode !== 'multiple' || !this.selectAllEnabled) return;
+    const allSelectable = this.paged.filter((r, i) => !this.isSelectionDisabled(r, i));
+    const allSelected = allSelectable.every((r, i) => this.isRowSelected(r, i));
+    if (allSelected) {
+      allSelectable.forEach((r, i) => {
+        const rid = this.getRowId(this.data.indexOf(r), r);
+        this.selectedRowIds.delete(rid);
+      });
+    } else {
+      allSelectable.forEach((r, i) => {
+        const rid = this.getRowId(this.data.indexOf(r), r);
+        this.selectedRowIds.add(rid);
+      });
+    }
+    this.selectionChange.emit({
+      selected: this.data.filter((r, idx) => this.selectedRowIds.has(this.getRowId(idx, r))),
+      lastAction: null
+    });
+  }
+
+  isPageAllSelected(): boolean {
+    const selectable = this.paged.filter((r, i) => !this.isSelectionDisabled(r, i));
+    return selectable.length > 0 && selectable.every((r, i) => this.isRowSelected(r, i));
+  }
+
+  isPageIndeterminate(): boolean {
+    const selectable = this.paged.filter((r, i) => !this.isSelectionDisabled(r, i));
+    const selectedCount = selectable.filter((r, i) => this.isRowSelected(r, i)).length;
+    return selectedCount > 0 && selectedCount < selectable.length;
+  }
+
+  selectAllLabel(): string {
+    const labels = this.selectionA11yLabels || {};
+    return this.isPageAllSelected()
+      ? (labels.unselectAll || 'Unselect all rows')
+      : (labels.selectAll || 'Select all rows');
+  }
+
+  rowSelectionLabel(index: number): string {
+    const labels = this.selectionA11yLabels || {};
+    const selected = this.isRowSelected(this.paged[index], index);
+    return selected
+      ? (labels.unselectRow || `Unselect row ${index + 1}`)
+      : (labels.selectRow || `Select row ${index + 1}`);
+  }
+
+  onRowSelect(ev: MouseEvent, pagedIndex: number) {
+    if (!this.isSelectionEnabled() || this.isCheckboxOnly()) return;
+    const target = ev.target as HTMLElement;
+    if (target.closest('input, button, a, select, textarea,label')) return;
+    this.toggleSelection(pagedIndex, ev);
+  }
+
+  onHeaderScroll(): void {
+    const body = this.bodyScroller?.nativeElement;
+    const head = this.headerScroller?.nativeElement;
+    if (body && head && body.scrollLeft !== head.scrollLeft) {
+      body.scrollLeft = head.scrollLeft;
+    }
+  }
+
+  private syncScrollbarWidth(): void {
+    const el = this.bodyScroller?.nativeElement;
+    if (!el) return;
+    const width = el.offsetWidth - el.clientWidth;
+    if (width !== this.scrollbarWidth) {
+      this.scrollbarWidth = width;
+      this.cdr.markForCheck();
+    }
   }
 
 }
