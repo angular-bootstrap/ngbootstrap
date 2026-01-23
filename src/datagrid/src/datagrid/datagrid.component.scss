@@ -10,51 +10,69 @@ th.sortable { cursor: pointer; user-select: none; }
 
 .table-wrapper { position: relative; }
 .table-wrapper {
-  display: flex;
-  flex-direction: column;
+    overflow-x: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    background: #fff;
 }
-.table-wrapper .table {
-  table-layout: fixed;
-  width: 100%;
-  margin-bottom: 0;
+// .table-wrapper .table {
+//   table-layout: fixed;
+//   width: 100%;
+//   margin-bottom: 0;
+// }
+.table-body-scroll {
+    max-height: 320px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-top: 1px solid #e9ecef;
+    border-bottom: 1px solid #e9ecef;
+    scrollbar-gutter: stable both-edges;
+    display: inline-block;
+    width: fit-content;
+    vertical-align: top;
 }
-.table-header {
-  overflow-x: auto; overflow-y: hidden;
+.grid-head {
+    border-bottom: 0;
 }
-.table-body {
-  max-height: 60vh;
-  overflow: auto;
-  scrollbar-gutter: stable;
+
+.grid-table {
+    width: 100%;
+    min-width: 1200px;
+    table-layout: fixed;
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
 }
-.table-header th,
-.table-body td {
-  min-width: 40px;
-  max-width: 320px;
-  word-break: break-word;
-}
-.table-header th { white-space: nowrap; }
-.table-body td { white-space: normal; }
-.table-header col,
-.table-body col {
-  min-width: 40px;
-  max-width: 320px;
-}
-.table-wrapper.sticky-header thead th {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: #ccc;
-}
-.table-wrapper.sticky-footer .grid-footer {
-    position: sticky;
-    bottom: 0;
+.grid-head {
+    position: relative;
     z-index: 5;
-    background: #ffffff;
-    border-top: 1px solid #e2e2e2;
-    border-left: 1px solid #e2e2e2;
-    border-right: 1px solid #e2e2e2;
-    padding: 5px 20px;
 }
+
+.grid-head thead tr:first-child th:first-child {
+    border-top-left-radius: 12px;
+}
+.grid-head thead th {
+    background: var(--bs-table-bg, #f8f9fa);
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 600;
+}
+.grid-table th, .grid-table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+    border-bottom: 1px solid #e9ecef;
+    padding: .55rem .65rem;
+}
+
+.filter-row td {
+    background: #fff;
+    border-bottom: 1px solid #dee2e6;
+    padding-top: .45rem;
+    padding-bottom: .45rem;
+}
+
+
 .sticky-row {
   position: sticky;
   background: #ccc;

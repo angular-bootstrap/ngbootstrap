@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { SimpleChange } from '@angular/core';
 import { Datagrid } from './datagrid.component';
 import { ColumnDef } from '../models/column-def';
@@ -565,7 +566,7 @@ describe('Datagrid', () => {
     });
   });
 
-  it('applies Bootstrap-like table options to header/body and wrapper', () => {
+  it('applies Bootstrap-like table options to header/body and wrapper', async () => {
     component.tableOptions = {
       stripedRows: true,
       stripedColumns: true,
@@ -579,11 +580,14 @@ describe('Datagrid', () => {
       responsive: 'lg'
     };
     fixture.detectChanges();
+    await fixture.whenStable();
 
     const wrapper = fixture.nativeElement.querySelector('.table-wrapper') as HTMLElement;
-    const headerTable = fixture.nativeElement.querySelector('.table-header table') as HTMLElement;
-    const bodyTable = fixture.nativeElement.querySelector('.table-body table') as HTMLElement;
-    const caption = headerTable.querySelector('caption') as HTMLElement | null;
+    const headerTable = fixture.debugElement.query(By.css('.grid-header'))?.nativeElement as HTMLElement | null;
+    const bodyTable = fixture.debugElement.query(By.css('.grid-body'))?.nativeElement as HTMLElement | null;
+    expect(headerTable).toBeTruthy();
+    expect(bodyTable).toBeTruthy();
+    const caption = headerTable?.querySelector('caption') as HTMLElement | null;
 
     expect(wrapper.classList.contains('table-responsive-lg')).toBe(true);
 
@@ -617,7 +621,7 @@ describe('Datagrid', () => {
     expect(component.isPageAllSelected()).toBe(false);
   });
 
-  it('highlights rows and cells using provided highlight indices', () => {
+  it('highlights rows and cells using provided highlight indices', async () => {
     component.highlightRowKey = (row: Person) => row.id;
     component.highlightColKey = (_col: ColumnDef<Person>) => _col.field;
     component.highlightedIndex = [
@@ -626,13 +630,35 @@ describe('Datagrid', () => {
     ];
     component.updateHighlightCache();
     fixture.detectChanges();
+    await fixture.whenStable();
 
-    const rows = fixture.nativeElement.querySelectorAll('.table-body tbody tr') as NodeListOf<HTMLElement>;
-    const highlightedRow = rows[1];
-    const cells = highlightedRow.querySelectorAll('td') as NodeListOf<HTMLElement>;
+    const rows = fixture.debugElement.queryAll(By.css('.grid-body tbody tr'));
+    expect(rows.length).toBeGreaterThan(1);
+    const highlightedRow = rows[1].nativeElement as HTMLElement;
+    const cells = highlightedRow?.querySelectorAll('td') as NodeListOf<HTMLElement>;
 
     expect(highlightedRow.classList.contains('row-highlight')).toBe(true);
     expect(cells[3].classList.contains('cell-highlight')).toBe(true); // score column
     expect(cells[0].classList.contains('cell-highlight')).toBe(false);
+  });
+
+  it('applies title attributes with fallbacks for headers and cells', async () => {
+    component.columns = [
+      { ...baseColumns[0], title: 'Custom ID Title' },
+      { ...baseColumns[1], cellTitle: (row: Person) => `Name: ${row.name}` },
+      ...baseColumns.slice(2)
+    ];
+    triggerColumnsChange();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const headerTitles = fixture.debugElement.queryAll(By.css('.grid-header thead th'))
+      .map(d => (d.nativeElement as HTMLElement).getAttribute('title'));
+    expect(headerTitles[0]).toBe('Custom ID Title');
+    expect(headerTitles[1]).toBe('Name');
+
+    const firstRowCells = fixture.nativeElement.querySelectorAll('.grid-body tbody tr td') as NodeListOf<HTMLElement>;
+    expect(firstRowCells[0].getAttribute('title')).toBe('1');
+    expect(firstRowCells[1].getAttribute('title')).toBe('Name: Alice');
   });
 });

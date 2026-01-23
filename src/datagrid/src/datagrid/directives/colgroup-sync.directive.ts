@@ -4,6 +4,7 @@ const MIN_WIDTH = 40;
 const MAX_WIDTH = 320;
 const MAX_SAMPLE_ROWS = 50;
 const CHAR_WIDTH_FACTOR = 0.6;
+const CHROME_TOLERANCE = 12; // small buffer to ignore reapplication of padding/borders
 
 type SyncRole = 'header' | 'body';
 
@@ -65,6 +66,7 @@ export class NgbSyncColgroupDirective implements AfterViewInit, OnDestroy {
     const widths = this.measure();
     if (!widths.length) return;
     const entry = this.ensureEntry();
+    if (entry.widths && this.areWidthsEqual(entry.widths, widths)) return;
     entry.widths = widths;
     this.apply(widths);
     entry.bodies.forEach(b => b.apply(widths));
@@ -120,16 +122,34 @@ export class NgbSyncColgroupDirective implements AfterViewInit, OnDestroy {
   private measure(): number[] {
     const bodyTable = this.firstBodyForSync();
     const cols = this.colElements();
+    const entry = NgbSyncColgroupDirective.registry.get(this.syncId);
     if (!cols.length) return [];
 
     if (!bodyTable) {
-      const entry = NgbSyncColgroupDirective.registry.get(this.syncId);
       return entry?.widths ?? [];
     }
 
     const bodyRows = Array.from(bodyTable.querySelectorAll('tbody tr')).slice(0, MAX_SAMPLE_ROWS);
+    const headerTable = this.syncRole === 'header' ? this.tableEl() : null;
+    const headerRow = headerTable?.querySelector('thead tr');
 
-    return cols.map((_col, colIndex) => {
+    return cols.map((col, colIndex) => {
+      const fixedWidth = (col.getAttribute('data-fixed') ?? '').toLowerCase() === 'true';
+      if (fixedWidth) {
+        const explicit = parseFloat(col.style.width || '') || MIN_WIDTH;
+        return Math.min(Math.max(explicit, MIN_WIDTH), MAX_WIDTH);
+      }
+      
+      // Measure header content width if available
+      let headerContentWidth = 0;
+      if (headerRow) {
+        const th = headerRow.querySelectorAll('th')[colIndex] as HTMLElement | undefined;
+        if (th) {
+          headerContentWidth = this.measureCellContent(th);
+        }
+      }
+      
+      // Measure body content width
       let maxContent = 0;
       for (const tr of bodyRows) {
         const td = tr.querySelectorAll('td')[colIndex] as HTMLElement | undefined;
@@ -137,9 +157,20 @@ export class NgbSyncColgroupDirective implements AfterViewInit, OnDestroy {
         maxContent = Math.max(maxContent, this.measureCellContent(td));
         if (maxContent >= MAX_WIDTH) break;
       }
-      if (maxContent === 0) maxContent = MIN_WIDTH;
+      
+      // Use the maximum of header and body content widths
+      let finalContent = Math.max(headerContentWidth, maxContent);
+      if (finalContent === 0) finalContent = MIN_WIDTH;
 
-      return Math.min(Math.max(maxContent, MIN_WIDTH), MAX_WIDTH);
+      let width = Math.min(Math.max(finalContent, MIN_WIDTH), MAX_WIDTH);
+      const prev = entry?.widths?.[colIndex];
+      if (prev && width > prev) {
+        // If the only change is re-adding cell chrome (common when interactive elements span the cell),
+        // keep the previous stable width to avoid incremental growth.
+        const delta = width - prev;
+        if (delta <= CHROME_TOLERANCE) width = prev;
+      }
+      return width;
     });
   }
 
@@ -154,16 +185,56 @@ export class NgbSyncColgroupDirective implements AfterViewInit, OnDestroy {
 
   private measureCellContent(cell: HTMLElement): number {
     const style = getComputedStyle(cell);
+    const cellClientWidth = cell.clientWidth;
+    const cellRect = cell.getBoundingClientRect();
     const chrome =
       (parseFloat(style.paddingLeft) || 0) +
       (parseFloat(style.paddingRight) || 0) +
       (parseFloat(style.borderLeftWidth) || 0) +
       (parseFloat(style.borderRightWidth) || 0);
 
-    const interactive = cell.querySelector('input, select, textarea, button') as HTMLElement | null;
-    if (interactive) return (interactive.getBoundingClientRect().width || 0) + chrome;
+    const interactiveEls = Array.from(cell.querySelectorAll<HTMLElement>('input, select, textarea, button'));
+    let interactiveWidth: number | null = null;
+    if (interactiveEls.length) {
+      interactiveWidth = interactiveEls.reduce((total, el) => {
+        const rect = el.getBoundingClientRect();
+        const elStyle = getComputedStyle(el);
+        const widthStr = (el.style.width || elStyle.width || '').toString().trim();
+        const usesPercentWidth = widthStr.endsWith('%');
+        const matchesCellWidth =
+          (!!cellClientWidth && rect.width && Math.abs(rect.width - cellClientWidth) <= 1) ||
+          (cellRect.width > 0 && rect.width > 0 && Math.abs(rect.width - cellRect.width) <= 1);
+        const spansCell = usesPercentWidth || matchesCellWidth;
+        const margin = (parseFloat(elStyle.marginLeft) || 0) + (parseFloat(elStyle.marginRight) || 0);
+        if (spansCell) {
+          const textWidth = this.measureTextWidth((el.textContent ?? '').trim(), elStyle);
+          const paddingBorder =
+            (parseFloat(elStyle.paddingLeft) || 0) +
+            (parseFloat(elStyle.paddingRight) || 0) +
+            (parseFloat(elStyle.borderLeftWidth) || 0) +
+            (parseFloat(elStyle.borderRightWidth) || 0);
+          return total + Math.ceil(textWidth + paddingBorder + margin);
+        }
+        const rectWidth = rect.width || parseFloat(elStyle.width) || ((el.textContent ?? '').length * ((parseFloat(elStyle.fontSize) || 14) * CHAR_WIDTH_FACTOR));
+        return total + rectWidth + margin;
+      }, 0);
+      interactiveWidth = Math.ceil((interactiveWidth || 0) + chrome);
+    }
 
     const text = (cell.textContent ?? '').trim();
+    const textWidth = Math.ceil(this.measureTextWidth(text, style) + chrome);
+    if (interactiveWidth != null) {
+      return Math.max(textWidth, interactiveWidth);
+    }
+    return textWidth;
+  }
+
+  private areWidthsEqual(prev: number[], next: number[]): boolean {
+    if (prev.length !== next.length) return false;
+    return prev.every((v, i) => v === next[i]);
+  }
+
+  private measureTextWidth(text: string, style: CSSStyleDeclaration): number {
     const fontSize = parseFloat(style.fontSize) || 14;
     const font = style.font || `${style.fontStyle} ${style.fontVariant} ${style.fontWeight} ${style.fontSize} / ${style.lineHeight} ${style.fontFamily}`;
 
@@ -187,7 +258,6 @@ export class NgbSyncColgroupDirective implements AfterViewInit, OnDestroy {
     if (!contentWidth) {
       contentWidth = text.length * (fontSize * CHAR_WIDTH_FACTOR);
     }
-
-    return Math.ceil(contentWidth + chrome);
+    return contentWidth;
   }
 }

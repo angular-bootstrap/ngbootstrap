@@ -1,4 +1,4 @@
-import { Component, Input, ChangeDetectionStrategy, EventEmitter, Output, inject, AfterContentInit, ContentChildren, QueryList, OnChanges, SimpleChanges, TemplateRef, ElementRef, ViewChild, AfterViewInit, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy, EventEmitter, Output, inject, AfterContentInit, ContentChildren, QueryList, OnChanges, SimpleChanges, TemplateRef, ElementRef, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ColumnDef } from '../models/column-def';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, FormControl } from '@angular/forms';
@@ -88,7 +88,7 @@ const isReasonableEmail = (value: unknown): boolean => {
   standalone:true,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class Datagrid<T = any> implements AfterContentInit, AfterViewInit, OnChanges {
+export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   /** Column definitions to render */
   @Input() columns: ColumnDef<T>[] = [];
 
@@ -113,7 +113,7 @@ export class Datagrid<T = any> implements AfterContentInit, AfterViewInit, OnCha
   @Input() stickyHeader = false;
   /** Enables sticky footer when scrolling. */
   @Input() stickyFooter = false;
-  /** Enables scroll container (used when pagination is off). */
+  /** Enables scroll table body container */
   @Input() scrollable = true;
   /** Row height used to stack multiple sticky rows without overlap (px). */
   @Input() stickyRowHeight = 40;
@@ -141,7 +141,6 @@ export class Datagrid<T = any> implements AfterContentInit, AfterViewInit, OnCha
   @Input() highlightRowKey: NgbRowKey | null = null;
   /** Column key for highlighting. */
   @Input() highlightColKey: NgbColKey | null = null;
-  scrollbarWidth = 0;
   /** Accessible label for the global filter input. */
   @Input() globalFilterAriaLabel = 'Search all columns';
   /** Accessible label announced when expanding a row. */
@@ -418,6 +417,19 @@ export class Datagrid<T = any> implements AfterContentInit, AfterViewInit, OnCha
     return (col.header ?? col.field ?? '').toString();
   }
 
+  headerTitle(col: ColumnDef<T>): string {
+    const t = (col as any)?.title;
+    return (t ?? this.headerText(col)) ?? '';
+  }
+
+  cellTitle(row: T, col: ColumnDef<T>): string {
+    const def = (col as any)?.cellTitle;
+    if (typeof def === 'function') return def(row) ?? '';
+    if (typeof def === 'string') return def;
+    const val = (row as any)?.[col.field];
+    return val === undefined || val === null ? '' : String(val);
+  }
+
   columnFilterAriaLabel(col: ColumnDef<T>): string {
     return `${this.headerText(col)} filter`;
   }
@@ -558,9 +570,6 @@ export class Datagrid<T = any> implements AfterContentInit, AfterViewInit, OnCha
     this.editTplQ?.changes.subscribe(rebuild);
     this.filterTplQ?.changes.subscribe(rebuild);
     this.globalTplQ?.changes.subscribe(rebuild);
-  }
-  ngAfterViewInit(): void {
-    queueMicrotask(() => this.syncScrollbarWidth());
   }
 
   ngOnChanges(ch: SimpleChanges): void {
@@ -996,24 +1005,6 @@ export class Datagrid<T = any> implements AfterContentInit, AfterViewInit, OnCha
     const target = ev.target as HTMLElement;
     if (target.closest('input, button, a, select, textarea,label')) return;
     this.toggleSelection(pagedIndex, ev);
-  }
-
-  onHeaderScroll(): void {
-    const body = this.bodyScroller?.nativeElement;
-    const head = this.headerScroller?.nativeElement;
-    if (body && head && body.scrollLeft !== head.scrollLeft) {
-      body.scrollLeft = head.scrollLeft;
-    }
-  }
-
-  private syncScrollbarWidth(): void {
-    const el = this.bodyScroller?.nativeElement;
-    if (!el) return;
-    const width = el.offsetWidth - el.clientWidth;
-    if (width !== this.scrollbarWidth) {
-      this.scrollbarWidth = width;
-      this.cdr.markForCheck();
-    }
   }
 
 }

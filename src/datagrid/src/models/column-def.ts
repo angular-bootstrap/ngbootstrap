@@ -5,6 +5,10 @@ export interface ColumnDef<T = any> {
   field: Extract<keyof T, string>;
   /** human‐readable header text */
   header: string;
+  /** Optional tooltip/title for the header cell; defaults to header text. */
+  title?: string;
+  /** Optional tooltip/title for body cells; defaults to the cell text. */
+  cellTitle?: string | ((row: T) => string);
   /** enable clicking to sort */
   sortable?: boolean;
   /** enable filtering on this column */
@@ -12,5 +16,6 @@ export interface ColumnDef<T = any> {
   editable?: boolean;      // (default true)
   type?: ColumnType; // editor type
   options?: Array<{ label: string; value: any }>; // <-- needed for select
+  width?: number;         // in pixels
   required?: boolean;            // block save if empty/invalid
 }
