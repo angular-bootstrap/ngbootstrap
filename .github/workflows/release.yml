@@ -26,7 +26,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          registry-url: https://registry.npmjs.org
+
+      - name: Use current npm for trusted publishing
+        run: npm install -g npm@latest
 
       - name: Enable Corepack
         run: corepack enable
@@ -70,6 +72,15 @@ jobs:
 
       - name: Audit production dependencies
         run: pnpm security:audit
+
+      - name: Ensure tokenless publishing
+        run: |
+          set -euo pipefail
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "NODE_AUTH_TOKEN must not be set for npm trusted publishing."
+            exit 1
+          fi
+          npm --version
 
       - name: Publish to npm
         run: npm publish ./dist/ngbootstrap --access public --provenance
