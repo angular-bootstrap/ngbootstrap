@@ -1,11 +1,37 @@
 {
   "name": "@angular-bootstrap/ngbootstrap",
-  "version": "0.0.13",
-  "description": "Angular UI library providing datagrid, drag-and-drop, pagination, stepper, splitter, typeahead and chips components with Bootstrap-friendly styling.",
+  "version": "1.0.0",
+  "description": "Bootstrap-friendly standalone Angular UI components, including DataGrid, pagination, typeahead, tree, splitter, stepper, chips, and drag-and-drop.",
   "author": {
     "name": "Harmeet Singh"
   },
-  "keywords": ["ngbootstrap", "angular bootstrap", "bootstrap 5", "angular components", "UI library", "datagrid", "data grid", "table", "pagination", "stepper", "wizard", "splitter", "resizable panes", "tree view", "typeahead", "autocomplete", "chips", "tags input", "drag and drop", "dnd", "accessibility", "a11y", "ARIA", "reactive forms", "standalone components."],
+  "keywords": [
+    "ngbootstrap",
+    "angular bootstrap",
+    "bootstrap 5",
+    "angular components",
+    "UI library",
+    "datagrid",
+    "data grid",
+    "table",
+    "pagination",
+    "stepper",
+    "wizard",
+    "splitter",
+    "resizable panes",
+    "tree view",
+    "typeahead",
+    "autocomplete",
+    "chips",
+    "tags input",
+    "drag and drop",
+    "dnd",
+    "accessibility",
+    "a11y",
+    "ARIA",
+    "reactive forms",
+    "standalone components."
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/angular-bootstrap/ngbootstrap.git"
@@ -25,52 +51,63 @@
     "watch": "ng-packagr -p ng-package.json --watch",
     "lint": "eslint \"src/**/*.{ts,html}\"",
     "test": "jest",
+    "test:ci": "jest --runInBand",
+    "security:audit": "corepack pnpm audit --prod --audit-level=high",
+    "release:verify": "node scripts/validate-release-package.mjs",
+    "pack:dry-run": "npm pack ./dist/ngbootstrap --dry-run",
     "clean": "rimraf dist"
   },
   "peerDependencies": {
-    "@angular/common": ">=21.0.0 <22.0.0",
-    "@angular/core": ">=21.0.0 <22.0.0",
-    "@angular/forms": ">=21.0.0 <22.0.0",
-    "jspdf": "^3.0.1",
-    "jspdf-autotable": "^5.0.2",
-    "rxjs": "^7.8.0",
-    "xlsx": "^0.18.0"
+    "@angular/common": ">=21.0.0 <23.0.0",
+    "@angular/core": ">=21.0.0 <23.0.0",
+    "@angular/forms": ">=21.0.0 <23.0.0",
+    "chart.js": ">=4.4.0 <5.0.0",
+    "jspdf": ">=4.2.1 <5.0.0",
+    "jspdf-autotable": ">=5.0.0 <6.0.0",
+    "rxjs": "^7.8.0"
   },
   "peerDependenciesMeta": {
+    "chart.js": {
+      "optional": true
+    },
     "jspdf": {
       "optional": true
     },
     "jspdf-autotable": {
       "optional": true
-    },
-    "xlsx": {
-      "optional": true
     }
   },
+  "dependencies": {
+    "tslib": "^2.6.2"
+  },
   "devDependencies": {
-    "@angular-eslint/eslint-plugin": "^21.1.0",
-    "@angular-eslint/eslint-plugin-template": "^21.1.0",
-    "@angular/common": "~21.0.6",
-    "@angular/compiler": "~21.0.6",
-    "@angular/compiler-cli": "~21.0.6",
-    "@angular/core": "~21.0.6",
-    "@angular/forms": "~21.0.6",
-    "@angular/platform-browser": "~21.0.6",
-    "@angular/platform-browser-dynamic": "~21.0.6",
+    "@angular-eslint/eslint-plugin": "^21.4.0",
+    "@angular-eslint/eslint-plugin-template": "^21.4.0",
+    "@angular/common": "~22.0.0",
+    "@angular/compiler": "~22.0.0",
+    "@angular/compiler-cli": "~22.0.0",
+    "@angular/core": "~22.0.0",
+    "@angular/forms": "~22.0.0",
+    "@angular/platform-browser": "~22.0.0",
+    "@angular/platform-browser-dynamic": "~22.0.0",
     "@eslint/js": "^9.8.0",
     "@types/jest": "^30.0.0",
     "@typescript-eslint/eslint-plugin": "^8.29.0",
     "@typescript-eslint/parser": "^8.29.0",
     "eslint": "^9.8.0",
+    "fast-png": "^6.4.0",
+    "iobuffer": "^5.4.0",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
     "jest-preset-angular": "^16.0.0",
-    "ng-packagr": "~21.0.1",
+    "ng-packagr": "~22.0.0",
+    "pako": "^2.1.0",
     "rimraf": "^6.1.2",
+    "chart.js": "4.4.9",
     "ts-jest": "^29.4.6",
-    "typescript": "~5.9.3",
-    "zone.js": "^0.15.0",
     "ts-node": "^10.9.2",
-    "tslib": "^2.6.2"
-  }
+    "typescript": "~6.0.0",
+    "zone.js": "^0.15.0"
+  },
+  "packageManager": "pnpm@9.15.9+sha512.68046141893c66fad01c079231128e9afb89ef87e2691d69e4d40eee228988295fd4682181bae55b58418c3a253bde65a505ec7c5f9403ece5cc3cd37dcf2531"
 }

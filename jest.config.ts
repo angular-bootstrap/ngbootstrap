@@ -1,5 +1,5 @@
 import type { Config } from 'jest';
-import { createEsmPreset } from 'jest-preset-angular/presets';
+import { createEsmPreset } from 'jest-preset-angular/presets/index.js';
 
 const angularEsmPreset = createEsmPreset();
 
@@ -25,11 +25,7 @@ const config: Config = {
       },
     ],
   },
-  snapshotSerializers: [
-    'jest-preset-angular/build/serializers/no-ng-attributes',
-    'jest-preset-angular/build/serializers/ng-snapshot',
-    'jest-preset-angular/build/serializers/html-comment',
-  ],
+  snapshotSerializers: [],
 };
 
 export default config;

@@ -2,7 +2,7 @@ import { ExcelExportAdapter, ExcelExportPayload } from '../services/export.servi
 
 export class XlsxAdapter implements ExcelExportAdapter {
   async export({ fileName, sheetName, columns, rows }: ExcelExportPayload) {
-    const XLSX = await import('xlsx');
+    const XLSX = await import(/* webpackIgnore: true */ 'xlsx');
     const header = [columns.map(c => c.title)];
     const data = rows.map(r => columns.map(c => r[c.key]));
     const ws = XLSX.utils.aoa_to_sheet([...header, ...data]);

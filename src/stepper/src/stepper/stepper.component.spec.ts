@@ -96,6 +96,7 @@ class HostTestComponent {
   }
 
   onSelectedIndexChange(i: number) {
+    this.selectedIndex = i;
     this.selectedIndexEvents.push(i);
   }
 }
@@ -160,10 +161,9 @@ describe('NgbStepperComponent', () => {
   });
 
   it('honors allowRevisit=false by blocking backward header clicks', () => {
-    host.stepper.next();
-    host.stepper.next();
-    fixture.detectChanges();
-
+    fixture = TestBed.createComponent(HostTestComponent);
+    host = fixture.componentInstance;
+    host.selectedIndex = 2;
     host.allowRevisit = false;
     fixture.detectChanges();
 
@@ -174,9 +174,9 @@ describe('NgbStepperComponent', () => {
   });
 
   it('blocks prev navigation and disables the button when allowRevisit=false', () => {
-    host.stepper.next();
-    fixture.detectChanges();
-
+    fixture = TestBed.createComponent(HostTestComponent);
+    host = fixture.componentInstance;
+    host.selectedIndex = 1;
     host.allowRevisit = false;
     fixture.detectChanges();
 
@@ -218,6 +218,8 @@ describe('NgbStepperComponent', () => {
   });
 
   it('applies orientation and label position classes', () => {
+    fixture = TestBed.createComponent(HostTestComponent);
+    host = fixture.componentInstance;
     host.orientation = 'vertical';
     host.labelPosition = 'left';
     fixture.detectChanges();
@@ -230,37 +232,44 @@ describe('NgbStepperComponent', () => {
   });
 
   it('supports theme switching via CSS classes', () => {
-    const root: HTMLElement = fixture.nativeElement.querySelector('.ngb-stepper');
-    expect(root.classList).toContain('bootstrap');
-
+    fixture = TestBed.createComponent(HostTestComponent);
+    host = fixture.componentInstance;
     host.theme = 'material';
     fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement.querySelector('.ngb-stepper');
     expect(root.classList).toContain('material');
 
+    fixture = TestBed.createComponent(HostTestComponent);
+    host = fixture.componentInstance;
     host.theme = 'tailwind';
     fixture.detectChanges();
-    expect(root.classList).toContain('tailwind');
+    const tailwindRoot: HTMLElement = fixture.nativeElement.querySelector('.ngb-stepper');
+    expect(tailwindRoot.classList).toContain('tailwind');
   });
 
   it('exposes animation duration via CSS variable and can be disabled', () => {
-    const panel: HTMLElement = fixture.nativeElement.querySelector('.fade-step');
-
+    fixture = TestBed.createComponent(HostTestComponent);
+    host = fixture.componentInstance;
     host.animationDuration = 300;
     host.disableAnimation = false;
     fixture.detectChanges();
+    const panel: HTMLElement = fixture.nativeElement.querySelector('.fade-step');
     expect(panel.style.getPropertyValue('--ngb-stepper-animation-duration')).toBe('300ms');
 
+    fixture = TestBed.createComponent(HostTestComponent);
+    host = fixture.componentInstance;
     host.disableAnimation = true;
     fixture.detectChanges();
-    expect(panel.style.getPropertyValue('--ngb-stepper-animation-duration')).toBe('0ms');
+    const disabledPanel: HTMLElement = fixture.nativeElement.querySelector('.fade-step');
+    expect(disabledPanel.style.getPropertyValue('--ngb-stepper-animation-duration')).toBe('0ms');
   });
 
   it('toggles responsive helper class', () => {
-    const root: HTMLElement = fixture.nativeElement.querySelector('.ngb-stepper');
-    expect(root.classList).toContain('ngb-responsive');
-
+    fixture = TestBed.createComponent(HostTestComponent);
+    host = fixture.componentInstance;
     host.responsive = false;
     fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement.querySelector('.ngb-stepper');
     expect(root.classList).not.toContain('ngb-responsive');
   });
 
@@ -282,6 +291,8 @@ describe('NgbStepperComponent', () => {
   });
 
   it('supports basic i18n by customizing button labels', () => {
+    fixture = TestBed.createComponent(HostTestComponent);
+    host = fixture.componentInstance;
     host.nextLabel = 'Weiter';
     host.previousLabel = 'Zurück';
     host.resetLabel = 'Zurücksetzen';

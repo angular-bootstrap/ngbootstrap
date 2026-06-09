@@ -17,14 +17,17 @@ export class NgbDndItemDirective<T = unknown> {
   @Input('ngbDndItem') item!: T;
   /** optional: constrain cross-list drops */
   @Input() dndGroup?: string;
-  /** index inside its parent list (bind to *ngFor index) */
+  /** index inside its parent list (bind to the rendered row index) */
   @Input() dndIndex?: number;
+  /** Explicit source list for recursive templates where DI can be ambiguous. */
+  @Input() dndSourceList?: T[];
   @Input() dndDisabled = false;
 
   @Output() dndDragStart = new EventEmitter<T>();
   @Output() dndDragEnd = new EventEmitter<void>();
 
   @HostBinding('attr.draggable') get draggable() { return !this.dndDisabled; }
+  @HostBinding('class.ngb-dnd-item') hostClass = true;
   @HostBinding('class.ngb-dnd-dragging') dragging = false;
   @HostBinding('attr.aria-grabbed') get ariaGrabbed() { return this.dragging ? 'true' : 'false'; }
   @HostBinding('attr.role') role = 'listitem';
@@ -33,14 +36,19 @@ export class NgbDndItemDirective<T = unknown> {
   private sessionId: string | null = null;
 
   @HostListener('dragstart', ['$event'])
-    onDragStart(ev: DragEvent) {
+  onDragStart(ev: DragEvent) {
+    const eventWithFlag = ev as DragEvent & { __ngbDndItemStarted?: boolean };
+    if (eventWithFlag.__ngbDndItemStarted) return;
+    eventWithFlag.__ngbDndItemStarted = true;
+
     if (this.dndDisabled || this.item == null) { ev.preventDefault(); return; }
 
     this.sessionId = this.state.createSession({
         item: this.item,
         group: this.dndGroup ?? this.parentList?.dndGroup,
-        fromList: this.parentList?.list,
+        fromList: this.dndSourceList ?? this.parentList?.list,
         fromIndex: this.dndIndex,
+        fromListRef: this.parentList,
         fromIsPalette: this.parentList?.dndIsPalette === true
 
     });
@@ -54,7 +62,7 @@ export class NgbDndItemDirective<T = unknown> {
 
     this.dragging = true;
     this.dndDragStart.emit(this.item);
-    }
+  }
 
   @HostListener('dragend')
   onDragEnd() {

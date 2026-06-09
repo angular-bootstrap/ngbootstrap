@@ -105,6 +105,8 @@ export class NgbDndListDirective<T = unknown> {
         }
 
         ev.preventDefault();
+        ev.stopPropagation();
+        this.state.setActiveDropList(this);
         this.hover = true;
         this.canDrop = true;
 
@@ -126,13 +128,33 @@ export class NgbDndListDirective<T = unknown> {
             this.lastIndex = -1;
             this.hover = false;
             this.canDrop = null;
+            this.state.clearActiveDropList(this);
         }
     }
 
     @HostListener('document:drop', ['$event'])
     onDocumentDrop(ev: DragEvent) {
+        const activeDropList = this.state.getActiveDropList();
+        const target = ev.target as Element | null;
         const host = this.el.nativeElement;
-        if (!host.contains(ev.target as Node)) return;
+        const targetList = target?.closest?.('.ngb-dnd-list');
+        const dropTargetsThisList = targetList === host;
+
+        if (activeDropList && activeDropList !== this && !dropTargetsThisList) {
+            this.resetVisualState();
+            return;
+        }
+
+        if (!host.contains(ev.target as Node) && activeDropList !== this) {
+            this.resetVisualState();
+            return;
+        }
+        if (!activeDropList) {
+            if (targetList && targetList !== host) {
+                this.resetVisualState();
+                return;
+            }
+        }
 
         const anyEv = ev as any;
         if (anyEv.__ngbHandled) return;
@@ -141,14 +163,20 @@ export class NgbDndListDirective<T = unknown> {
         ev.preventDefault();
         this.performDrop(ev);
 
-        // reset visual state
-        this.hover = false;
-        this.canDrop = null;
+        this.resetVisualState();
     }
 
     @HostListener('drop', ['$event'])
     onDrop(ev: DragEvent) {
         if (this.dndDisabled) return;
+        const activeDropList = this.state.getActiveDropList();
+        const target = ev.target as Element | null;
+        const targetList = target?.closest?.('.ngb-dnd-list');
+        const dropTargetsThisList = targetList === this.el.nativeElement;
+        if (activeDropList && activeDropList !== this && !dropTargetsThisList) {
+            this.resetVisualState();
+            return;
+        }
 
         const anyEv = ev as any;
         if (anyEv.__ngbHandled) return;
@@ -159,9 +187,13 @@ export class NgbDndListDirective<T = unknown> {
 
         this.performDrop(ev);
 
-        // reset visual state
-        this.hover = false;
-        this.canDrop = null;
+        this.resetVisualState();
+    }
+
+    @HostListener('document:dragend')
+    @HostListener('document:dragcancel')
+    onDocumentDragFinished() {
+        this.resetVisualState();
     }
 
     // helpers
@@ -178,9 +210,28 @@ export class NgbDndListDirective<T = unknown> {
 
     private ensurePlaceholder() {
         if (!this.placeholder) {
-            this.placeholder = document.createElement('div');
-            this.placeholder.className = 'ngb-dnd-placeholder';
-            this.placeholder.setAttribute('aria-hidden', 'true');
+            const hostTag = this.el.nativeElement.tagName;
+            if (hostTag === 'TBODY') {
+                const row = document.createElement('tr');
+                row.className = 'ngb-dnd-placeholder';
+                row.setAttribute('aria-hidden', 'true');
+                const cell = document.createElement('td');
+                const sampleRow = this.el.nativeElement.querySelector('tr:not(.ngb-dnd-placeholder)');
+                const colspan = sampleRow?.children?.length || 1;
+                cell.colSpan = colspan;
+                cell.style.padding = '0';
+                cell.style.border = '0';
+                cell.style.height = '0';
+                const bar = document.createElement('div');
+                bar.className = 'ngb-dnd-placeholder__bar';
+                cell.appendChild(bar);
+                row.appendChild(cell);
+                this.placeholder = row;
+            } else {
+                this.placeholder = document.createElement('div');
+                this.placeholder.className = 'ngb-dnd-placeholder';
+                this.placeholder.setAttribute('aria-hidden', 'true');
+            }
             this.el.nativeElement.appendChild(this.placeholder);
         }
     }
@@ -188,23 +239,38 @@ export class NgbDndListDirective<T = unknown> {
         if (this.placeholder?.parentElement) this.placeholder.parentElement.removeChild(this.placeholder);
         this.placeholder = undefined;
     }
+    private resetVisualState() {
+        this.removePlaceholder();
+        this.lastIndex = -1;
+        this.hover = false;
+        this.canDrop = null;
+        this._denied = false;
+        this.state.clearActiveDropList(this);
+    }
     private positionPlaceholderAt(index: number) {
         const host = this.el.nativeElement;
-        const children = Array.from(host.children).filter(c => c !== this.placeholder) as HTMLElement[];
+        const children = this.draggableChildren();
         const before = children[index];
         if (!before) host.appendChild(this.placeholder!);
         else host.insertBefore(this.placeholder!, before);
     }
     private indexFromPointer(ev: DragEvent) {
-        const host = this.el.nativeElement;
         const y = ev.clientY;
-        const children = Array.from(host.children).filter(c => c !== this.placeholder) as HTMLElement[];
+        const children = this.draggableChildren();
         for (let i = 0; i < children.length; i++) {
             const r = children[i].getBoundingClientRect();
             const mid = r.top + r.height / 2;
             if (y < mid) return i;
         }
         return children.length;
+    }
+
+    private draggableChildren(): HTMLElement[] {
+        const host = this.el.nativeElement;
+        const items = Array.from(host.children)
+            .filter(c => c !== this.placeholder && (c as HTMLElement).classList.contains('ngb-dnd-item')) as HTMLElement[];
+        if (items.length) return items;
+        return Array.from(host.children).filter(c => c !== this.placeholder) as HTMLElement[];
     }
 
     private cloneItem(i: T): T {
@@ -236,24 +302,19 @@ export class NgbDndListDirective<T = unknown> {
      * Build a guard payload using whatever drag context you already store.
      * If some fields don’t exist in your code, the fallbacks keep it working.
      */
-    private _buildGuardPayload(dstIndex: number): DndCanDropPayload<any> {
-    const anyThis = this as any;
+    private _buildGuardPayload(session: DndSession, dstIndex: number): DndCanDropPayload<any> {
+        const srcList = (session.fromList as any[]) ?? [];
+        const srcIndex = typeof session.fromIndex === 'number' ? session.fromIndex : -1;
+        const dstList = this.list as any[];
 
-    // Try your known drag context fields; fall back harmlessly if absent
-    const dragItem = anyThis._dragCtx?.item ?? anyThis.dragItem ?? anyThis._drag?.item ?? null;
-    const srcList  = anyThis._dragCtx?.src?.list ?? anyThis.srcList ?? anyThis._drag?.srcList ?? [];
-    const srcIndex = anyThis._dragCtx?.src?.index ?? anyThis.srcIndex ?? anyThis._drag?.srcIndex ?? -1;
-
-    const dstList  = this.list as any[];
-
-    return {
-        dragItem,
-        srcList,
-        srcIndex,
-        dstList,
-        dstIndex,
-        isExternal: srcList !== dstList,
-    };
+        return {
+            dragItem: session.item,
+            srcList,
+            srcIndex,
+            dstList,
+            dstIndex,
+            isExternal: session.fromIsPalette === true || srcList !== dstList,
+        };
     }
 
     /**
@@ -269,7 +330,7 @@ export class NgbDndListDirective<T = unknown> {
 
     if (!host) return (this.list as any[])?.length ?? 0;
 
-    const children = Array.from(host.children) as HTMLElement[];
+    const children = this.draggableChildren();
     const y = ev.clientY;
 
     for (let i = 0; i < children.length; i++) {
@@ -294,7 +355,7 @@ export class NgbDndListDirective<T = unknown> {
         const dstIndex = this._computeDropIndex(ev);
 
         // Guard check (block drop if not allowed)
-        const payload = this._buildGuardPayload(dstIndex);
+        const payload = this._buildGuardPayload(session, dstIndex);
         if (!this._allowDrop(payload)) {
             ev.preventDefault();
             ev.stopPropagation();
@@ -314,7 +375,6 @@ export class NgbDndListDirective<T = unknown> {
         const targetIndex = this.lastIndex < 0 ? this.list.length : this.lastIndex;
         const fromList = (session.fromList as T[]) ?? undefined;
         const fromIndex = (session.fromIndex as number) ?? -1;
-
         const sameList = fromList === this.list;
         const isExternal = session.fromIsPalette === true || !fromList || fromIndex === -1;
 

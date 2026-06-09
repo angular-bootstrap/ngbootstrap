@@ -1,4 +1,5 @@
-import { AfterViewInit, Directive, ElementRef, HostListener, Input, OnDestroy } from '@angular/core';
+import { AfterViewInit, Directive, ElementRef, HostListener, Input, OnDestroy, inject } from '@angular/core';
+import { NgbDndState } from '../../../../drag-drop/src/service/drag-state.service';
 
 const MIN_WIDTH = 40;
 const MAX_WIDTH = 320;
@@ -7,6 +8,7 @@ const CHAR_WIDTH_FACTOR = 0.6;
 const CHROME_TOLERANCE = 12; // small buffer to ignore reapplication of padding/borders
 
 type SyncRole = 'header' | 'body';
+export type NgbColgroupSyncMode = 'auto' | 'explicit';
 
 interface SyncEntry {
   header?: NgbSyncColgroupDirective;
@@ -21,17 +23,35 @@ interface SyncEntry {
 export class NgbSyncColgroupDirective implements AfterViewInit, OnDestroy {
   @Input('ngbSyncColgroup') syncId!: string;
   @Input() syncRole: SyncRole = 'header';
+  /** `explicit` copies header <col> widths without remeasuring cell content (use with column resizing). */
+  @Input() syncMode: NgbColgroupSyncMode = 'auto';
 
   private static registry = new Map<string, SyncEntry>();
   private mutationObserver?: MutationObserver;
   private resizeObserver?: ResizeObserver;
   private rafId: number | null = null;
+  private dndState = inject(NgbDndState, { optional: true });
 
   constructor(private el: ElementRef<HTMLElement>) {}
+
+  static syncExplicitWidths(syncId: string): void {
+    const entry = NgbSyncColgroupDirective.registry.get(syncId);
+    entry?.header?.syncExplicitWidths();
+  }
 
   ngAfterViewInit(): void {
     if (!this.syncId) return;
     const entry = this.ensureEntry();
+    if (this.syncMode === 'explicit') {
+      if (this.syncRole === 'header') {
+        entry.header = this;
+        this.syncExplicitWidths();
+      } else {
+        entry.bodies.add(this);
+        entry.header?.syncExplicitWidths();
+      }
+      return;
+    }
     if (this.syncRole === 'header') {
       entry.header = this;
       this.measureAndDistribute();
@@ -59,10 +79,36 @@ export class NgbSyncColgroupDirective implements AfterViewInit, OnDestroy {
 
   @HostListener('window:resize')
   onResize(): void {
+    if (this.syncMode === 'explicit') {
+      if (this.syncRole === 'header') this.syncExplicitWidths();
+      return;
+    }
     if (this.syncRole === 'header') this.measureAndDistribute();
   }
 
+  syncExplicitWidths(): void {
+    const widths = this.readExplicitWidths();
+    if (!widths.length) return;
+    const entry = this.ensureEntry();
+    if (entry.widths && this.areWidthsEqual(entry.widths, widths)) return;
+    entry.widths = widths;
+    this.apply(widths);
+    entry.bodies.forEach((body) => body.apply(widths));
+  }
+
+  private readExplicitWidths(): number[] {
+    return this.colElements().map((col) => {
+      const explicit = parseFloat(col.style.width || '');
+      return Number.isFinite(explicit) && explicit > 0 ? explicit : MIN_WIDTH;
+    });
+  }
+
   measureAndDistribute(): void {
+    if (this.syncMode === 'explicit') {
+      this.syncExplicitWidths();
+      return;
+    }
+    if (this.dndState?.active()) return;
     const widths = this.measure();
     if (!widths.length) return;
     const entry = this.ensureEntry();
@@ -84,7 +130,7 @@ export class NgbSyncColgroupDirective implements AfterViewInit, OnDestroy {
   private startObservers(): void {
     const bodyTable = this.tableEl();
     const tbody = bodyTable?.querySelector('tbody');
-    if (tbody && typeof MutationObserver !== 'undefined') {
+    if (tbody && typeof MutationObserver !== 'undefined' && !tbody.classList.contains('ngb-dnd-list')) {
       this.mutationObserver = new MutationObserver(() => this.scheduleMeasure());
       this.mutationObserver.observe(tbody, { childList: true, subtree: true, characterData: true });
     }
@@ -95,9 +141,11 @@ export class NgbSyncColgroupDirective implements AfterViewInit, OnDestroy {
   }
 
   private scheduleMeasure(): void {
+    if (this.syncMode === 'explicit') return;
     if (this.rafId != null) return;
     this.rafId = requestAnimationFrame(() => {
       this.rafId = null;
+      if (this.dndState?.active()) return;
       const entry = NgbSyncColgroupDirective.registry.get(this.syncId);
       entry?.header?.measureAndDistribute();
     });
@@ -129,9 +177,11 @@ export class NgbSyncColgroupDirective implements AfterViewInit, OnDestroy {
       return entry?.widths ?? [];
     }
 
-    const bodyRows = Array.from(bodyTable.querySelectorAll('tbody tr')).slice(0, MAX_SAMPLE_ROWS);
+    const bodyRows = Array.from(bodyTable.querySelectorAll<HTMLTableRowElement>('tbody tr'))
+      .filter((row) => !Array.from(row.cells).some((cell) => cell.colSpan > 1))
+      .slice(0, MAX_SAMPLE_ROWS);
     const headerTable = this.syncRole === 'header' ? this.tableEl() : null;
-    const headerRow = headerTable?.querySelector('thead tr');
+    const headerRows = Array.from(headerTable?.querySelectorAll('thead tr') ?? []);
 
     return cols.map((col, colIndex) => {
       const fixedWidth = (col.getAttribute('data-fixed') ?? '').toLowerCase() === 'true';
@@ -142,11 +192,10 @@ export class NgbSyncColgroupDirective implements AfterViewInit, OnDestroy {
       
       // Measure header content width if available
       let headerContentWidth = 0;
-      if (headerRow) {
+      for (const headerRow of headerRows) {
         const th = headerRow.querySelectorAll('th')[colIndex] as HTMLElement | undefined;
-        if (th) {
-          headerContentWidth = this.measureCellContent(th);
-        }
+        if (!th) continue;
+        headerContentWidth = Math.max(headerContentWidth, this.measureCellContent(th));
       }
       
       // Measure body content width

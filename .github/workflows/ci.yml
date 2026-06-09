@@ -1,15 +1,16 @@
-name: CI (non-main)
+name: CI
 
 on:
   push:
-    branches-ignore:
+    branches:
       - main
   pull_request:
-    branches:
-      - '**'
+
+permissions:
+  contents: read
 
 jobs:
-  build-test:
+  library:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,14 +20,28 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: 22.x
+
+      - name: Enable Corepack
+        run: corepack enable
 
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
 
       - name: Run tests
-        run: npm test
+        run: pnpm test:ci
 
       - name: Build library
-        run: npm run build
+        run: pnpm build
+
+      - name: Verify release package
+        run: pnpm release:verify
+
+      - name: Inspect npm package contents
+        run: pnpm pack:dry-run
+
+      - name: Audit production dependencies
+        run: pnpm security:audit

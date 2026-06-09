@@ -56,23 +56,22 @@ export type NgbChip = {
   ],
   template: `
     <div class="ngb-chips" [attr.aria-label]="ariaLabel">
-      <span
-        *ngFor="let item of items; trackBy: trackById"
-        class="badge rounded-pill bg-secondary ngb-chip"
-        [class.opacity-50]="!!item.disabled"
-      >
-        <span class="ngb-chip-label">{{ item.label }}</span>
-        <button
-          *ngIf="removable"
-          type="button"
-          class="ngb-chip-remove"
-          [disabled]="!!item.disabled"
-          (click)="remove.emit(item)"
-          [attr.aria-label]="removeLabel || 'Remove'"
-        >
-          &times;
-        </button>
-      </span>
+      @for (item of items; track trackById($index, item)) {
+        <span class="badge rounded-pill bg-secondary ngb-chip" [class.opacity-50]="!!item.disabled">
+          <span class="ngb-chip-label">{{ item.label }}</span>
+          @if (removable) {
+            <button
+              type="button"
+              class="ngb-chip-remove"
+              [disabled]="!!item.disabled"
+              (click)="remove.emit(item)"
+              [attr.aria-label]="removeLabel || 'Remove'"
+            >
+              &times;
+            </button>
+          }
+        </span>
+      }
     </div>
   `,
 })
@@ -86,4 +85,3 @@ export class NgbChipsComponent {
 
   trackById = (_: number, item: NgbChip) => item.id;
 }
-

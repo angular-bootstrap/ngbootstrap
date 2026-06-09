@@ -87,16 +87,18 @@ describe('NgbSplitterComponent', () => {
   });
 
   it('should apply orientation classes', () => {
-    const container = fixture.nativeElement.querySelector('.splitter-container') as HTMLElement;
-    expect(container.classList.contains('vertical')).toBe(false);
+    fixture = TestBed.createComponent(HostComponent);
+    host = fixture.componentInstance;
     host.orientation = 'vertical';
     fixture.detectChanges();
-    const verticalContainer = fixture.nativeElement.querySelector('.splitter-container') as HTMLElement;
-    expect(verticalContainer.classList.contains('vertical')).toBe(true);
+    const container = fixture.nativeElement.querySelector('.splitter-container') as HTMLElement;
+    expect(container.classList.contains('vertical')).toBe(true);
     expect(container.style.minHeight).toBeTruthy();
   });
 
   it('resizes vertically when orientation is vertical', () => {
+    fixture = TestBed.createComponent(HostComponent);
+    host = fixture.componentInstance;
     host.orientation = 'vertical';
     fixture.detectChanges();
 

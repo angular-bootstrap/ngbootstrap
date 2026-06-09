@@ -248,6 +248,8 @@ describe('NgbTypeaheadComponent', () => {
   });
 
   it('keeps focus on input when updateOnTab adds a chip', () => {
+    fixture = TestBed.createComponent(HostComponent);
+    host = fixture.componentInstance;
     host.multi = true;
     host.chips = true;
     host.updateOnTab = true;

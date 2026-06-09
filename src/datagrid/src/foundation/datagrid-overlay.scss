@@ -1,0 +1,366 @@
+/* Styles for filter panels positioned with ngbDatagridFloatingPanel (fixed; may sit outside .ngb-grid). */
+
+.ngb-datagrid-floating-panel.grid-filter-menu-popover,
+.ngb-datagrid-floating-panel.dropdown-menu {
+  position: fixed !important;
+  z-index: 1200;
+  display: block;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  max-height: min(28rem, calc(100vh - 1.5rem));
+  overflow: auto;
+  margin: 0 !important;
+  border-radius: var(--dg-radius-md);
+  border: 1px solid var(--dg-border);
+  background: var(--dg-surface);
+  box-shadow: var(--dg-shadow-md);
+}
+
+.ngb-datagrid-floating-panel.dropdown-menu {
+  min-width: 12rem;
+  padding: 0.35rem 0;
+}
+
+.ngb-datagrid-floating-panel.grid-filter-operator-menu .dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.85rem;
+  border: 0;
+  background: transparent;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--dg-text);
+  text-align: left;
+}
+
+.ngb-datagrid-floating-panel.grid-filter-operator-menu .dropdown-item:hover {
+  background: var(--dg-surface-subtle);
+}
+
+.ngb-datagrid-floating-panel.grid-filter-operator-menu .dropdown-item.active {
+  color: var(--dg-dropdown-item-active-color);
+  background: var(--dg-dropdown-item-active-bg);
+}
+
+.ngb-datagrid-floating-panel.dropdown-menu .dropdown-item {
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--dg-text);
+}
+
+.ngb-datagrid-floating-panel.dropdown-menu .dropdown-item:hover {
+  background: var(--dg-surface-subtle);
+}
+
+.ngb-datagrid-floating-panel.grid-filter-menu-popover {
+  min-width: 18rem;
+  padding: 0;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-menu-surface {
+  display: block;
+  min-width: 18rem;
+  padding: 1rem;
+  border-radius: var(--dg-radius-md);
+  background: var(--dg-surface);
+}
+
+.ngb-datagrid-floating-panel .grid-filter-menu-surface__header {
+  margin-bottom: 0.875rem;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-menu-surface__eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dg-text-muted);
+}
+
+.ngb-datagrid-floating-panel .grid-filter-menu-surface__title {
+  margin-top: 0.15rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--dg-text);
+}
+
+.ngb-datagrid-floating-panel .grid-filter-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-stack__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--dg-text-muted);
+}
+
+.ngb-datagrid-floating-panel .grid-filter-stack--multi {
+  gap: 0.65rem;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-condition {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-operator-select,
+.ngb-grid .grid-filter-operator-select {
+  width: 100%;
+  min-height: var(--dg-control-height);
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-radius-sm);
+  background: var(--dg-surface);
+  font-size: 0.875rem;
+  color: var(--dg-text);
+}
+
+.ngb-datagrid-floating-panel .grid-filter-operator-select--compact,
+.ngb-grid .grid-filter-operator-select--compact {
+  width: auto;
+  min-width: 2.25rem;
+  max-width: 2.5rem;
+  padding: 0.35rem 0.25rem;
+  font-size: 0;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-logic-select,
+.ngb-grid .grid-filter-logic-select {
+  display: flex;
+  justify-content: center;
+  margin: 0.15rem 0;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-logic-select select,
+.ngb-grid .grid-filter-logic-select select {
+  width: auto;
+  min-width: 4.5rem;
+  min-height: 1.75rem;
+  padding: 0.2rem 1.5rem 0.2rem 0.65rem;
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-radius-sm);
+  background: var(--dg-surface);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--dg-text);
+  text-align: center;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-menu-surface__actions--split,
+.ngb-grid .grid-filter-menu-surface__actions--split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-apply--secondary,
+.ngb-datagrid-floating-panel .grid-filter-cancel--secondary,
+.ngb-grid .grid-filter-apply--secondary,
+.ngb-grid .grid-filter-cancel--secondary {
+  width: 100%;
+  border: 1px solid var(--dg-border-strong);
+  background: var(--dg-surface-muted);
+  color: var(--dg-text);
+  font-weight: 600;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-apply--secondary:hover,
+.ngb-datagrid-floating-panel .grid-filter-cancel--secondary:hover,
+.ngb-grid .grid-filter-apply--secondary:hover,
+.ngb-grid .grid-filter-cancel--secondary:hover {
+  background: var(--dg-surface-subtle);
+}
+
+.ngb-datagrid-floating-panel .grid-filter-multi-panel,
+.ngb-grid .grid-filter-multi-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 16.5rem;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-join-select,
+.ngb-grid .grid-filter-join-select {
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0.1rem 0;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-join-select__control,
+.ngb-grid .grid-filter-join-select__control {
+  width: 100%;
+  min-height: 1.75rem;
+  padding: 0.2rem 1.25rem 0.2rem 0.5rem;
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-radius-sm);
+  background: var(--dg-surface);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-field {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-field--with-icon .grid-filter-control,
+.ngb-datagrid-floating-panel .grid-filter-field--with-icon .grid-filter-value-input {
+  padding-right: 2.25rem;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-field__icon {
+  position: absolute;
+  right: 0.8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--dg-placeholder);
+  pointer-events: none;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-control,
+.ngb-datagrid-floating-panel .grid-filter-value-input,
+.ngb-datagrid-floating-panel .grid-filter-value-select,
+.ngb-grid .grid-filter-value-input,
+.ngb-grid .grid-filter-value-select {
+  width: 100%;
+  min-height: var(--dg-control-height);
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-radius-sm);
+  background: var(--dg-surface);
+  color: var(--dg-text);
+  font-size: 0.875rem;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-apply--secondary:disabled,
+.ngb-datagrid-floating-panel .grid-filter-cancel--secondary:disabled,
+.ngb-grid .grid-filter-apply--secondary:disabled,
+.ngb-grid .grid-filter-cancel--secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-condition__join {
+  margin: 0.15rem 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--dg-text-muted);
+  text-align: center;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-stack__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-operator__button {
+  padding: 0.55rem 0.8rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--dg-text-muted);
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-radius-sm);
+  background: var(--dg-surface);
+}
+
+.ngb-datagrid-floating-panel .grid-filter-clear,
+.ngb-datagrid-floating-panel .grid-filter-apply,
+.ngb-datagrid-floating-panel .grid-filter-cancel {
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: var(--dg-radius-sm);
+}
+
+.ngb-datagrid-floating-panel .grid-filter-apply {
+  border: 1px solid var(--dg-primary);
+  background: var(--dg-primary);
+  color: var(--dg-on-primary);
+}
+
+.ngb-datagrid-floating-panel .grid-filter-cancel,
+.ngb-datagrid-floating-panel .grid-filter-clear {
+  border: 1px solid var(--dg-border-strong);
+  background: var(--dg-surface);
+  color: var(--dg-text);
+}
+
+.ngb-datagrid-floating-panel .grid-filter-menu-surface__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--dg-border);
+}
+
+.ngb-datagrid-floating-panel .grid-filter-menu-surface__multi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 16rem;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-menu-surface__search {
+  border: 1px solid var(--dg-border);
+  border-radius: var(--dg-radius-md);
+  min-height: 2rem;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.8125rem;
+  width: 100%;
+}
+
+.ngb-datagrid-floating-panel .grid-multi-filter-list {
+  max-height: 11.5rem;
+  overflow: auto;
+  border-top: 1px solid var(--dg-border);
+  border-bottom: 1px solid var(--dg-border);
+}
+
+.ngb-datagrid-floating-panel .grid-multi-filter-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--dg-text);
+  cursor: pointer;
+}
+
+.ngb-datagrid-floating-panel .grid-multi-filter-option__main {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ngb-datagrid-floating-panel .grid-filter-menu-surface__actions--multi {
+  justify-content: space-between;
+}
+
+/* Bootstrap theme: prefer native dropdown-item / form-control styling when loaded */
+.ngb-datagrid-floating-panel[data-theme='bootstrap'].dropdown-menu .dropdown-item {
+  font-weight: 400;
+}
+
+.ngb-datagrid-floating-panel[data-theme='bootstrap'] .grid-filter-operator-select,
+.ngb-datagrid-floating-panel[data-theme='bootstrap'] .grid-filter-value-input,
+.ngb-datagrid-floating-panel[data-theme='bootstrap'] .grid-filter-value-select,
+.ngb-datagrid-floating-panel[data-theme='bootstrap'] .grid-filter-menu-surface__search,
+.ngb-datagrid-floating-panel[data-theme='bootstrap'] .grid-filter-join-select__control {
+  border-radius: var(--bs-border-radius, var(--dg-radius-sm));
+}

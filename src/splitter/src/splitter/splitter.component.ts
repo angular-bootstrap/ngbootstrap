@@ -106,7 +106,7 @@ type PaneState = {
       [style.min-height]="orientation === 'vertical' ? verticalMinHeight : null"
       [style.height]="orientation === 'vertical' ? verticalMinHeight : null">
       <!-- Iterate through the QueryList of panes -->
-      <ng-container *ngFor="let pane of panes; let i = index">
+      @for (pane of panes; track pane; let i = $index) {
         <div class="pane-wrapper" [style.flex]="getPaneFlex(pane)"
         [style.min-width]="orientation === 'horizontal' ? (pane.min || '0px') : null"
         [style.max-width]="orientation === 'horizontal' ? pane.max : null"
@@ -117,7 +117,8 @@ type PaneState = {
           <ng-container [ngTemplateOutlet]="pane.template"></ng-container>
         </div>
 
-        <div *ngIf="i < panes.length - 1" class="splitbar" 
+        @if (i < panes.length - 1) {
+        <div class="splitbar"
         [class.resizable]="resizable"
         [style.background-color]="barColor"
         [style.width.px]="orientation === 'horizontal' ? handleThickness : '100%'" 
@@ -131,17 +132,19 @@ type PaneState = {
         (keydown)="onHandleKeyDown($event, i)"
         (mousedown)="onMouseDown($event, i)">
           <div class="handle-line" [style.background-color]="lineColor">
+            @if (pane.collapsible) {
             <span
-              *ngIf="pane.collapsible"
               class="collapse-arrow bi"
               [ngClass]="getCollapseIcon(pane)"
               [style.color]="handleIconColor"
               (click)="onHandleToggle($event, i)"
               aria-hidden="true"
             ></span>
+            }
           </div>
         </div>
-      </ng-container>
+        }
+      }
     </div>
   `,
 })

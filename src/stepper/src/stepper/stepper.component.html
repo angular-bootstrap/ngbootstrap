@@ -12,8 +12,8 @@
   <!-- HEADER / LABELS -->
   <div class="ngb-stepper-header">
     <ol class="ngb-stepper-steps" role="presentation">
+      @for (step of steps; track step; let i = $index) {
       <li
-        *ngFor="let step of steps; let i = index"
         class="ngb-stepper-step"
         [class.active]="i === selectedIndex"
         [class.done]="i < selectedIndex && !isStepInError(i)"
@@ -34,64 +34,46 @@
           [ngClass]="indicatorClass(i)"
           aria-hidden="true"
         >
-          <ng-container *ngIf="customIconTpl; else defaultIcon">
+          @if (customIconTpl) {
             <ng-container
               [ngTemplateOutlet]="customIconTpl"
               [ngTemplateOutletContext]="{ index: i, state: stepState(i) }"
             ></ng-container>
-          </ng-container>
-          <ng-template #defaultIcon>
+          } @else {
             {{ defaultIconForState(stepState(i), i) }}
-          </ng-template>
+          }
         </div>
 
         <div
           class="ngb-stepper-label-container"
           [ngClass]="labelPositionClass"
         >
-          <div class="ngb-stepper-label" *ngIf="stepLabelTpl; else textLabel">
+          @if (stepLabelTpl) {
+          <div class="ngb-stepper-label">
             <ng-container
               [ngTemplateOutlet]="stepLabelTpl"
               [ngTemplateOutletContext]="{ index: i, step: step }"
             ></ng-container>
           </div>
-          <ng-template #textLabel>
+          } @else {
             <div class="ngb-stepper-label-text">
               {{ step.label || ('Step ' + (i + 1)) }}
             </div>
-          </ng-template>
-          <div class="ngb-stepper-optional" *ngIf="step.optional">
+          }
+          @if (step.optional) {
+          <div class="ngb-stepper-optional">
             {{ optionalLabel }}
           </div>
+          }
         </div>
       </li>
+      }
     </ol>
   </div>
 
   <!-- CONTENT -->
   <div class="ngb-stepper-content" [class.ngb-stepper-content-top]="contentPosition === 'top'">
-    <ng-container *ngIf="lazy; else allContent">
-      <ng-container *ngFor="let index of [selectedIndex]">
-        <div
-          class="fade-step"
-          [style.--ngb-stepper-animation-duration]="(disableAnimation ? 0 : animationDuration) + 'ms'"
-          role="tabpanel"
-          [attr.aria-labelledby]="stepId(index)"
-          [attr.id]="contentId(index)"
-        >
-          <ng-container *ngTemplateOutlet="stepContentTpl; context: { index: index }"></ng-container>
-          <div
-            *ngIf="currentErrorMessage"
-            class="ngb-stepper-error"
-            role="alert"
-          >
-            {{ currentErrorMessage }}
-          </div>
-        </div>
-      </ng-container>
-    </ng-container>
-
-    <ng-template #allContent>
+    @if (lazy) {
       <div
         class="fade-step"
         [style.--ngb-stepper-animation-duration]="(disableAnimation ? 0 : animationDuration) + 'ms'"
@@ -100,15 +82,28 @@
         [attr.id]="contentId(selectedIndex)"
       >
         <ng-container *ngTemplateOutlet="stepContentTpl; context: { index: selectedIndex }"></ng-container>
-        <div
-          *ngIf="currentErrorMessage"
-          class="ngb-stepper-error"
-          role="alert"
-        >
-          {{ currentErrorMessage }}
-        </div>
+        @if (currentErrorMessage) {
+          <div class="ngb-stepper-error" role="alert">
+            {{ currentErrorMessage }}
+          </div>
+        }
       </div>
-    </ng-template>
+    } @else {
+      <div
+        class="fade-step"
+        [style.--ngb-stepper-animation-duration]="(disableAnimation ? 0 : animationDuration) + 'ms'"
+        role="tabpanel"
+        [attr.aria-labelledby]="stepId(selectedIndex)"
+        [attr.id]="contentId(selectedIndex)"
+      >
+        <ng-container *ngTemplateOutlet="stepContentTpl; context: { index: selectedIndex }"></ng-container>
+        @if (currentErrorMessage) {
+          <div class="ngb-stepper-error" role="alert">
+            {{ currentErrorMessage }}
+          </div>
+        }
+      </div>
+    }
   </div>
 
   <!-- ACTIONS -->

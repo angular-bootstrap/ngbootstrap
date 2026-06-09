@@ -109,7 +109,7 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
   template: `
     <div class="typeahead-root">
       <div class="input-group mb-2">
-        <ng-container *ngIf="chips && multiSelect; else plainInput">
+        @if (chips && multiSelect) {
           <div class="form-control typeahead-chips-control" (click)="disabled ? null : focusInput()">
             <ngb-chips
               [items]="selected"
@@ -135,8 +135,7 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
               [attr.aria-activedescendant]="activeDescendantId"
             />
           </div>
-        </ng-container>
-        <ng-template #plainInput>
+        } @else {
           <input
             #inputEl
             type="text"
@@ -155,29 +154,31 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
             [attr.aria-controls]="overlayId"
             [attr.aria-activedescendant]="activeDescendantId"
           />
-        </ng-template>
+        }
 
-        <button
-          *ngIf="showClearButton && (query || (!multiSelect && selected.length))"
-          type="button"
-          class="btn btn-outline-secondary"
-          (click)="onClearClick($event)"
-          [disabled]="disabled"
-          [attr.aria-label]="i18n?.clear || 'Clear'"
-        >
-          &times;
-        </button>
+        @if (showClearButton && (query || (!multiSelect && selected.length))) {
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            (click)="onClearClick($event)"
+            [disabled]="disabled"
+            [attr.aria-label]="i18n?.clear || 'Clear'"
+          >
+            &times;
+          </button>
+        }
 
-        <button
-          *ngIf="showDropdownButton"
-          type="button"
-          class="btn btn-outline-secondary"
-          (click)="onDropdownButtonClick($event)"
-          [disabled]="disabled"
-          [attr.aria-label]="i18n?.dropdownButtonLabel || 'Toggle suggestions'"
-        >
-          &#9662;
-        </button>
+        @if (showDropdownButton) {
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            (click)="onDropdownButtonClick($event)"
+            [disabled]="disabled"
+            [attr.aria-label]="i18n?.dropdownButtonLabel || 'Toggle suggestions'"
+          >
+            &#9662;
+          </button>
+        }
       </div>
 
       <div
@@ -188,10 +189,12 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
         role="listbox"
         (scroll)="onScroll($event)"
       >
-        <div *ngIf="vScroll" [style.height.px]="beforePadding"></div>
+        @if (vScroll) {
+          <div [style.height.px]="beforePadding"></div>
+        }
 
+        @for (item of visible; track trackById($index, item); let idx = $index) {
         <button
-          *ngFor="let item of visible; trackBy: trackById; let idx = index"
           type="button"
           class="dropdown-item"
           [class.active]="idx === activeIndex"
@@ -202,7 +205,8 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
           [disabled]="item.disabled"
         >
           <div class="typeahead-item">
-            <span *ngIf="multiSelect" class="typeahead-item-checkbox">
+            @if (multiSelect) {
+            <span class="typeahead-item-checkbox">
               <input
                 type="checkbox"
                 class="form-check-input m-0"
@@ -212,7 +216,8 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
                 aria-hidden="true"
               />
             </span>
-            <ng-container *ngIf="resolvedItemTemplate as tpl; else defaultTpl">
+            }
+            @if (resolvedItemTemplate; as tpl) {
               <ng-container
                 [ngTemplateOutlet]="tpl"
                 [ngTemplateOutletContext]="{
@@ -223,26 +228,32 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
                   index: idx
                 }"
               ></ng-container>
-            </ng-container>
-            <ng-template #defaultTpl>
+            } @else {
               <span>{{ item.label }}</span>
-            </ng-template>
+            }
           </div>
         </button>
+        }
 
-        <div *ngIf="vScroll" [style.height.px]="afterPadding"></div>
+        @if (vScroll) {
+          <div [style.height.px]="afterPadding"></div>
+        }
 
-        <div *ngIf="showNoResults" class="dropdown-item text-muted text-center">
+        @if (showNoResults) {
+        <div class="dropdown-item text-muted text-center">
           {{ i18n?.noResults || 'No results' }}
         </div>
+        }
       </div>
 
-      <div *ngIf="multiSelect && selected.length" class="mt-2 small text-muted">
+      @if (multiSelect && selected.length) {
+      <div class="mt-2 small text-muted">
         {{ selectionSummary }}
         <button type="button" class="btn btn-link btn-sm ps-1" (click)="clearSelection()">
           {{ i18n?.clearSelection || 'Clear' }}
         </button>
       </div>
+      }
     </div>
   `,
 })

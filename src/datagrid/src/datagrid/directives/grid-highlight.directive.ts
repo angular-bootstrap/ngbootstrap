@@ -30,8 +30,8 @@ export class NgbGridHighlightDirective implements OnInit, OnChanges {
 
   private apply() {
     if (!this.grid) return;
-    this.grid.highlightRowKey = this.rowKey;
-    this.grid.highlightColKey = this.highlightColumnIndex;
+    this.grid.highlightRowKey = this.rowKey ?? null;
+    this.grid.highlightColKey = this.highlightColumnIndex ?? null;
     this.grid.highlightedIndex = this.highlightedIndex ?? [];
     this.grid.updateHighlightCache();
   }

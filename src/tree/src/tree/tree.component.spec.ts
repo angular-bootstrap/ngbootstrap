@@ -96,6 +96,8 @@ describe('NgbTreeComponent', () => {
   });
 
   it('uses plus/minus file icons when type is json', () => {
+    fixture = TestBed.createComponent(HostComponent);
+    host = fixture.componentInstance;
     host.type = 'json';
     host.nodes[0].expanded = false;
     fixture.detectChanges();

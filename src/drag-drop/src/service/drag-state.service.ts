@@ -8,7 +8,8 @@ export interface DndSession<T = unknown> {
   group?: string;
   fromList?: T[];
   fromIndex?: number;
-   fromIsPalette?: boolean;
+  fromIsPalette?: boolean;
+  fromListRef?: unknown;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -16,6 +17,7 @@ export class NgbDndState {
   readonly active = signal(false);
   private store = new Map<string, DndSession>();
   private currentId: string | null = null; // ✅ track current session id
+  private activeDropList: unknown | null = null;
 
 
   // Public so directives can read strings and announce
@@ -48,9 +50,26 @@ export class NgbDndState {
     return this.currentId ? (this.store.get(this.currentId) ?? null) : null;
   }
 
+  setActiveDropList(list: unknown): void {
+    this.activeDropList = list;
+  }
+
+  getActiveDropList(): unknown | null {
+    return this.activeDropList;
+  }
+
+  clearActiveDropList(list?: unknown): void {
+    if (!list || this.activeDropList === list) {
+      this.activeDropList = null;
+    }
+  }
+
   clear(id?: string | null) {
     if (id) this.store.delete(id);
     if (this.currentId === id) this.currentId = null;
-    if (this.store.size === 0) this.active.set(false);
+    if (this.store.size === 0) {
+      this.activeDropList = null;
+      this.active.set(false);
+    }
   }
 }

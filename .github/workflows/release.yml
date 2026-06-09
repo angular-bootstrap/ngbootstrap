@@ -1,59 +1,75 @@
+name: Release @angular-bootstrap/ngbootstrap
+
 on:
+  release:
+    types:
+      - published
   push:
-    branches:
-      - main
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
-  build-test-release:
+  publish:
+    name: Publish to npm
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write # CRITICAL: This enables OIDC authentication
-      packages: write
+    environment: npm-production
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-          always-auth: true
-          scope: '@angular-bootstrap'
+          node-version: 22.x
+          registry-url: https://registry.npmjs.org
 
-      - name: Clean dist
-        run: rm -rf dist
+      - name: Enable Corepack
+        run: corepack enable
 
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
 
       - name: Run tests
-        run: npm test
+        run: pnpm test:ci
 
       - name: Build library
-        run: npm run build
+        run: pnpm build
+
+      - name: Validate package metadata
+        run: pnpm release:verify
+
+      - name: Validate release tag
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="${GITHUB_REF_NAME}"
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "Release tag $TAG must match package version v$VERSION."
+            exit 1
+          fi
+
+      - name: Verify version is unpublished
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          if npm view "@angular-bootstrap/ngbootstrap@$VERSION" version >/dev/null 2>&1; then
+            echo "@angular-bootstrap/ngbootstrap@$VERSION is already published."
+            exit 1
+          fi
+
+      - name: Inspect npm package contents
+        run: pnpm pack:dry-run
+
+      - name: Audit production dependencies
+        run: pnpm security:audit
 
       - name: Publish to npm
-        working-directory: dist/ngbootstrap
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --provenance --access public
-
-      - name: Read version
-        id: pkg
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.pkg.outputs.version }}
-          release_name: v${{ steps.pkg.outputs.version }}
-          generate_release_notes: true
+        run: npm publish ./dist/ngbootstrap --access public --provenance

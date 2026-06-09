@@ -60,7 +60,7 @@ describe('NgbSplitterPaneComponent', () => {
     const wrapper = view.rootNodes[0] as HTMLDivElement | undefined;
     expect(wrapper?.style.overflow).toBe('auto');
 
-    host.scrollable = false;
+    host.pane.scrollable = false;
     fixture.detectChanges();
     const viewAfter = host.pane.template.createEmbeddedView(null);
     viewAfter.detectChanges();

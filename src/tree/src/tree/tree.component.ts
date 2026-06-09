@@ -27,9 +27,9 @@ import { NgbTreeNode, NgbTreeType, NgbTreeI18n } from './tree.types';
     </div>
 
     <ul class="list-unstyled mb-0" role="tree" [attr.aria-label]="i18n?.treeLabel || 'Tree'">
-      <ng-container *ngFor="let node of nodes; let i = index; trackBy: trackById">
+      @for (node of nodes; track trackById($index, node); let i = $index) {
         <ng-container *ngTemplateOutlet="renderNode; context: { $implicit: node, level: 1, index: i }"></ng-container>
-      </ng-container>
+      }
     </ul>
 
     <ng-template #renderNode let-node let-level="level" let-index="index">
@@ -39,7 +39,7 @@ import { NgbTreeNode, NgbTreeType, NgbTreeI18n } from './tree.types';
         [attr.aria-expanded]="hasChildren(node) ? !!node.expanded : null"
         [attr.aria-level]="level"
       >
-        <ng-container *ngIf="hasChildren(node); else leafSpacer">
+        @if (hasChildren(node)) {
           <button
             #nodeBtn
             type="button"
@@ -48,17 +48,19 @@ import { NgbTreeNode, NgbTreeType, NgbTreeI18n } from './tree.types';
             (keydown)="onNodeKeydown($event, node)"
             [attr.aria-label]="(node.expanded ? i18n?.collapse || 'Collapse' : i18n?.expand || 'Expand') + ' ' + node.label"
           >
-            <span *ngIf="type === 'json'" class="bi" [ngClass]="node.expanded ? minusIcon : plusIcon" aria-hidden="true"></span>
-            <span *ngIf="type !== 'json'" class="bi" [ngClass]="node.expanded ? collapseIcon : expandIcon" aria-hidden="true"></span>
+            @if (type === 'json') {
+              <span class="bi" [ngClass]="node.expanded ? minusIcon : plusIcon" aria-hidden="true"></span>
+            } @else {
+              <span class="bi" [ngClass]="node.expanded ? collapseIcon : expandIcon" aria-hidden="true"></span>
+            }
           </button>
-        </ng-container>
-        <ng-template #leafSpacer>
+        } @else {
           <span class="d-inline-block px-1" style="width: 1.5rem;"></span>
-        </ng-template>
+        }
 
         <label class="form-check d-inline-flex align-items-center gap-2 flex-grow-1 mb-0">
+          @if (showCheckbox) {
           <input
-            *ngIf="showCheckbox"
             type="checkbox"
             class="form-check-input"
             [checked]="!!node.selected"
@@ -66,19 +68,21 @@ import { NgbTreeNode, NgbTreeType, NgbTreeI18n } from './tree.types';
             (change)="toggleSelection(node, $event.target.checked)"
             [attr.aria-label]="(i18n?.select || 'Select') + ' ' + node.label"
           />
+          }
           <span class="form-check-label">{{ node.label }}</span>
         </label>
       </li>
 
+      @if (node.expanded && hasChildren(node)) {
       <ul
-        *ngIf="node.expanded && hasChildren(node)"
         class="list-unstyled ms-4"
         role="group"
       >
-        <ng-container *ngFor="let child of node.children; let ci = index; trackBy: trackById">
+        @for (child of node.children; track trackById($index, child); let ci = $index) {
           <ng-container *ngTemplateOutlet="renderNode; context: { $implicit: child, level: level + 1, index: ci }"></ng-container>
-        </ng-container>
+        }
       </ul>
+      }
     </ng-template>
   `,
 })

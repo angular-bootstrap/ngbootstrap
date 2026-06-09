@@ -114,12 +114,62 @@ class ColgroupSyncFilterHostComponent {
   syncId = 'filter-sync';
 }
 
+@Component({
+  selector: 'ngb-colgroup-sync-detail-host',
+  standalone: true,
+  imports: [NgbSyncColgroupDirective],
+  template: `
+    <table>
+      <colgroup [ngbSyncColgroup]="syncId" syncRole="header">
+        <col data-fixed="true" style="width: 48px;" />
+        <col />
+        <col />
+      </colgroup>
+      <thead>
+        <tr>
+          <th style="padding: 0; border: 0;">D</th>
+          <th style="padding: 0; border: 0;">Customer</th>
+          <th style="padding: 0; border: 0;">Owner</th>
+        </tr>
+        <tr>
+          <th></th>
+          <th style="padding: 0; border: 0;"><input style="width: 100%;" value="Filter customer" /></th>
+          <th style="padding: 0; border: 0;"><input style="width: 100%;" value="Filter owner" /></th>
+        </tr>
+      </thead>
+    </table>
+
+    <table>
+      <colgroup [ngbSyncColgroup]="syncId" syncRole="body">
+        <col data-fixed="true" style="width: 48px;" />
+        <col />
+        <col />
+      </colgroup>
+      <tbody>
+        <tr>
+          <td style="padding: 0; border: 0;"><button style="width: 32px;">></button></td>
+          <td style="padding: 0; border: 0;">Northwind Labs</td>
+          <td style="padding: 0; border: 0;">Avery Cole</td>
+        </tr>
+        <tr>
+          <td colspan="3" style="padding: 0; border: 0;">
+            <div style="width: 600px;">Expanded detail content should not resize the utility column.</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  `
+})
+class ColgroupSyncDetailHostComponent {
+  syncId = 'detail-sync';
+}
+
 describe('NgbSyncColgroupDirective', () => {
   let fixture: ComponentFixture<ColgroupSyncHostComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ColgroupSyncHostComponent, ColgroupSyncSortableHostComponent, ColgroupSyncFilterHostComponent]
+      imports: [ColgroupSyncHostComponent, ColgroupSyncSortableHostComponent, ColgroupSyncFilterHostComponent, ColgroupSyncDetailHostComponent]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ColgroupSyncHostComponent);
@@ -221,5 +271,19 @@ describe('NgbSyncColgroupDirective', () => {
 
     expect(widthAfterFirst).not.toBe('320px');
     expect(widthAfterSecond).toBe(widthAfterFirst);
+  });
+
+  it('ignores detail rows with colspan when syncing column widths', () => {
+    const detailFixture = TestBed.createComponent(ColgroupSyncDetailHostComponent);
+    detailFixture.detectChanges();
+
+    const tables = detailFixture.nativeElement.querySelectorAll('table');
+    const headerCols = tables[0].querySelectorAll('col');
+    const bodyCols = tables[1].querySelectorAll('col');
+
+    expect(headerCols[0].style.width).toBe('48px');
+    expect(bodyCols[0].style.width).toBe('48px');
+    expect(parseFloat(headerCols[1].style.width)).toBeGreaterThanOrEqual(80);
+    expect(parseFloat(headerCols[2].style.width)).toBeGreaterThanOrEqual(70);
   });
 });
