@@ -1,9 +1,6 @@
 name: Release @angular-bootstrap/ngbootstrap
 
 on:
-  release:
-    types:
-      - published
   push:
     tags:
       - 'v*.*.*'
