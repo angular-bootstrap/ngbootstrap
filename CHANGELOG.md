@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.1 - 2026-07-05
+
+### Fixed
+
+- Fixed `JsPdfAdapter` runtime loading in browser apps by allowing the bundler to resolve `jspdf` and `jspdf-autotable` from the consuming application.
+
 ## 2.0.0 - 2026-07-05
 
 ### Breaking Changes

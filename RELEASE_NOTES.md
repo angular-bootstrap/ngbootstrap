@@ -1,31 +1,18 @@
-# @angular-bootstrap/ngbootstrap 2.0.0
+# @angular-bootstrap/ngbootstrap 2.0.1
 
-This release removes the DataGrid Excel export dependency on an unmaintained spreadsheet writer package and replaces it with a dependency-free browser adapter.
+This patch fixes PDF export in browser apps.
 
-## Highlights
+## Fixed
 
-- DataGrid Excel export now uses `BrowserExcelExportAdapter` by default.
-- The adapter implements the existing `ExcelExportAdapter` contract, so applications can still provide a custom exporter through Angular DI.
-- The package no longer references or requires the removed spreadsheet dependency.
-- Documentation now explains the implementation choice, security rationale, migration path, and default adapter limitations.
+- `JsPdfAdapter` no longer leaves `jspdf` and `jspdf-autotable` as bare browser runtime imports.
+- Angular/Webpack can now resolve and bundle those maintained optional PDF integrations from the consuming application.
 
-## Breaking Change
+## Notes
 
-The previous spreadsheet adapter has been removed from the public API. Use `BrowserExcelExportAdapter` or provide your own `ExcelExportAdapter`.
+Applications using PDF export should keep `jspdf` and `jspdf-autotable` installed:
 
-## Limitations
-
-The built-in browser adapter exports visible column values and basic scalar cell types. It does not generate formulas, charts, pivot tables, merged cells, multiple sheets, workbook styling, or macro-enabled files.
-
-## Upgrade
-
-```ts
-import {
-  BrowserExcelExportAdapter,
-  ExcelExportAdapter,
-} from '@angular-bootstrap/ngbootstrap';
-
-providers: [
-  { provide: ExcelExportAdapter, useClass: BrowserExcelExportAdapter },
-];
+```bash
+npm install jspdf jspdf-autotable
 ```
+
+Excel export remains dependency-free through `BrowserExcelExportAdapter`.

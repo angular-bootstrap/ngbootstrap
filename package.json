@@ -1,6 +1,6 @@
 {
   "name": "@angular-bootstrap/ngbootstrap",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Bootstrap-friendly standalone Angular UI components, including DataGrid, pagination, typeahead, tree, splitter, stepper, chips, and drag-and-drop.",
   "author": {
     "name": "Harmeet Singh"
