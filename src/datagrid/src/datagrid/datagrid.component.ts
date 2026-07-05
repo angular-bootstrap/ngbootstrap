@@ -39,7 +39,7 @@ import { ngbApplyDataGridOperations } from '../data-operations';
 import { ExcelExportAdapter, NgbExportService, PdfExportAdapter } from '../services/export.services';
 import { NgbDatagridDefaultEditService, NgbDatagridEditService, NgbDatagridTrackByFn } from '../services/editing.service';
 import { JsPdfAdapter } from '../adapters/jsdf.adapter';
-import { XlsxAdapter } from '../adapters/xlsx.adapter';
+import { BrowserExcelExportAdapter } from '../adapters/browser-excel-export.adapter';
 
 import { ExportButtonDirective, ExportButtonContext } from '../directives/export-button.directive';
 import { NgbGridColumnDirective } from '../directives/grid-column.directive';
@@ -179,7 +179,7 @@ const isReasonableEmail = (value: unknown): boolean => {
   styleUrls: ['./datagrid.component.scss'],
   providers: [
     { provide: PdfExportAdapter, useClass: JsPdfAdapter },
-    { provide: ExcelExportAdapter, useClass: XlsxAdapter },
+    { provide: ExcelExportAdapter, useClass: BrowserExcelExportAdapter },
     { provide: NGB_DATAGRID_HOST, useExisting: forwardRef(() => Datagrid) },
   ],
   standalone:true

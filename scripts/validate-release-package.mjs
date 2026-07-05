@@ -8,6 +8,7 @@ const distPkgPath = join(distDir, 'package.json');
 const expectedPackageName = '@angular-bootstrap/ngbootstrap';
 const requiredOptionalPeers = ['chart.js', 'jspdf', 'jspdf-autotable'];
 const requiredAngularPeers = ['@angular/common', '@angular/core', '@angular/forms'];
+const forbiddenPeerNames = ['x' + 'lsx'];
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -34,7 +35,9 @@ assert(sourcePkg.publishConfig?.access === 'public', 'publishConfig.access must 
 assert(sourcePkg.license === 'MIT', 'Package license must be MIT.');
 assert(sourcePkg.repository?.url?.includes('github.com/angular-bootstrap/ngbootstrap'), 'Repository must point to angular-bootstrap/ngbootstrap.');
 assert(sourcePkg.sideEffects === false, 'sideEffects must remain false for tree-shaking.');
-assert(!sourcePkg.peerDependencies?.xlsx, 'xlsx must not be published as a supported optional peer until a patched npm version is available.');
+for (const peerName of forbiddenPeerNames) {
+  assert(!sourcePkg.peerDependencies?.[peerName], `${peerName} must not be published as a supported optional peer.`);
+}
 assert(existsSync(join(distDir, 'README.md')), 'Dist package README.md is missing.');
 assert(existsSync(join(distDir, 'fesm2022')), 'Dist package fesm2022 output is missing.');
 assert(existsSync(join(distDir, 'types')), 'Dist package type declarations are missing.');

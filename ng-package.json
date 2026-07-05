@@ -6,6 +6,8 @@
   },
   "allowedNonPeerDependencies": [],
   "assets": [
+    "CHANGELOG.md",
+    "RELEASE_NOTES.md",
     "src/styles/**/*.scss",
     "src/styles/**/*.css"
   ]

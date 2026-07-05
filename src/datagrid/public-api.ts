@@ -7,7 +7,7 @@ export * from './src/foundation/datagrid-floating-panel.directive';
 
 //adapters
 export * from './src/adapters/jsdf.adapter'
-export * from './src/adapters/xlsx.adapter'
+export * from './src/adapters/browser-excel-export.adapter'
 
 //directives
 export * from './src/directives/export-button.directive'
