@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.3 - 2026-07-05
+
+### Fixed
+
+- Replaced the default PDF export implementation with a dependency-free browser PDF writer so Angular apps do not need jsPDF optional HTML/canvas dependencies for basic table export.
+- Removed `jspdf` and `jspdf-autotable` from optional peer dependencies.
+
 ## 2.0.2 - 2026-07-05
 
 ### Fixed

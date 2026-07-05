@@ -6,9 +6,9 @@ const distDir = join(root, 'dist', 'ngbootstrap');
 const sourcePkgPath = join(root, 'package.json');
 const distPkgPath = join(distDir, 'package.json');
 const expectedPackageName = '@angular-bootstrap/ngbootstrap';
-const requiredOptionalPeers = ['chart.js', 'jspdf', 'jspdf-autotable'];
+const requiredOptionalPeers = ['chart.js'];
 const requiredAngularPeers = ['@angular/common', '@angular/core', '@angular/forms'];
-const forbiddenPeerNames = ['x' + 'lsx'];
+const forbiddenPeerNames = ['x' + 'lsx', 'jspdf', 'jspdf-autotable'];
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -45,8 +45,6 @@ assert(existsSync(join(distDir, 'types')), 'Dist package type declarations are m
 for (const peerName of requiredAngularPeers) {
   assert(sourcePkg.peerDependencies?.[peerName] === '>=21.0.0 <23.0.0', `${peerName} peer range must remain >=21.0.0 <23.0.0.`);
 }
-
-assert(sourcePkg.peerDependencies?.jspdf === '>=4.2.1 <5.0.0', 'jspdf peer range must require the patched 4.2.1+ release.');
 
 for (const peerName of requiredOptionalPeers) {
   assert(sourcePkg.peerDependencies?.[peerName], `${peerName} must remain declared as a peer dependency.`);

@@ -1,18 +1,15 @@
-# @angular-bootstrap/ngbootstrap 2.0.2
+# @angular-bootstrap/ngbootstrap 2.0.3
 
-This patch fixes PDF export bundling for Angular browser apps.
+This patch makes the default PDF export path dependency-free.
 
 ## Fixed
 
-- `JsPdfAdapter` now loads jsPDF from its browser UMD bundle.
-- This avoids forcing consuming apps to resolve jsPDF optional ESM dependencies such as HTML/canvas sanitization helpers when they only need table PDF export.
+- `JsPdfAdapter` now generates a simple table PDF directly in the browser.
+- Removed `jspdf` and `jspdf-autotable` from optional peer dependencies.
+- Angular apps no longer need jsPDF optional HTML/canvas dependencies for basic DataGrid PDF export.
 
 ## Notes
 
-Applications using PDF export should keep both maintained PDF integrations installed:
+PDF and Excel export are dependency-free by default. The built-in PDF adapter is intended for simple table export only.
 
-```bash
-npm install jspdf jspdf-autotable
-```
-
-Excel export remains dependency-free through `BrowserExcelExportAdapter`.
+Use a custom `PdfExportAdapter` for branded layouts, images, charts, rich typography, or advanced pagination.

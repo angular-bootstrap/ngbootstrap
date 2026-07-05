@@ -29,14 +29,20 @@ npm install @angular-bootstrap/ngbootstrap bootstrap bootstrap-icons
 Optional integrations are installed only when you use those features:
 
 ```bash
-npm install chart.js jspdf jspdf-autotable
+npm install chart.js
 ```
+
+PDF and Excel export are dependency-free by default.
 
 Excel export is dependency-free by default. The built-in `BrowserExcelExportAdapter`
 generates an Excel-compatible workbook in the browser and avoids unmaintained
 spreadsheet writer dependencies. It is intended for visible column values and
 basic scalar cell types; use a custom `ExcelExportAdapter` for formulas, charts,
 multiple sheets, workbook styling, or other advanced workbook features.
+
+The built-in PDF adapter generates a simple table PDF in the browser. Provide a custom
+`PdfExportAdapter` when your product needs branded PDFs, images, charts, advanced layout,
+rich typography, headers, footers, or more precise pagination.
 
 ## Use
 
