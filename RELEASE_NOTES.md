@@ -1,15 +1,15 @@
-# @angular-bootstrap/ngbootstrap 2.0.1
+# @angular-bootstrap/ngbootstrap 2.0.2
 
-This patch fixes PDF export in browser apps.
+This patch fixes PDF export bundling for Angular browser apps.
 
 ## Fixed
 
-- `JsPdfAdapter` no longer leaves `jspdf` and `jspdf-autotable` as bare browser runtime imports.
-- Angular/Webpack can now resolve and bundle those maintained optional PDF integrations from the consuming application.
+- `JsPdfAdapter` now loads jsPDF from its browser UMD bundle.
+- This avoids forcing consuming apps to resolve jsPDF optional ESM dependencies such as HTML/canvas sanitization helpers when they only need table PDF export.
 
 ## Notes
 
-Applications using PDF export should keep `jspdf` and `jspdf-autotable` installed:
+Applications using PDF export should keep both maintained PDF integrations installed:
 
 ```bash
 npm install jspdf jspdf-autotable

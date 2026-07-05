@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.2 - 2026-07-05
+
+### Fixed
+
+- Fixed PDF export bundling by loading jsPDF from its browser UMD bundle, avoiding build-time resolution of jsPDF optional ESM dependencies.
+
 ## 2.0.1 - 2026-07-05
 
 ### Fixed
