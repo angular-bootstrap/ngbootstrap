@@ -3,6 +3,8 @@ import {
 } from '@angular/core';
 import { NgbDndState, DndSession } from '../service/drag-state.service';
 
+type DndHandledDragEvent = DragEvent & { __ngbHandled?: boolean };
+
 export interface NgbDndDropEvent<T> {
     item: T;
     fromIndex: number;
@@ -12,7 +14,7 @@ export interface NgbDndDropEvent<T> {
     sameList: boolean;
 }
 
-export interface DndCanDropPayload<T = any> {
+export interface DndCanDropPayload<T = unknown> {
   dragItem: T;        // item being dragged (best-effort if unknown)
   srcList: T[];       // source array (best-effort if unknown)
   srcIndex: number;   // index in source (best-effort if unknown)
@@ -22,7 +24,7 @@ export interface DndCanDropPayload<T = any> {
 }
 
 /** Guard function; return true to allow, false to block */
-export type DndCanDropFn<T = any> = (payload: DndCanDropPayload<T>) => boolean;
+export type DndCanDropFn<T = unknown> = (payload: DndCanDropPayload<T>) => boolean;
 
 @Directive({
     selector: '[ngbDndList]',
@@ -48,7 +50,7 @@ export class NgbDndListDirective<T = unknown> {
 
     @Input() dndIsPalette = false;
 
-    @Input() dndCanDrop: boolean | DndCanDropFn<any> = true;
+    @Input() dndCanDrop: boolean | DndCanDropFn<T> = true;
 
     // (optional) visual feedback while hovering a denied list
     private _denied = false;
@@ -104,16 +106,32 @@ export class NgbDndListDirective<T = unknown> {
             return;
         }
 
+        this.hover = true;
+        const idx = this.indexFromPointer(ev);
+        const payload = this._buildGuardPayload(s as DndSession<T>, idx);
+        const canDropHere = this._allowDrop(payload)
+          && !this.isDroppingIntoOwnDescendant(s.item, this.list as unknown[]);
+
+        this.canDrop = canDropHere;
+        this._denied = !canDropHere;
+
+        try {
+          if (ev.dataTransfer) {
+            ev.dataTransfer.dropEffect = canDropHere ? (this.dndCloneOnDrop ? 'copy' : 'move') : 'none';
+          }
+        } catch { }
+
+        if (!canDropHere) {
+          this.removePlaceholder();
+          this.lastIndex = -1;
+          this.state.clearActiveDropList(this);
+          return;
+        }
+
         ev.preventDefault();
         ev.stopPropagation();
         this.state.setActiveDropList(this);
-        this.hover = true;
-        this.canDrop = true;
-
-        try { if (ev.dataTransfer) ev.dataTransfer.dropEffect = this.dndCloneOnDrop ? 'copy' : 'move'; } catch { }
-
         this.ensurePlaceholder();
-        const idx = this.indexFromPointer(ev);
         if (idx !== this.lastIndex) {
             this.lastIndex = idx;
             this.positionPlaceholderAt(idx);
@@ -156,9 +174,9 @@ export class NgbDndListDirective<T = unknown> {
             }
         }
 
-        const anyEv = ev as any;
-        if (anyEv.__ngbHandled) return;
-        anyEv.__ngbHandled = true;
+        const handledEvent = ev as DndHandledDragEvent;
+        if (handledEvent.__ngbHandled) return;
+        handledEvent.__ngbHandled = true;
 
         ev.preventDefault();
         this.performDrop(ev);
@@ -178,9 +196,9 @@ export class NgbDndListDirective<T = unknown> {
             return;
         }
 
-        const anyEv = ev as any;
-        if (anyEv.__ngbHandled) return;
-        anyEv.__ngbHandled = true;
+        const handledEvent = ev as DndHandledDragEvent;
+        if (handledEvent.__ngbHandled) return;
+        handledEvent.__ngbHandled = true;
 
         ev.preventDefault();
         ev.stopPropagation();
@@ -281,31 +299,33 @@ export class NgbDndListDirective<T = unknown> {
         return i; // primitive
     }
 
-    private isDroppingIntoOwnDescendant(item: any, targetList: any[]): boolean {
+    private isDroppingIntoOwnDescendant(item: unknown, targetList: unknown[]): boolean {
         const key = this.dndChildrenKey;
-        if (!key || !item) return false;
+        if (!key || !item || typeof item !== 'object') return false;
 
-        const stack: any[][] = [];
-        if (Array.isArray(item[key])) stack.push(item[key]);
+        const stack: unknown[][] = [];
+        const rootChildren = (item as Record<string, unknown>)[key];
+        if (Array.isArray(rootChildren)) stack.push(rootChildren);
 
         while (stack.length) {
             const arr = stack.pop()!;
             if (arr === targetList) return true;
             for (const child of arr) {
-            const kids = child?.[key];
-            if (Array.isArray(kids)) stack.push(kids);
+              if (!child || typeof child !== 'object') continue;
+              const kids = (child as Record<string, unknown>)[key];
+              if (Array.isArray(kids)) stack.push(kids);
             }
         }
         return false;
-        }
+    }
     /**
      * Build a guard payload using whatever drag context you already store.
      * If some fields don’t exist in your code, the fallbacks keep it working.
      */
-    private _buildGuardPayload(session: DndSession, dstIndex: number): DndCanDropPayload<any> {
-        const srcList = (session.fromList as any[]) ?? [];
+    private _buildGuardPayload(session: DndSession<T>, dstIndex: number): DndCanDropPayload<T> {
+        const srcList = session.fromList ?? [];
         const srcIndex = typeof session.fromIndex === 'number' ? session.fromIndex : -1;
-        const dstList = this.list as any[];
+        const dstList = this.list ?? [];
 
         return {
             dragItem: session.item,
@@ -322,34 +342,34 @@ export class NgbDndListDirective<T = unknown> {
      * Uses vertical list heuristics; adjust for horizontal if your list is horizontal.
      */
     private _computeDropIndex(ev: DragEvent): number {
-    const host = (this as any)._host?.nativeElement
-                ?? (this as any)._el?.nativeElement
-                ?? (this as any).el?.nativeElement
-                ?? (this as any).elementRef?.nativeElement
-                ?? null;
+      const host = this.el.nativeElement;
+      if (!host) return this.list?.length ?? 0;
 
-    if (!host) return (this.list as any[])?.length ?? 0;
+      const children = this.draggableChildren();
+      const y = ev.clientY;
 
-    const children = this.draggableChildren();
-    const y = ev.clientY;
-
-    for (let i = 0; i < children.length; i++) {
-        const rect = children[i].getBoundingClientRect();
-        const midY = rect.top + rect.height / 2;
-        if (y < midY) return i;
-    }
-    return children.length;
+      for (let i = 0; i < children.length; i++) {
+          const rect = children[i].getBoundingClientRect();
+          const midY = rect.top + rect.height / 2;
+          if (y < midY) return i;
+      }
+      return children.length;
     }
         // Evaluate the guard safely
-    private _allowDrop<T>(payload: DndCanDropPayload<T>): boolean {
+    private _allowDrop(payload: DndCanDropPayload<T>): boolean {
         const guard = this.dndCanDrop;
         if (typeof guard === 'boolean') return guard;
         try { return guard ? !!guard(payload) : true; } catch { return false; }
     }
 
+    emitDropEvent(event: NgbDndDropEvent<T>): void {
+        this.dndDropped.emit(event);
+        this.state.announce?.(this.state.i18n.dropped());
+    }
+
     // Extract your existing onDrop logic into a single method:
     private performDrop(ev: DragEvent) {
-        const session = this.getSession(ev);
+        const session = this.getSession(ev) as DndSession<T> | null;
         if (!session) return;
 
         const dstIndex = this._computeDropIndex(ev);
@@ -360,6 +380,10 @@ export class NgbDndListDirective<T = unknown> {
             ev.preventDefault();
             ev.stopPropagation();
             this._denied = true;   // cosmetic: adds .ngb-dnd-denied for styling
+            this.canDrop = false;
+            this.state.announce?.(this.state.i18n.cannotDropHere());
+            this.removePlaceholder();
+            this.lastIndex = -1;
             return;                // ⛔ do not mutate arrays
         }
         this._denied = false;
@@ -367,13 +391,15 @@ export class NgbDndListDirective<T = unknown> {
         // ❗ block cycles: don't allow dropping an item into its own descendants
         if (this.isDroppingIntoOwnDescendant(session.item, this.list)) {
             // optional: visual/aural feedback
+            this._denied = true;
+            this.canDrop = false;
             this.state.announce?.(this.state.i18n.cannotDropHere());
             this.removePlaceholder();
             this.lastIndex = -1;
             return;
         }
         const targetIndex = this.lastIndex < 0 ? this.list.length : this.lastIndex;
-        const fromList = (session.fromList as T[]) ?? undefined;
+        const fromList = session.fromList;
         const fromIndex = (session.fromIndex as number) ?? -1;
         const sameList = fromList === this.list;
         const isExternal = session.fromIsPalette === true || !fromList || fromIndex === -1;
@@ -402,7 +428,7 @@ export class NgbDndListDirective<T = unknown> {
         this.removePlaceholder();
         this.lastIndex = -1;
 
-        this.dndDropped.emit({
+        this.emitDropEvent({
             item: itemToInsert,
             fromIndex,
             toIndex: insertAt,
@@ -410,8 +436,6 @@ export class NgbDndListDirective<T = unknown> {
             toList: this.list,
             sameList
         });
-
-        this.state.announce?.(this.state.i18n.dropped());
 
     }
 

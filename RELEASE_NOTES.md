@@ -1,15 +1,27 @@
-# @angular-bootstrap/ngbootstrap 2.0.3
+# @angular-bootstrap/ngbootstrap 2.1.0
 
-This patch makes the default PDF export path dependency-free.
+This release expands the DataGrid with first-class grouping support and rounds out several related grid behaviors and docs updates.
+
+## Added
+
+- DataGrid grouping with `groupable` and `group` inputs for single-field or multi-field grouping.
+- `groupChange` and grouped `dataStateChange` payloads for manual or server-side grouping flows.
+- Drag-to-group interactions, grouped rows, expand/collapse behavior, aggregate output, and custom group header/footer templates.
+- Sticky group headers and sticky group footers for larger grouped datasets.
+
+## Changed
+
+- Docs, package copy, and examples now position ngbootstrap as Angular UI for data-heavy apps.
+- Grouping examples now build on a shared realistic dataset and extend it across automatic grouping, manual grouping, aggregates, templates, and sticky group examples.
 
 ## Fixed
 
-- `JsPdfAdapter` now generates a simple table PDF directly in the browser.
-- Removed `jspdf` and `jspdf-autotable` from optional peer dependencies.
-- Angular apps no longer need jsPDF optional HTML/canvas dependencies for basic DataGrid PDF export.
+- Sorting continues to behave correctly in grouped scenarios.
+- In-cell editing activation is more reliable.
+- Sticky columns and column reordering behavior were corrected in the DataGrid docs and integration flow.
 
 ## Notes
 
-PDF and Excel export are dependency-free by default. The built-in PDF adapter is intended for simple table export only.
+PDF and Excel export remain dependency-free by default.
 
-Use a custom `PdfExportAdapter` for branded layouts, images, charts, rich typography, or advanced pagination.
+Use a custom `PdfExportAdapter` or `ExcelExportAdapter` when your product needs branded documents, advanced workbook generation, charts, images, or other highly customized export output.

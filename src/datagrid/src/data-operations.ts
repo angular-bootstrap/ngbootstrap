@@ -11,6 +11,8 @@ import {
   NgbDataGridAggregateDescriptor,
   NgbDataGridAggregateResults,
   NgbDataGridDataResult,
+  NgbDataGridGroupDescriptor,
+  NgbDataGridGroupResult,
   NgbDataGridProcessOptions,
   NgbDataGridSortDescriptor,
   NgbDataGridState,
@@ -36,12 +38,26 @@ export function ngbApplyDataGridOperations<T>(
   const total = sorted.length;
   const aggregates = ngbCalculateDataGridAggregates(sorted, options.aggregates ?? []);
   const page = options.page === false ? sorted : applyPage(sorted, state);
+  const groupedData = (state.group?.length ?? 0) > 0
+    ? (options.groupedData?.length ? cloneGroupResults(options.groupedData) : ngbGroupData(page, state.group ?? []))
+    : undefined;
 
   return {
     data: page,
     total,
     ...(Object.keys(aggregates).length ? { aggregates } : {}),
+    ...(groupedData?.length ? { groupedData } : {}),
   };
+}
+
+export function ngbGroupData<T>(
+  data: readonly T[] | null | undefined,
+  descriptors: readonly NgbDataGridGroupDescriptor[] | null | undefined,
+): NgbDataGridGroupResult<T>[] {
+  const rows = [...(data ?? [])];
+  const normalized = normalizeGroupDescriptors(descriptors);
+  if (!normalized.length || !rows.length) return [];
+  return groupRows(rows, normalized, 0);
 }
 
 export function ngbCalculateDataGridAggregates<T>(
@@ -57,17 +73,20 @@ export function ngbCalculateDataGridAggregates<T>(
     const values = rows
       .map((row) => (row as Record<string, unknown>)?.[field])
       .filter((value) => value !== null && value !== undefined && value !== '');
+    const aggregate = normalizeAggregate(descriptor.aggregate);
 
-    switch (descriptor.aggregate) {
+    switch (aggregate) {
       case 'count':
         bucket.count = values.length;
         break;
       case 'sum':
         bucket.sum = numericValues(values).reduce((sum, value) => sum + value, 0);
         break;
-      case 'average': {
+      case 'avg': {
         const numbers = numericValues(values);
-        bucket.average = numbers.length ? numbers.reduce((sum, value) => sum + value, 0) / numbers.length : null;
+        const average = numbers.length ? numbers.reduce((sum, value) => sum + value, 0) / numbers.length : null;
+        bucket.avg = average;
+        bucket.average = average;
         break;
       }
       case 'min':
@@ -199,6 +218,96 @@ function applyPage<T>(rows: T[], state: NgbDataGridState): T[] {
     ? Math.max(0, Math.trunc(Number(state.skip)))
     : Math.max(0, (Math.max(1, Math.trunc(Number(state.page) || 1)) - 1) * pageSize);
   return rows.slice(skip, skip + pageSize);
+}
+
+function groupRows<T>(
+  rows: T[],
+  descriptors: readonly Required<NgbDataGridGroupDescriptor>[],
+  level: number,
+): NgbDataGridGroupResult<T>[] {
+  const descriptor = descriptors[level];
+  if (!descriptor) return [];
+
+  const buckets = new Map<string, { value: unknown; rows: T[] }>();
+  for (const row of rows) {
+    const value = (row as Record<string, unknown>)?.[descriptor.field];
+    const key = groupValueKey(value);
+    const bucket = buckets.get(key);
+    if (bucket) {
+      bucket.rows.push(row);
+    } else {
+      buckets.set(key, { value, rows: [row] });
+    }
+  }
+
+  const groups = Array.from(buckets.values()).sort((left, right) => {
+    const result = compareValues(left.value, right.value);
+    return descriptor.dir === 'desc' ? -result : result;
+  });
+
+  return groups.map((bucket) => {
+    const childGroups = groupRows(bucket.rows, descriptors, level + 1);
+    return {
+      field: descriptor.field,
+      value: bucket.value,
+      dir: descriptor.dir,
+      level,
+      count: bucket.rows.length,
+      ...(descriptor.aggregates?.length ? { aggregates: ngbCalculateDataGridAggregates(bucket.rows, descriptor.aggregates) } : {}),
+      items: childGroups.length ? childGroups : bucket.rows,
+    };
+  });
+}
+
+function normalizeGroupDescriptors(
+  descriptors: readonly NgbDataGridGroupDescriptor[] | null | undefined,
+): Array<Required<NgbDataGridGroupDescriptor>> {
+  const seen = new Set<string>();
+  const normalized: Array<Required<NgbDataGridGroupDescriptor>> = [];
+
+  for (const descriptor of descriptors ?? []) {
+    const field = String(descriptor?.field ?? '').trim();
+    if (!field || seen.has(field)) continue;
+      seen.add(field);
+      normalized.push({
+        field,
+        dir: descriptor.dir === 'desc' ? 'desc' : 'asc',
+        aggregates: [...(descriptor.aggregates ?? [])],
+      });
+    }
+
+  return normalized;
+}
+
+function normalizeAggregate(aggregate: NgbDataGridAggregateDescriptor['aggregate']): 'count' | 'sum' | 'avg' | 'min' | 'max' {
+  return aggregate === 'average' ? 'avg' : aggregate;
+}
+
+function cloneGroupResults<T>(groups: readonly NgbDataGridGroupResult<T>[]): NgbDataGridGroupResult<T>[] {
+  return groups.map((group) => ({
+    ...group,
+    ...(group.aggregates ? { aggregates: cloneAggregateResults(group.aggregates) } : {}),
+    items: group.items.map((item) => (isGroupResult(item) ? cloneGroupResults([item])[0] : item)),
+  }));
+}
+
+function cloneAggregateResults(
+  results: NgbDataGridAggregateResults | null | undefined,
+): NgbDataGridAggregateResults {
+  const cloned: NgbDataGridAggregateResults = {};
+  for (const field of Object.keys(results ?? {})) {
+    cloned[field] = { ...(results as NgbDataGridAggregateResults)[field] };
+  }
+  return cloned;
+}
+
+function isGroupResult<T>(item: NgbDataGridGroupResult<T> | T): item is NgbDataGridGroupResult<T> {
+  return typeof item === 'object' && item !== null && Array.isArray((item as NgbDataGridGroupResult<T>).items);
+}
+
+function groupValueKey(value: unknown): string {
+  if (value instanceof Date) return `date:${value.toISOString()}`;
+  return `${typeof value}:${String(value)}`;
 }
 
 function resolveFilterType<T>(

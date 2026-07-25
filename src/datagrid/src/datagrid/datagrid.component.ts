@@ -15,6 +15,11 @@ import {
   NgbFilterTemplate,
   NgbFilterMenuTemplate,
   NgbGlobalFilterTemplate,
+  NgbDataGridGroupFooterTemplateDirective,
+  NgbDataGridGroupHeaderColumnTemplateDirective,
+  NgbDataGridGroupHeaderTemplateDirective,
+  GroupColumnCtx,
+  GroupHeaderCtx,
   NgbPagerTemplate,
   CellCtx,
   EditCtx,
@@ -26,18 +31,31 @@ import { NgbRowDetailTemplate } from '../directives/datagrid-templates.directive
 import { ngbResolvePagerPageSizeOptions } from '../../../pagination';
 import { firstValueFrom, isObservable, Observable } from 'rxjs';
 import {
+  NgbDataGridAggregateDescriptor,
+  NgbDataGridAggregateResults,
   NgbColumnReorderEvent,
   NgbColumnReorderOptions,
   NgbDataGridState,
   NgbDataGridExportOptions,
+  NgbDataGridGroupChange,
+  NgbDataGridGroupDescriptor,
+  NgbDataGridGroupResult,
+  NgbDataGridGroupingSettings,
   NgbDataGridProcessOptions,
+  NgbMultiCheckboxFilterOptions,
+  NgbSearchHighlightSegment,
   NgbDataGridTheme,
   NgbDataGridResponsiveOptions,
   NgbEditMode
 } from '../datagrid.types';
-import { ngbApplyDataGridOperations } from '../data-operations';
+import { ngbApplyDataGridOperations, ngbGroupData } from '../data-operations';
 import { ExcelExportAdapter, NgbExportService, PdfExportAdapter } from '../services/export.services';
-import { NgbDatagridDefaultEditService, NgbDatagridEditService, NgbDatagridTrackByFn } from '../services/editing.service';
+import {
+  NgbDatagridDefaultEditService,
+  NgbDatagridEditService,
+  NgbDatagridRowId,
+  NgbDatagridTrackByFn,
+} from '../services/editing.service';
 import { JsPdfAdapter } from '../adapters/jsdf.adapter';
 import { BrowserExcelExportAdapter } from '../adapters/browser-excel-export.adapter';
 
@@ -73,7 +91,6 @@ import {
   NgbMenuFilterConditionDraft
 } from '../models/filtering';
 import { NGB_DATAGRID_HOST } from '../layout-toolbar/datagrid-host.token';
-import { NgbMultiCheckboxFilterOptions } from '../datagrid.types';
 import {
   NGB_DATAGRID_DEFAULT_LABELS,
   NgbDatagridLabels,
@@ -82,10 +99,13 @@ import {
 } from '../models/datagrid-labels';
 
 type SortDir = 'asc' | 'desc' | '';
+type NormalizedFilterValue = string | number | boolean | null;
+type ModifierKeyEvent = Event & Partial<Pick<MouseEvent, 'shiftKey' | 'metaKey' | 'ctrlKey'>>;
 
 type Key<T> = Extract<keyof T, string>;
 
 type KeyOf<T> = Extract<keyof T, string>;
+type DraftValues<T> = Partial<Record<KeyOf<T>, unknown>>;
 
 const MAX_EMAIL_LENGTH = 254;
 const SELECTION_COL_WIDTH = 48;
@@ -94,6 +114,47 @@ const STICKY_TOGGLE_COL_WIDTH = 48;
 const ACTION_COL_WIDTH = 176;
 
 type UtilityColumnKind = 'selection' | 'detail' | 'sticky-toggle' | 'actions';
+type StackedGroup = 'start' | 'center' | 'end';
+type MultiCheckboxOption = { label: string; value: unknown };
+type GroupSortDir = 'asc' | 'desc';
+
+interface NgbDatagridGroupRenderRow<T> {
+  kind: 'group';
+  key: string;
+  group: NgbDataGridGroupResult<T>;
+  collapsed: boolean;
+  level: number;
+  startIndex: number;
+}
+
+interface NgbDatagridGroupFooterRenderRow<T> {
+  kind: 'group-footer';
+  key: string;
+  group: NgbDataGridGroupResult<T>;
+  level: number;
+  startIndex: number;
+}
+
+interface NgbDatagridStickyGroupMeasurement<T> {
+  key: string;
+  level: number;
+  startIndex: number;
+  endIndex: number;
+  top: number;
+  bottom: number;
+  height: number;
+  row: T;
+}
+
+interface NgbDatagridDataRenderRow<T> {
+  kind: 'data';
+  key: NgbDatagridRowId;
+  row: T;
+  pagedIndex: number;
+  level: number;
+}
+
+type NgbDatagridRenderRow<T> = NgbDatagridGroupRenderRow<T> | NgbDatagridGroupFooterRenderRow<T> | NgbDatagridDataRenderRow<T>;
 
 export type NgbTableResponsive = true | false | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 export interface NgbTableOptions {
@@ -126,8 +187,8 @@ export type NgbDataLayoutMode = 'tabular' | 'stacked';
 export type NgbSelectionMode = 'none' | 'single' | 'multiple';
 export type NgbSelectionBehavior = 'row' | 'checkbox' | 'both';
 export type NgbSelectionKeyMode = 'desktop' | 'mobile';
-export type NgbRowKey = string | ((row: any, rowIndex: number) => any);
-export type NgbColKey = string | ((column: any, columnIndex: number) => any);
+export type NgbRowKey = string | ((row: unknown, rowIndex: number) => NgbDatagridRowId);
+export type NgbColKey = string | ((column: unknown, columnIndex: number) => unknown);
 
 export interface NgbSelectionLabels {
   selectAll?: string;
@@ -187,6 +248,7 @@ const isReasonableEmail = (value: unknown): boolean => {
 export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   /** Column definitions to render */
   private _columns: ColumnDef<T>[] = [];
+  renderTick = 0;
   @Input()
   get columns(): ColumnDef<T>[] {
     return this._columns;
@@ -287,7 +349,16 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.syncLegacyFilters(this.localFilter);
     this.invalidateFilteredCaches();
   }
-  @Input() filterOperators?: Partial<Record<ColumnType, NgbFilterOperator[]>>;
+  private _filterOperators?: Partial<Record<ColumnType, NgbFilterOperator[]>>;
+  @Input()
+  get filterOperators(): Partial<Record<ColumnType, NgbFilterOperator[]>> | undefined {
+    return this._filterOperators;
+  }
+  set filterOperators(value: Partial<Record<ColumnType, NgbFilterOperator[]>> | undefined) {
+    this._filterOperators = value;
+    this.filterOperatorsCache.clear();
+    this.markGridForCheck();
+  }
   @Input() filterManual = false;
   @Input() externalFiltering = false;
   /** Opts local arrays into the reusable DataGrid operation helper for filter/sort/page processing. */
@@ -299,6 +370,37 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   set dataOperations(value: boolean | NgbDataGridProcessOptions<T> | null | undefined) {
     this._dataOperations = value ?? false;
     this.invalidatePagedCache();
+  }
+  private _groupable: boolean | NgbDataGridGroupingSettings = false;
+  @Input()
+  get groupable(): boolean | NgbDataGridGroupingSettings {
+    return this._groupable;
+  }
+  set groupable(value: boolean | NgbDataGridGroupingSettings | null | undefined) {
+    this._groupable = value ?? false;
+    this.invalidatePagedCache();
+    this.markGridForCheck();
+  }
+  private _group: NgbDataGridGroupDescriptor[] = [];
+  @Input()
+  get group(): NgbDataGridGroupDescriptor[] {
+    return this._group;
+  }
+  set group(value: NgbDataGridGroupDescriptor[] | null | undefined) {
+    this._group = this.normalizeGroupDescriptors(value);
+    this.syncCollapsedGroups();
+    this.invalidatePagedCache();
+    this.markGridForCheck();
+  }
+  private _groupedData: NgbDataGridGroupResult<T>[] | null = null;
+  @Input()
+  get groupedData(): NgbDataGridGroupResult<T>[] | null {
+    return this._groupedData;
+  }
+  set groupedData(value: NgbDataGridGroupResult<T>[] | null | undefined) {
+    this._groupedData = value ? this.cloneGroupResults(value) : null;
+    this.invalidatePagedCache();
+    this.markGridForCheck();
   }
   /**
    * Optional controlled data-operation state. When provided, the grid syncs page, pageSize,
@@ -377,6 +479,8 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
   set tableOptions(value: NgbTableOptions | null | undefined) {
     this._tableOptions = value ?? {};
+    this.tableClassListCache = null;
+    this.responsiveWrapperClassesCache = null;
     this.invalidatePagedCache();
   }
   /**
@@ -414,10 +518,28 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   @Input() globalFilterAriaLabel = 'Search all columns';
   /** Placeholder for the built-in global search input. */
   @Input() globalFilterPlaceholder = 'Search all columns';
+  private _searchHighlightTerm = '';
   /** When set, matching substrings in visible cells are wrapped with `.grid-search-highlight`. */
-  @Input() searchHighlightTerm = '';
+  @Input()
+  get searchHighlightTerm(): string {
+    return this._searchHighlightTerm;
+  }
+  set searchHighlightTerm(value: string | null | undefined) {
+    this._searchHighlightTerm = value ?? '';
+    this.searchHighlightCache.clear();
+    this.markGridForCheck();
+  }
+  private _searchHighlightFields: string[] | null = null;
   /** Column fields included in search highlighting; all visible columns when empty. */
-  @Input() searchHighlightFields: string[] | null = null;
+  @Input()
+  get searchHighlightFields(): string[] | null {
+    return this._searchHighlightFields;
+  }
+  set searchHighlightFields(value: string[] | null | undefined) {
+    this._searchHighlightFields = value ?? null;
+    this.searchHighlightCache.clear();
+    this.markGridForCheck();
+  }
   /** Accessible label announced when expanding a row. */
   @Input() expandRowAriaLabel = 'Expand row';
   /** Accessible label announced when collapsing a row. */
@@ -427,7 +549,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   /** Accessible label for the Excel export button. */
   @Input() exportExcelAriaLabel = 'Export to Excel';
   /** Optional defaults for new rows */
-  @Input() newRowDefaults: | Partial<Record<KeyOf<T>, any>> | (() => Partial<Record<KeyOf<T>, any>>) | null = null;
+  @Input() newRowDefaults: DraftValues<T> | (() => DraftValues<T>) | null = null;
   @Input() strictEmail = false; // turn off if needed (e.g., intranet emails)
   @Input() editOnRowClick = false;
   /** Row editing interaction: inline actions, in-cell, external dialog, or toolbar selection. */
@@ -457,7 +579,17 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   @Input() theme: NgbDataGridTheme = 'bootstrap';
   @Input() responsive: NgbDataGridResponsiveOptions | boolean = false;
-  @Input() trackBy?: NgbDatagridTrackByFn<T>;
+  private _trackBy?: NgbDatagridTrackByFn<T>;
+  @Input()
+  get trackBy(): NgbDatagridTrackByFn<T> | undefined {
+    return this._trackBy;
+  }
+  set trackBy(value: NgbDatagridTrackByFn<T> | undefined) {
+    this._trackBy = value;
+    this.invalidateRowIdentityCache();
+    this.invalidateSortedCaches();
+    this.markGridForCheck();
+  }
   @Input() rowClass?: string | string[] | Record<string, boolean> | ((row: T, rowIndex: number) => string | string[] | Record<string, boolean>);
   @Input() rowStyle?: Record<string, string | number> | ((row: T, rowIndex: number) => Record<string, string | number> | null | undefined);
   @Input() rowReorderable = false;
@@ -497,8 +629,8 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   @Input() editService?: NgbDatagridEditService<T>;
 
   // Data hooks for export
-  @Input() dataProviderAll?: () => Observable<any[]> | Promise<any[]> | any[]; // used when pages='all'
-  @Input() dataProviderSelection?: () => any[]; // used when pages='selection'
+  @Input() dataProviderAll?: () => Observable<T[]> | Promise<T[]> | T[]; // used when pages='all'
+  @Input() dataProviderSelection?: () => T[]; // used when pages='selection'
   
   // Grab the directive and its TemplateRef
   @ContentChild(ExportButtonDirective) exportButtonDir?: ExportButtonDirective;
@@ -522,6 +654,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   @Output() rowCancel = new EventEmitter<{ row: T; index: number }>();
   @Output() rowDelete = new EventEmitter<{ row: T; index: number }>();
 
+  @Output() groupChange = new EventEmitter<NgbDataGridGroupChange>();
   @Output() sortChange = new EventEmitter<{ active: string | null; direction: 'asc' | 'desc' | '' }>();
   @Output() filterChange = new EventEmitter<NgbCompositeFilterDescriptor>();
   @Output() filtersChange = new EventEmitter<{ global: string; columns: Record<string, string> }>();
@@ -533,6 +666,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   @ContentChild(NgbRowDetailTemplate) rowDetailTpl?: NgbRowDetailTemplate<T>;
   @ContentChild(NgbPagerTemplate) pagerTpl?: NgbPagerTemplate<T>;
+  @ContentChild(NgbDataGridGroupHeaderTemplateDirective) groupHeaderTpl?: NgbDataGridGroupHeaderTemplateDirective<T>;
   private exporter = inject(NgbExportService); // instead of constructor(private exporter: NgbExportService) {}
 
   expanded: Set<number> = new Set<number>();
@@ -543,7 +677,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   public globalFilterCtrl = new FormControl<string>('', { nonNullable: true });
 
   addingNew = false;
-  draftNew: Partial<Record<KeyOf<T>, any>> | null = null;
+  draftNew: DraftValues<T> | null = null;
   errorsNew: Partial<Record<KeyOf<T>, string>> = {};
   // --- sorting (from previous step)
   private _sort: { active: Extract<keyof T, string> | null; direction: SortDir } = { active: null, direction: '' };
@@ -554,10 +688,10 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this._sort = value ?? { active: null, direction: '' };
     this.invalidateSortedCaches();
   }
-  stickyRowIds: Set<any> = new Set<any>();
-  selectedRowIds: Set<any> = new Set<any>();
+  stickyRowIds: Set<NgbDatagridRowId> = new Set<NgbDatagridRowId>();
+  selectedRowIds: Set<NgbDatagridRowId> = new Set<NgbDatagridRowId>();
   private selectionAnchor: number | null = null;
-  private highlightRowMap: Map<any, HighlightItem[]> = new Map();
+  private highlightRowMap: Map<NgbDatagridRowId, HighlightItem[]> = new Map();
   // --- filtering
   private _globalFilter = '';
   get globalFilter(): string {
@@ -591,7 +725,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   menuDrafts: Record<string, NgbMenuFilterConditionDraft[]> = {};
   /** Join logic between conditions in a column filter menu (And / Or). */
   menuDraftJoinLogic: Record<string, 'and' | 'or'> = {};
-  multiCheckboxDrafts: Record<string, any[]> = {};
+  multiCheckboxDrafts: Record<string, unknown[]> = {};
   multiCheckboxSearch: Record<string, string> = {};
   private syncingFilterForm = false;
   private _page = 1;
@@ -634,7 +768,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   addForm:  FormGroup = this.fb.group({});
   saveAttemptedNew = false;
-  private addDraftRowId: any = null;
+  private addDraftRowId: NgbDatagridRowId | null = null;
 
   private readonly defaultEditService = new NgbDatagridDefaultEditService<T>();
   private cdr = inject(ChangeDetectorRef);
@@ -643,13 +777,36 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   private filteredCache: T[] = [];
   private sortedCache: T[] = [];
   private pagedCache: T[] = [];
+  private renderRowsCache: NgbDatagridRenderRow<T>[] = [];
+  stickyGroupHeaderRows: NgbDatagridGroupRenderRow<T>[] = [];
+  stickyGroupFooterRows: NgbDatagridGroupFooterRenderRow<T>[] = [];
+  stickyGroupOverlayColumnWidths: number[] = [];
+  stickyGroupHeaderTranslateY = 0;
+  stickyGroupFooterTranslateY = 0;
   private resolvedColumnsDirty = true;
   private visibleColumnsDirty = true;
   private filteredDirty = true;
   private sortedDirty = true;
   private pagedDirty = true;
-  private rowIndexMap = new Map<any, number>();
-  private rowIndexMapSource: T[] | null = null;
+  private renderRowsDirty = true;
+  private stickyGroupSyncQueued = false;
+  private rowMetaMap = new Map<T, { index: number; id: NgbDatagridRowId }>();
+  private rowMetaSource: T[] | null = null;
+  private rowMetaTrackBy: NgbDatagridTrackByFn<T> | undefined;
+  private filterOperatorsCache = new Map<string, NgbFilterOperator[]>();
+  private searchHighlightCache = new Map<string, NgbSearchHighlightSegment[]>();
+  private multiCheckboxOptionsCache = new Map<string, MultiCheckboxOption[]>();
+  private multiCheckboxVisibleOptionsCache = new Map<string, MultiCheckboxOption[]>();
+  private stackedColumnsCache = new Map<StackedGroup, ColumnDef<T>[]>();
+  private stackedCardGroupsCache: StackedGroup[] | null = null;
+  private tableClassListCache: string[] | null = null;
+  private responsiveWrapperClassesCache: string[] | null = null;
+  private collapsedGroupKeys = new Set<string>();
+  private groupRenderRowLookup = new Map<string, NgbDatagridGroupRenderRow<T>>();
+  private groupFooterRenderRowLookup = new Map<string, NgbDatagridGroupFooterRenderRow<T>>();
+  groupDragField: string | null = null;
+  groupPanelDragActive = false;
+  groupPanelDragDenied = false;
 
   private norm(v: unknown): string {
     return (v ?? '').toString().toLowerCase().trim();
@@ -659,13 +816,54 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     return col.field as KeyOf<T>;
   }
 
-  private getDefaults(): Partial<Record<KeyOf<T>, any>> {
+  private readFieldValue(
+    row: unknown,
+    field: string,
+  ): unknown {
+    return typeof row === 'object' && row !== null ? (row as Record<string, unknown>)[field] : undefined;
+  }
+
+  private getDefaults(): DraftValues<T> {
     return typeof this.newRowDefaults === 'function'
-      ? (this.newRowDefaults as any)() ?? {}
+      ? this.newRowDefaults() ?? {}
       : this.newRowDefaults ?? {};
   }
 
-  private defaultFor(col: ColumnDef<T>): any {
+  private toDraftValues(
+    row: T | DraftValues<T> | null | undefined,
+  ): DraftValues<T> {
+    return typeof row === 'object' && row !== null ? (row as DraftValues<T>) : {};
+  }
+
+  private formDraftValues(form: FormGroup): DraftValues<T> {
+    return this.toDraftValues(form.getRawValue());
+  }
+
+  private assignDraftValues(row: T, values: DraftValues<T>): T {
+    return this.getEditService().assignValues(row, values as Partial<T>);
+  }
+
+  private patchFieldValue(field: string, value: unknown): Partial<T> {
+    return { [field]: value } as Partial<T>;
+  }
+
+  private compareSortValues(left: unknown, right: unknown): number {
+    if (typeof left === 'string' && typeof right === 'string') {
+      return left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' });
+    }
+    if (left === right) return 0;
+    return left != null && right != null && left < right ? -1 : 1;
+  }
+
+  private readModifierKeys(event?: Event): { shift: boolean; meta: boolean } {
+    const modifierEvent = event as ModifierKeyEvent | undefined;
+    return {
+      shift: !!modifierEvent?.shiftKey,
+      meta: !!(modifierEvent?.metaKey || modifierEvent?.ctrlKey),
+    };
+  }
+
+  private defaultFor(col: ColumnDef<T>): unknown {
     const d = this.getDefaults();
     const key = col.field as KeyOf<T>;
     if (key in d) return d[key];
@@ -692,15 +890,15 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     };
   }
 
-  private buildFormFromRow(row?: Partial<Record<KeyOf<T>, any>>): FormGroup {
-    const group: Record<string, any> = {};
+  private buildFormFromRow(row?: DraftValues<T>): FormGroup {
+    const group: Record<string, unknown> = {};
     const sampleRow = (row ?? {}) as T;
     const isNew = !row || !Object.keys(row).length;
     for (const col of this.resolvedColumns) {
       if (!this.isCellEditable(col, sampleRow, isNew)) continue;
       const key = col.field as string;
-      const initial = row && key in row ? (row as any)[key] : this.defaultFor(col);
-      const v: any[] = [];
+      const initial = row && key in row ? row[key as KeyOf<T>] : this.defaultFor(col);
+      const v: unknown[] = [];
 
       if (col.required && col.type !== 'boolean') v.push(Validators.required);
       if (col.type === 'email') {
@@ -780,6 +978,12 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   private invalidateColumnCaches(): void {
     this.resolvedColumnsDirty = true;
     this.visibleColumnsDirty = true;
+    this.filterOperatorsCache.clear();
+    this.stackedColumnsCache.clear();
+    this.stackedCardGroupsCache = null;
+    this.multiCheckboxOptionsCache.clear();
+    this.multiCheckboxVisibleOptionsCache.clear();
+    this.searchHighlightCache.clear();
     this.invalidateFilteredCaches();
   }
 
@@ -795,10 +999,20 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   private invalidatePagedCache(): void {
     this.pagedDirty = true;
+    this.renderRowsDirty = true;
+    this.scheduleStickyGroupSync();
+  }
+
+  private invalidateRowIdentityCache(): void {
+    this.rowMetaSource = null;
+    this.rowMetaTrackBy = undefined;
   }
 
   private invalidateDataCaches(): void {
-    this.rowIndexMapSource = null;
+    this.invalidateRowIdentityCache();
+    this.multiCheckboxOptionsCache.clear();
+    this.multiCheckboxVisibleOptionsCache.clear();
+    this.searchHighlightCache.clear();
     this.invalidateFilteredCaches();
   }
 
@@ -806,16 +1020,47 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.cdr?.markForCheck();
   }
 
-  private ensureRowIndexMap(): void {
-    if (this.rowIndexMapSource === this.data) return;
-    this.rowIndexMap.clear();
-    (this.data ?? []).forEach((row, index) => this.rowIndexMap.set(row, index));
-    this.rowIndexMapSource = this.data;
+  // Some library interactions update internal state without changing an input reference.
+  // Schedule a follow-up render so zoneless hosts and child row/header views stay in sync.
+  private scheduleViewRefresh(afterRefresh?: () => void): void {
+    this.renderTick++;
+    this.cdr.markForCheck();
+    Promise.resolve().then(() => {
+      try {
+        this.cdr.detectChanges();
+        afterRefresh?.();
+      } catch {
+        // The view can be destroyed before the queued refresh runs.
+      }
+    });
+  }
+
+  private ensureRowMetaMap(): void {
+    if (this.rowMetaSource === this.data && this.rowMetaTrackBy === this.trackBy) return;
+    this.rowMetaMap.clear();
+    (this.data ?? []).forEach((row, index) => {
+      this.rowMetaMap.set(row, {
+        index,
+        id: this.trackBy ? this.trackBy(index, row) : index,
+      });
+    });
+    this.rowMetaSource = this.data;
+    this.rowMetaTrackBy = this.trackBy;
+  }
+
+  private resolveRowMeta(row: T, fallbackIndex = -1): { index: number; id: NgbDatagridRowId } {
+    this.ensureRowMetaMap();
+    const cached = this.rowMetaMap.get(row);
+    if (cached) return cached;
+
+    return {
+      index: fallbackIndex,
+      id: this.trackBy ? this.trackBy(fallbackIndex, row) : fallbackIndex,
+    };
   }
 
   private dataIndexOf(row: T, fallback = -1): number {
-    this.ensureRowIndexMap();
-    return this.rowIndexMap.get(row) ?? fallback;
+    return this.resolveRowMeta(row, fallback).index;
   }
 
   private syncColumnOrder(resetFromColumns: boolean): void {
@@ -831,6 +1076,230 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       if (!next.includes(field)) next.push(field);
     }
     this.columnOrder = next;
+  }
+
+  isGroupingEnabled(): boolean {
+    return this.groupable !== false;
+  }
+
+  isGroupingActive(): boolean {
+    return this.isGroupingEnabled() && this.group.length > 0;
+  }
+
+  isColumnGroupable(col: ColumnDef<T>): boolean {
+    return this.isGroupingEnabled() && !col.hidden;
+  }
+
+  isFieldGrouped(field: string): boolean {
+    return this.group.some((descriptor) => descriptor.field === field);
+  }
+
+  groupedColumns(): NgbDataGridGroupDescriptor[] {
+    return this.group;
+  }
+
+  groupingSettings(): NgbDataGridGroupingSettings {
+    return typeof this.groupable === 'object' && this.groupable !== null ? this.groupable : {};
+  }
+
+  showGroupFooters(): boolean {
+    return this.isGroupingActive() && this.groupingSettings().showFooter === true;
+  }
+
+  showStickyGroupHeaders(): boolean {
+    return this.isGroupingActive() && this.groupingSettings().stickyHeaders === true;
+  }
+
+  showStickyGroupFooters(): boolean {
+    return this.showGroupFooters() && this.groupingSettings().stickyFooters === true;
+  }
+
+  hasStickyGroupHeaders(): boolean {
+    return this.showStickyGroupHeaders() && this.stickyGroupHeaderRows.length > 0;
+  }
+
+  hasStickyGroupFooters(): boolean {
+    return this.showStickyGroupFooters() && this.stickyGroupFooterRows.length > 0;
+  }
+
+  groupColumnHeader(field: string): string {
+    const column = this.resolvedColumns.find((item) => item.field === field);
+    return column?.header ?? field;
+  }
+
+  groupHandleAriaLabel(col: ColumnDef<T>): string {
+    const header = this.groupColumnHeader(col.field as string);
+    return this.isFieldGrouped(col.field as string)
+      ? `Grouped by ${header}. Press Enter to remove it from grouping.`
+      : `Add ${header} to grouping. Drag into the group panel or press Enter.`;
+  }
+
+  groupDirectionAriaLabel(descriptor: NgbDataGridGroupDescriptor): string {
+    return `Toggle ${this.groupColumnHeader(descriptor.field)} group direction. Currently ${descriptor.dir === 'desc' ? 'descending' : 'ascending'}.`;
+  }
+
+  groupRemoveAriaLabel(descriptor: NgbDataGridGroupDescriptor): string {
+    return `Remove ${this.groupColumnHeader(descriptor.field)} grouping`;
+  }
+
+  groupPanelLabel(): string {
+    return this.group.length
+      ? 'Grouped by'
+      : 'Drag column headers here to group rows';
+  }
+
+  groupFieldLabel(descriptor: NgbDataGridGroupDescriptor): string {
+    return this.groupColumnHeader(descriptor.field);
+  }
+
+  groupDirectionLabel(descriptor: NgbDataGridGroupDescriptor): string {
+    return descriptor.dir === 'desc' ? 'Descending' : 'Ascending';
+  }
+
+  toggleGroupField(field: string): void {
+    if (!field) return;
+    if (this.isFieldGrouped(field)) {
+      this.removeGroupField(field);
+      return;
+    }
+    this.addGroupField(field);
+  }
+
+  addGroupField(field: string, dir: GroupSortDir = 'asc', emit = true): void {
+    if (!field || this.isFieldGrouped(field)) return;
+    this.setGroupDescriptors([...this.group, { field, dir }], emit);
+  }
+
+  removeGroupField(field: string, emit = true): void {
+    if (!field) return;
+    this.setGroupDescriptors(this.group.filter((descriptor) => descriptor.field !== field), emit);
+  }
+
+  toggleGroupDirection(field: string): void {
+    this.setGroupDescriptors(
+      this.group.map((descriptor) =>
+        descriptor.field === field
+          ? { ...descriptor, dir: descriptor.dir === 'desc' ? 'asc' : 'desc' }
+          : descriptor
+      ),
+      true,
+    );
+  }
+
+  private setGroupDescriptors(
+    descriptors: NgbDataGridGroupDescriptor[] | null | undefined,
+    emit = true,
+  ): void {
+    const normalized = this.normalizeGroupDescriptors(descriptors);
+    const changed =
+      normalized.length !== this.group.length ||
+      normalized.some((descriptor, index) =>
+        descriptor.field !== this.group[index]?.field || descriptor.dir !== this.group[index]?.dir,
+      );
+    if (!changed) {
+      this.clearGroupDragState();
+      return;
+    }
+
+    this._group = normalized;
+    this.page = 1;
+    this.syncCollapsedGroups();
+    this.invalidatePagedCache();
+    if (emit) {
+      this.groupChange.emit({ group: [...this.group] });
+      this.emitDataStateChange();
+    }
+    this.clearGroupDragState();
+    this.cdr.markForCheck();
+  }
+
+  private normalizeGroupDescriptors(
+    descriptors: NgbDataGridGroupDescriptor[] | null | undefined,
+  ): NgbDataGridGroupDescriptor[] {
+    const seen = new Set<string>();
+    const normalized: NgbDataGridGroupDescriptor[] = [];
+
+    for (const descriptor of descriptors ?? []) {
+      const field = String(descriptor?.field ?? '').trim();
+      if (!field || seen.has(field)) continue;
+      seen.add(field);
+      normalized.push({
+        field,
+        dir: descriptor.dir === 'desc' ? 'desc' : 'asc',
+        ...(descriptor.aggregates?.length ? { aggregates: this.cloneAggregateDescriptors(descriptor.aggregates) } : {}),
+      });
+    }
+
+    return normalized;
+  }
+
+  private syncCollapsedGroups(): void {
+    if (!this.collapsedGroupKeys.size) return;
+    const allowedPrefixes = new Set(this.group.map((descriptor, index) => `${index}:${descriptor.field}:`));
+    this.collapsedGroupKeys = new Set(
+      Array.from(this.collapsedGroupKeys).filter((key) =>
+        Array.from(allowedPrefixes).some((prefix) => key.startsWith(prefix)),
+      ),
+    );
+  }
+
+  private clearGroupDragState(): void {
+    this.groupDragField = null;
+    this.groupPanelDragActive = false;
+    this.groupPanelDragDenied = false;
+  }
+
+  private canAcceptGroupedField(field: string | null | undefined): boolean {
+    return !!field && this.isGroupingEnabled() && !this.isFieldGrouped(field);
+  }
+
+  onGroupHandleDragStart(event: DragEvent, field: string): void {
+    if (!this.canAcceptGroupedField(field)) {
+      event.preventDefault();
+      return;
+    }
+    this.groupDragField = field;
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/ngb-datagrid-group-field', field);
+      event.dataTransfer.setData('text/plain', field);
+    }
+  }
+
+  onGroupHandleDragEnd(): void {
+    this.clearGroupDragState();
+    this.cdr.markForCheck();
+  }
+
+  onGroupPanelDragOver(event: DragEvent): void {
+    const field = this.groupDragField || event.dataTransfer?.getData('text/ngb-datagrid-group-field') || null;
+    this.groupPanelDragDenied = !this.canAcceptGroupedField(field);
+    this.groupPanelDragActive = !!field;
+    if (this.groupPanelDragDenied) return;
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  onGroupPanelDragLeave(event: DragEvent): void {
+    const current = event.currentTarget as HTMLElement | null;
+    const related = event.relatedTarget as Node | null;
+    if (current && related && current.contains(related)) return;
+    this.groupPanelDragActive = false;
+    this.groupPanelDragDenied = false;
+    this.cdr.markForCheck();
+  }
+
+  onGroupPanelDrop(event: DragEvent): void {
+    const field = this.groupDragField || event.dataTransfer?.getData('text/ngb-datagrid-group-field') || null;
+    if (!this.canAcceptGroupedField(field)) {
+      this.clearGroupDragState();
+      this.cdr.markForCheck();
+      return;
+    }
+    event.preventDefault();
+    this.addGroupField(field!);
   }
 
   isColumnReorderEnabled(): boolean {
@@ -968,8 +1437,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
         fields: [...order],
       });
     }
-    this.syncResizableColgroups();
-    this.cdr.markForCheck();
+    this.scheduleViewRefresh(() => this.syncResizableColgroups());
   }
 
   private validateColumnConfig(): void {
@@ -1061,7 +1529,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
           const matchesComposite = !descriptor.filters.length || this.matchesComposite(row, descriptor);
           if (!matchesComposite) return false;
           if (!global) return true;
-          return resolvedColumns.some((column) => this.norm((row as any)?.[column.field]).includes(global));
+          return resolvedColumns.some((column) => this.norm(this.readFieldValue(row, column.field)).includes(global));
         });
       }
       this.filteredDirty = false;
@@ -1102,7 +1570,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   private matchesDescriptor(row: T, descriptor: NgbFilterDescriptor): boolean {
     const column = this.resolvedColumns.find((col) => col.field === descriptor.field);
     const filterType = this.getColumnFilterType(column);
-    const cellValue = this.normalizeFilterValue((row as any)?.[descriptor.field], filterType);
+    const cellValue = this.normalizeFilterValue(this.readFieldValue(row, descriptor.field), filterType);
     const compareValue = this.normalizeFilterValue(descriptor.value, filterType);
     const ignoreCase = descriptor.ignoreCase ?? (filterType === 'text' || filterType === 'select');
 
@@ -1150,7 +1618,10 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     }
   }
 
-  private normalizeFilterValue(value: any, filterType: ReturnType<Datagrid<T>['getColumnFilterType']>): any {
+  private normalizeFilterValue(
+    value: unknown,
+    filterType: ReturnType<Datagrid<T>['getColumnFilterType']>,
+  ): NormalizedFilterValue {
     if (value === '' || value === undefined) return null;
     if (value === null) return null;
     switch (filterType) {
@@ -1180,10 +1651,18 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   getAllowedOperators(col: ColumnDef<T>): NgbFilterOperator[] {
-    if (col.allowedFilterOperators?.length) return col.allowedFilterOperators;
-    const typeOperators = this.filterOperators?.[col.type ?? 'text'];
-    if (typeOperators?.length) return typeOperators;
-    return ngbAllowedFilterOperators(this.getColumnFilterType(col));
+    const field = col.field as string;
+    const cached = this.filterOperatorsCache.get(field);
+    if (cached) return cached;
+
+    const resolved = col.allowedFilterOperators?.length
+      ? col.allowedFilterOperators
+      : this.filterOperators?.[col.type ?? 'text']?.length
+        ? this.filterOperators[col.type ?? 'text']!
+        : ngbAllowedFilterOperators(this.getColumnFilterType(col));
+
+    this.filterOperatorsCache.set(field, resolved);
+    return resolved;
   }
 
   defaultFilterOperator(col: ColumnDef<T>): NgbFilterOperator {
@@ -1267,17 +1746,194 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     return String(value);
   }
 
-  getSearchHighlightSegments(value: unknown, field: string): Array<{ text: string; match: boolean }> {
-    const display = this.formatCellDisplayValue(value);
-    if (!this.shouldHighlightSearchInColumn(field)) {
-      return [{ text: display, match: false }];
+  private groupColumn(field: string): ColumnDef<T> | undefined {
+    return this.resolvedColumns.find((column) => column.field === field);
+  }
+
+  groupColumnField(col: ColumnDef<T>): string {
+    return String(col.field);
+  }
+
+  private formatGroupValue(field: string, value: unknown): string {
+    const column = this.groupColumn(field);
+    if (value === null || value === undefined || value === '') return '(Blank)';
+    if (column?.type === 'select') {
+      const option = column.options?.find((item) => item.value === value);
+      if (option) return option.label;
+    }
+    return this.formatCellDisplayValue(value);
+  }
+
+  groupRowLabel(group: NgbDataGridGroupResult<T>): string {
+    return `${this.groupColumnHeader(group.field)}: ${this.formatGroupValue(group.field, group.value)}`;
+  }
+
+  groupRowCountLabel(group: NgbDataGridGroupResult<T>): string {
+    return `${group.count} item${group.count === 1 ? '' : 's'}`;
+  }
+
+  groupLeadColumnField(group: NgbDataGridGroupResult<T>): string | null {
+    const first = this.visibleColumns[0];
+    return first ? String(first.field) : null;
+  }
+
+  isGroupLeadColumn(col: ColumnDef<T>, group: NgbDataGridGroupResult<T>): boolean {
+    return String(col.field) === this.groupLeadColumnField(group);
+  }
+
+  shouldRenderGroupCell(col: ColumnDef<T>, group: NgbDataGridGroupResult<T>): boolean {
+    if (this.isGroupLeadColumn(col, group)) return true;
+    return !this.isCoveredByGroupLeadSpan(col, group);
+  }
+
+  groupCellColspan(col: ColumnDef<T>, group: NgbDataGridGroupResult<T>): number | null {
+    if (!this.isGroupLeadColumn(col, group)) return null;
+    return this.groupLeadColumnSpan(group);
+  }
+
+  hasGroupHeaderColumnTemplate(field: string): boolean {
+    return !!this.groupHeaderColumnTpls[field];
+  }
+
+  hasGroupFooterTemplate(field: string): boolean {
+    return !!this.groupFooterTpls[field];
+  }
+
+  groupHeaderColumnTemplate(field: string): NgbDataGridGroupHeaderColumnTemplateDirective<T> | null {
+    return this.groupHeaderColumnTpls[field] ?? null;
+  }
+
+  groupFooterTemplate(field: string): NgbDataGridGroupFooterTemplateDirective<T> | null {
+    return this.groupFooterTpls[field] ?? null;
+  }
+
+  groupHeaderContext(group: NgbDataGridGroupResult<T>): GroupHeaderCtx<T> {
+    const ctx: GroupHeaderCtx<T> = {
+      $implicit: group,
+      group,
+      field: group.field,
+      value: group.value,
+      items: group.items,
+      level: group.level,
+      count: group.count,
+      aggregates: this.cloneAggregateResults(group.aggregates),
+    };
+    return ctx;
+  }
+
+  groupColumnContext(group: NgbDataGridGroupResult<T>, col: ColumnDef<T>): GroupColumnCtx<T> {
+    return {
+      ...this.groupHeaderContext(group),
+      col,
+    };
+  }
+
+  groupRowIndent(level: number): number {
+    return level * 1.1;
+  }
+
+  private groupLeadColumnSpan(group: NgbDataGridGroupResult<T>): number {
+    const leadIndex = this.groupLeadColumnIndex(group);
+    if (leadIndex === -1) return 1;
+
+    for (let index = leadIndex + 1; index < this.visibleColumns.length; index += 1) {
+      const field = this.groupColumnField(this.visibleColumns[index]);
+      if (this.hasGroupHeaderColumnTemplate(field)) {
+        return Math.max(index - leadIndex, 1);
+      }
     }
 
+    return Math.max(this.visibleColumns.length - leadIndex, 1);
+  }
+
+  private isCoveredByGroupLeadSpan(col: ColumnDef<T>, group: NgbDataGridGroupResult<T>): boolean {
+    const index = this.groupColumnIndex(col);
+    const leadIndex = this.groupLeadColumnIndex(group);
+    if (index === -1 || leadIndex === -1 || index <= leadIndex) return false;
+    return index < leadIndex + this.groupLeadColumnSpan(group);
+  }
+
+  private groupLeadColumnIndex(group: NgbDataGridGroupResult<T>): number {
+    const field = this.groupLeadColumnField(group);
+    return field ? this.visibleColumns.findIndex((column) => String(column.field) === field) : -1;
+  }
+
+  private groupColumnIndex(col: ColumnDef<T>): number {
+    const field = String(col.field);
+    return this.visibleColumns.findIndex((column) => String(column.field) === field);
+  }
+
+  private groupKeyFor(group: NgbDataGridGroupResult<T>, level: number, startIndex: number): string {
+    return `${level}:${group.field}:${String(group.value)}:${startIndex}`;
+  }
+
+  isGroupCollapsed(group: NgbDataGridGroupResult<T>, level: number, startIndex: number): boolean {
+    return this.collapsedGroupKeys.has(this.groupKeyFor(group, level, startIndex));
+  }
+
+  toggleGroupCollapsed(group: NgbDataGridGroupResult<T>, level: number, startIndex: number): void {
+    const key = this.groupKeyFor(group, level, startIndex);
+    if (this.collapsedGroupKeys.has(key)) {
+      this.collapsedGroupKeys.delete(key);
+    } else {
+      this.collapsedGroupKeys.add(key);
+    }
+    this.invalidatePagedCache();
+    this.cdr.markForCheck();
+  }
+
+  private isGroupResult(item: NgbDataGridGroupResult<T> | T): item is NgbDataGridGroupResult<T> {
+    return typeof item === 'object' && item !== null && Array.isArray((item as NgbDataGridGroupResult<T>).items);
+  }
+
+  private cloneAggregateDescriptors(
+    descriptors: readonly NgbDataGridAggregateDescriptor[] | null | undefined,
+  ): NgbDataGridAggregateDescriptor[] {
+    return (descriptors ?? []).map((descriptor) => ({ ...descriptor }));
+  }
+
+  private cloneAggregateResults(
+    results: NgbDataGridAggregateResults | null | undefined,
+  ): NgbDataGridAggregateResults {
+    const cloned: NgbDataGridAggregateResults = {};
+    for (const field of Object.keys(results ?? {})) {
+      cloned[field] = { ...(results as NgbDataGridAggregateResults)[field] };
+    }
+    return cloned;
+  }
+
+  private cloneGroupResults(
+    groups: readonly NgbDataGridGroupResult<T>[] | null | undefined,
+  ): NgbDataGridGroupResult<T>[] {
+    return (groups ?? []).map((group) => ({
+      ...group,
+      aggregates: this.cloneAggregateResults(group.aggregates),
+      items: group.items.map((item) => (this.isGroupResult(item) ? this.cloneGroupResults([item])[0] : item)),
+    }));
+  }
+
+  getSearchHighlightSegments(value: unknown, field: string): NgbSearchHighlightSegment[] {
+    const display = this.formatCellDisplayValue(value);
     const term = this.norm(this.searchHighlightTerm);
-    if (!term || !display) return [{ text: display, match: false }];
+    const highlightEnabled = this.shouldHighlightSearchInColumn(field);
+    const cacheKey = JSON.stringify([field, term, display, highlightEnabled]);
+    const cached = this.searchHighlightCache.get(cacheKey);
+    if (cached) return cached;
+
+    if (!highlightEnabled) {
+      const segments = [{ key: '0:n', text: display, match: false }];
+      this.searchHighlightCache.set(cacheKey, segments);
+      return segments;
+    }
+
+    if (!term || !display) {
+      const segments = [{ key: '0:n', text: display, match: false }];
+      this.searchHighlightCache.set(cacheKey, segments);
+      return segments;
+    }
 
     const normalizedDisplay = this.norm(display);
-    const segments: Array<{ text: string; match: boolean }> = [];
+    const segments: NgbSearchHighlightSegment[] = [];
     let cursor = 0;
 
     while (cursor < display.length) {
@@ -1285,20 +1941,22 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       const normalizedSlice = this.norm(slice);
       const matchIndex = normalizedSlice.indexOf(term);
       if (matchIndex < 0) {
-        segments.push({ text: display.slice(cursor), match: false });
+        segments.push({ key: `${cursor}:n`, text: display.slice(cursor), match: false });
         break;
       }
 
       const start = cursor + matchIndex;
       const end = start + term.length;
       if (start > cursor) {
-        segments.push({ text: display.slice(cursor, start), match: false });
+        segments.push({ key: `${cursor}:n`, text: display.slice(cursor, start), match: false });
       }
-      segments.push({ text: display.slice(start, end), match: true });
+      segments.push({ key: `${start}:m`, text: display.slice(start, end), match: true });
       cursor = end;
     }
 
-    return segments.length ? segments : [{ text: display, match: false }];
+    const resolved = segments.length ? segments : [{ key: '0:n', text: display, match: false }];
+    this.searchHighlightCache.set(cacheKey, resolved);
+    return resolved;
   }
 
   rowFilterEmptyOptionLabel(col: ColumnDef<T>): string {
@@ -1398,7 +2056,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   private upsertColumnFilter(
     field: string,
     operator: NgbFilterOperator,
-    value: any,
+    value: unknown,
     emit = true
   ): void {
     const base = this.cloneComposite(this.filter ?? this.localFilter);
@@ -1500,7 +2158,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.upsertColumnFilter(field, operator, value);
   }
 
-  private setFilterFormField(field: string, operator: NgbFilterOperator, value: any): void {
+  private setFilterFormField(field: string, operator: NgbFilterOperator, value: unknown): void {
     this.syncingFilterForm = true;
     this.filterForm.get(this.operatorControlName(field))?.setValue(operator, { emitEvent: false });
     this.filterForm.get(this.valueControlName(field))?.setValue(value, { emitEvent: false });
@@ -1720,37 +2378,54 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.closeFilterMenu();
   }
 
-  multiCheckboxOptions(col: ColumnDef<T>): Array<{ label: string; value: any }> {
-    const seen = new Map<string, { label: string; value: any }>();
+  multiCheckboxOptions(col: ColumnDef<T>): MultiCheckboxOption[] {
+    const field = col.field as string;
+    const cached = this.multiCheckboxOptionsCache.get(field);
+    if (cached) return cached;
+
+    const seen = new Map<string, { label: string; value: unknown }>();
     for (const row of this.data ?? []) {
-      const value = (row as any)?.[col.field];
+      const value = this.readFieldValue(row, col.field);
       const key = this.multiCheckboxValueKey(value);
       if (!seen.has(key)) {
         seen.set(key, { label: this.multiCheckboxValueLabel(col, value), value });
       }
     }
-    return Array.from(seen.values()).sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true }));
+    const options = Array.from(seen.values()).sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true }));
+    this.multiCheckboxOptionsCache.set(field, options);
+    return options;
   }
 
-  multiCheckboxVisibleOptions(col: ColumnDef<T>): Array<{ label: string; value: any }> {
-    const query = this.norm(this.multiCheckboxSearch[col.field as string]);
+  multiCheckboxVisibleOptions(col: ColumnDef<T>): MultiCheckboxOption[] {
+    const field = col.field as string;
+    const query = this.norm(this.multiCheckboxSearch[field]);
+    const cacheKey = JSON.stringify([field, query]);
+    const cached = this.multiCheckboxVisibleOptionsCache.get(cacheKey);
+    if (cached) return cached;
+
     const options = this.multiCheckboxOptions(col);
-    if (!query) return options;
-    return options.filter((option) => this.norm(option.label).includes(query));
+    if (!query) {
+      this.multiCheckboxVisibleOptionsCache.set(cacheKey, options);
+      return options;
+    }
+
+    const visible = options.filter((option) => this.norm(option.label).includes(query));
+    this.multiCheckboxVisibleOptionsCache.set(cacheKey, visible);
+    return visible;
   }
 
-  multiCheckboxValueLabel(col: ColumnDef<T>, value: any): string {
+  multiCheckboxValueLabel(col: ColumnDef<T>, value: unknown): string {
     if (this.getColumnFilterType(col) === 'boolean') return this.booleanFilterOptionLabel(!!value);
     if (value === null || value === undefined || value === '') return '(Blank)';
     const option = col.options?.find((item) => item.value === value);
     return option?.label ?? String(value);
   }
 
-  private multiCheckboxValueKey(value: any): string {
+  private multiCheckboxValueKey(value: unknown): string {
     return JSON.stringify(value);
   }
 
-  ensureMultiCheckboxDraft(col: ColumnDef<T>): any[] {
+  ensureMultiCheckboxDraft(col: ColumnDef<T>): unknown[] {
     const field = col.field as string;
     if (!this.multiCheckboxDrafts[field]) {
       const active = this.multiCheckboxSelectedValues(col);
@@ -1767,12 +2442,12 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     return this.multiCheckboxOptions(col).length;
   }
 
-  isMultiCheckboxChecked(col: ColumnDef<T>, value: any): boolean {
+  isMultiCheckboxChecked(col: ColumnDef<T>, value: unknown): boolean {
     const key = this.multiCheckboxValueKey(value);
     return this.ensureMultiCheckboxDraft(col).some((item) => this.multiCheckboxValueKey(item) === key);
   }
 
-  toggleMultiCheckboxValue(col: ColumnDef<T>, value: any): void {
+  toggleMultiCheckboxValue(col: ColumnDef<T>, value: unknown): void {
     const field = col.field as string;
     const selected = this.ensureMultiCheckboxDraft(col);
     const key = this.multiCheckboxValueKey(value);
@@ -1802,7 +2477,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     return selected > 0 && selected < total;
   }
 
-  private multiCheckboxSelectedValues(col: ColumnDef<T>): any[] | null {
+  private multiCheckboxSelectedValues(col: ColumnDef<T>): unknown[] | null {
     const filter = this.findFieldFilter(col.field as string);
     if (!filter || !ngbIsCompositeFilter(filter)) return null;
     const directFilters = filter.filters.filter((item): item is NgbFilterDescriptor => !ngbIsCompositeFilter(item));
@@ -1927,11 +2602,10 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
         : (() => {
           const copy = [...this.filtered];
           const { active, direction } = this.sort;
-          copy.sort((a: any, b: any) => {
-            const av = a?.[active]; const bv = b?.[active];
-            const cmp = typeof av === 'string' && typeof bv === 'string'
-              ? av.localeCompare(bv, undefined, { numeric: true, sensitivity: 'base' })
-              : av < bv ? -1 : av > bv ? 1 : 0;
+          copy.sort((a, b) => {
+            const av = this.readFieldValue(a, active);
+            const bv = this.readFieldValue(b, active);
+            const cmp = this.compareSortValues(av, bv);
             return direction === 'asc' ? cmp : -cmp;
           });
           return copy;
@@ -1968,6 +2642,11 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   get paged(): T[] {
     if (this.pagedDirty) {
+      if (this.isGroupingActive()) {
+        this.ensureRenderRows();
+        this.pagedDirty = false;
+        return this.pagedCache;
+      }
       if (this.shouldUseLocalDataOperations()) {
         this.pagedCache = this.localDataOperationsResult(this.paginationActive).data;
         this.pagedDirty = false;
@@ -1984,6 +2663,15 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     return this.pagedCache;
   }
 
+  get renderRows(): NgbDatagridRenderRow<T>[] {
+    this.ensureRenderRows();
+    return this.renderRowsCache;
+  }
+
+  hasRenderableRows(): boolean {
+    return this.renderRows.length > 0;
+  }
+
   private shouldUseLocalDataOperations(): boolean {
     if (!this.dataOperations) return false;
     const total = this.total;
@@ -1995,10 +2683,146 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     return ngbApplyDataGridOperations(this.data, {
       ...options,
       state: this.dataState(),
+      groupedData: options.groupedData ?? this.groupedData,
       columns: options.columns ?? this.resolvedColumns,
       globalFilterFields: options.globalFilterFields ?? this.resolvedColumns.map((column) => column.field as string),
       page,
     });
+  }
+
+  private usingProvidedGroupedData(): boolean {
+    return (this.groupedData?.length ?? 0) > 0;
+  }
+
+  private groupingResults(rows: T[]): NgbDataGridGroupResult<T>[] {
+    if (this.usingProvidedGroupedData()) {
+      return this.cloneGroupResults(this.groupedData);
+    }
+    if (this.shouldUseLocalDataOperations()) {
+      return this.localDataOperationsResult(false).groupedData ?? [];
+    }
+    return ngbGroupData(rows, this.group);
+  }
+
+  private ensureRenderRows(): void {
+    if (!this.renderRowsDirty) return;
+
+    if (!this.isGroupingActive()) {
+      const leafRows = this.shouldUseLocalDataOperations()
+        ? this.localDataOperationsResult(this.paginationActive).data
+        : (!this.paginationActive || this.isServerBound())
+          ? this.sorted
+          : this.sorted.slice((this.page - 1) * this.pageSize, (this.page - 1) * this.pageSize + this.pageSize);
+      this.pagedCache = leafRows;
+      this.renderRowsCache = leafRows.map((row, pagedIndex) => ({
+        kind: 'data',
+        key: this.trackRow(pagedIndex, row),
+        row,
+        pagedIndex,
+        level: 0,
+      }));
+      this.groupRenderRowLookup.clear();
+      this.groupFooterRenderRowLookup.clear();
+      this.renderRowsDirty = false;
+      this.pagedDirty = false;
+      return;
+    }
+
+    const rows = this.groupingSourceRows();
+    const groups = this.groupingResults(rows);
+    const groupLeafCount = rows.length;
+    const shouldSliceGroups = this.paginationActive && !this.isServerBound() && !this.usingProvidedGroupedData();
+    const pageStart = shouldSliceGroups ? Math.max(0, (this.page - 1) * this.pageSize) : 0;
+    const pageEnd = shouldSliceGroups ? pageStart + this.pageSize : groupLeafCount;
+    let absoluteLeafIndex = 0;
+    let pagedIndex = 0;
+    const leafRows: T[] = [];
+    const buildRows = (items: NgbDataGridGroupResult<T>[], level: number): NgbDatagridRenderRow<T>[] => {
+      const rowsForLevel: NgbDatagridRenderRow<T>[] = [];
+
+      for (const group of items) {
+        const groupStart = absoluteLeafIndex;
+        const collapsed = this.isGroupCollapsed(group, level, groupStart);
+        const childRows: NgbDatagridRenderRow<T>[] = [];
+
+        if (!collapsed) {
+          for (const item of group.items) {
+            if (this.isGroupResult(item)) {
+              childRows.push(...buildRows([item], level + 1));
+              continue;
+            }
+
+            const inPage = absoluteLeafIndex >= pageStart && absoluteLeafIndex < pageEnd;
+            if (inPage) {
+              leafRows.push(item);
+              childRows.push({
+                kind: 'data',
+                key: this.trackRow(pagedIndex, item),
+                row: item,
+                pagedIndex,
+                level: level + 1,
+              });
+              pagedIndex += 1;
+            }
+            absoluteLeafIndex += 1;
+          }
+        } else {
+          absoluteLeafIndex += group.count;
+        }
+
+        const groupEnd = groupStart + group.count;
+        if (groupEnd > pageStart && groupStart < pageEnd) {
+          rowsForLevel.push({
+            kind: 'group',
+            key: this.groupKeyFor(group, level, groupStart),
+            group,
+            collapsed,
+            level,
+            startIndex: groupStart,
+          });
+          if (!collapsed) {
+            rowsForLevel.push(...childRows);
+            if (this.showGroupFooters()) {
+              rowsForLevel.push({
+                kind: 'group-footer',
+                key: `${this.groupKeyFor(group, level, groupStart)}:footer`,
+                group,
+                level,
+                startIndex: groupStart,
+              });
+            }
+          }
+        }
+      }
+
+      return rowsForLevel;
+    };
+
+    const renderedRows = buildRows(groups, 0);
+    this.pagedCache = leafRows;
+    this.renderRowsCache = renderedRows;
+    this.rebuildGroupedRowLookups(renderedRows);
+    this.renderRowsDirty = false;
+    this.pagedDirty = false;
+  }
+
+  private rebuildGroupedRowLookups(rows: NgbDatagridRenderRow<T>[]): void {
+    this.groupRenderRowLookup.clear();
+    this.groupFooterRenderRowLookup.clear();
+    for (const row of rows) {
+      if (row.kind === 'group') {
+        this.groupRenderRowLookup.set(row.key, row);
+      } else if (row.kind === 'group-footer') {
+        this.groupFooterRenderRowLookup.set(row.key, row);
+      }
+    }
+  }
+
+  private groupingSourceRows(): T[] {
+    if (this.shouldUseLocalDataOperations()) {
+      return this.localDataOperationsResult(false).data;
+    }
+    return this.sorted;
   }
 
   // getters for template conditions / display
@@ -2090,6 +2914,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       skip: Math.max(0, (this.page - 1) * this.pageSize),
       pageSize: this.pageSize,
       sort,
+      group: [...this.group],
       filter: this.cloneComposite(this.effectiveFilterDescriptor()),
       globalFilter: this.currentGlobalFilterValue(),
     };
@@ -2123,6 +2948,11 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       ? { active: firstSort.field as Extract<keyof T, string>, direction: firstSort.direction }
       : { active: null, direction: '' };
 
+    if (state.group !== undefined) {
+      this._group = this.normalizeGroupDescriptors(state.group);
+      this.syncCollapsedGroups();
+    }
+
     if (state.filter !== undefined) {
       this.localFilter = this.cloneComposite(state.filter ?? { logic: 'and', filters: [] });
       this.syncLegacyFilters(this.localFilter);
@@ -2151,6 +2981,172 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     if (this.headerScroller?.nativeElement) {
       this.headerScroller.nativeElement.scrollLeft = left;
     }
+    this.scheduleStickyGroupSync();
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.scheduleStickyGroupSync();
+  }
+
+  private scheduleStickyGroupSync(): void {
+    if (!this.showStickyGroupHeaders() && !this.showStickyGroupFooters()) {
+      if (
+        this.stickyGroupHeaderRows.length ||
+        this.stickyGroupFooterRows.length ||
+        this.stickyGroupOverlayColumnWidths.length ||
+        this.stickyGroupHeaderTranslateY !== 0 ||
+        this.stickyGroupFooterTranslateY !== 0
+      ) {
+        this.stickyGroupHeaderRows = [];
+        this.stickyGroupFooterRows = [];
+        this.stickyGroupOverlayColumnWidths = [];
+        this.stickyGroupHeaderTranslateY = 0;
+        this.stickyGroupFooterTranslateY = 0;
+        this.cdr.markForCheck();
+      }
+      return;
+    }
+
+    if (this.stickyGroupSyncQueued) return;
+    this.stickyGroupSyncQueued = true;
+
+    Promise.resolve().then(() => {
+      const raf = typeof requestAnimationFrame === 'function'
+        ? requestAnimationFrame
+        : (callback: FrameRequestCallback) => setTimeout(() => callback(Date.now()), 16);
+
+      raf(() => {
+        this.stickyGroupSyncQueued = false;
+        this.syncStickyGroupOverlays();
+      });
+    });
+  }
+
+  private syncStickyGroupOverlays(): void {
+    this.ensureRenderRows();
+
+    const scroller = this.bodyScroller?.nativeElement;
+    if (!scroller || !this.isGroupingActive()) {
+      this.stickyGroupHeaderRows = [];
+      this.stickyGroupFooterRows = [];
+      this.stickyGroupOverlayColumnWidths = [];
+      this.stickyGroupHeaderTranslateY = 0;
+      this.stickyGroupFooterTranslateY = 0;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const mainTable = scroller.querySelector<HTMLTableElement>('table.grid-body--main');
+    this.stickyGroupOverlayColumnWidths = Array.from(mainTable?.querySelectorAll<HTMLTableColElement>('colgroup col') ?? []).map((col) => {
+      const explicit = parseFloat(col.style.width || '');
+      if (Number.isFinite(explicit) && explicit > 0) return explicit;
+      const width = col.getBoundingClientRect().width;
+      return Number.isFinite(width) && width > 0 ? width : 0;
+    });
+
+    const scrollerRect = scroller.getBoundingClientRect();
+    const headerMeasurements = this.collectStickyGroupMeasurements(
+      scroller.querySelectorAll<HTMLTableRowElement>('table.grid-body--main tbody > tr.grid-group-row[data-group-key]'),
+      this.groupRenderRowLookup,
+    );
+    const footerMeasurements = this.collectStickyGroupMeasurements(
+      scroller.querySelectorAll<HTMLTableRowElement>('table.grid-body--main tbody > tr.grid-group-footer-row[data-group-key]'),
+      this.groupFooterRenderRowLookup,
+    );
+
+    const stickyHeaders = this.showStickyGroupHeaders()
+      ? this.resolveStickyHeaderRows(headerMeasurements, scrollerRect.top)
+      : [];
+    const stickyFooters = this.showStickyGroupFooters()
+      ? this.resolveStickyFooterRows(stickyHeaders, footerMeasurements, scrollerRect.bottom)
+      : [];
+    const stickyFooterMeasurements = stickyFooters
+      .map((row) => footerMeasurements.find((measurement) => measurement.key === row.key))
+      .filter(Boolean) as Array<NgbDatagridStickyGroupMeasurement<NgbDatagridGroupFooterRenderRow<T>>>;
+
+    this.stickyGroupHeaderRows = stickyHeaders;
+    this.stickyGroupFooterRows = stickyFooters;
+    this.stickyGroupHeaderTranslateY = stickyHeaders.length ? scroller.scrollTop : 0;
+    this.stickyGroupFooterTranslateY = stickyFooters.length
+      ? Math.max(0, scroller.scrollTop + scroller.clientHeight - this.measurementStackHeight(stickyFooterMeasurements))
+      : 0;
+    this.cdr.markForCheck();
+  }
+
+  private collectStickyGroupMeasurements<R extends NgbDatagridGroupRenderRow<T> | NgbDatagridGroupFooterRenderRow<T>>(
+    nodes: NodeListOf<HTMLTableRowElement>,
+    lookup: Map<string, R>,
+  ): Array<NgbDatagridStickyGroupMeasurement<R>> {
+    const measurements: Array<NgbDatagridStickyGroupMeasurement<R>> = [];
+    for (const node of Array.from(nodes)) {
+      const key = node.getAttribute('data-group-key') ?? '';
+      const row = lookup.get(key);
+      if (!row) continue;
+      const rect = node.getBoundingClientRect();
+      measurements.push({
+        key: row.key,
+        level: row.level,
+        startIndex: row.startIndex,
+        endIndex: row.startIndex + row.group.count,
+        top: rect.top,
+        bottom: rect.bottom,
+        height: rect.height,
+        row,
+      });
+    }
+    return measurements;
+  }
+
+  private resolveStickyHeaderRows(
+    measurements: Array<NgbDatagridStickyGroupMeasurement<NgbDatagridGroupRenderRow<T>>>,
+    scrollerTop: number,
+  ): NgbDatagridGroupRenderRow<T>[] {
+    const active: NgbDatagridGroupRenderRow<T>[] = [];
+    let parentRange: { start: number; end: number } | null = null;
+    let threshold = scrollerTop;
+
+    for (let level = 0; level < this.group.length; level++) {
+      const matches = measurements.filter((measurement) =>
+          measurement.level === level &&
+          (!parentRange || (measurement.startIndex >= parentRange.start && measurement.startIndex < parentRange.end)) &&
+          measurement.top < threshold - 0.5,
+        );
+      const match = matches.length ? matches[matches.length - 1] : null;
+
+      if (!match) break;
+
+      active.push(match.row);
+      parentRange = { start: match.startIndex, end: match.endIndex };
+      threshold += match.height;
+    }
+
+    return active;
+  }
+
+  private resolveStickyFooterRows(
+    stickyHeaders: NgbDatagridGroupRenderRow<T>[],
+    measurements: Array<NgbDatagridStickyGroupMeasurement<NgbDatagridGroupFooterRenderRow<T>>>,
+    scrollerBottom: number,
+  ): NgbDatagridGroupFooterRenderRow<T>[] {
+    const active: NgbDatagridGroupFooterRenderRow<T>[] = [];
+
+    for (const stickyHeader of stickyHeaders) {
+      const footerKey = `${stickyHeader.key}:footer`;
+      const match = measurements.find((measurement) => measurement.key === footerKey);
+      if (!match) continue;
+      if (match.top > scrollerBottom + 0.5) {
+        active.push(match.row);
+      }
+    }
+
+    return active;
+  }
+
+  private measurementStackHeight<R>(
+    measurements: Array<NgbDatagridStickyGroupMeasurement<R>>,
+  ): number {
+    return measurements.reduce((total, measurement) => total + measurement.height, 0);
   }
 
   get isHeaderSticky(): boolean {
@@ -2273,11 +3269,25 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   onCellClick(ev: MouseEvent, pagedIndex: number, col: ColumnDef<T>): void {
+    this.tryStartIncellEdit(ev, pagedIndex, col);
+  }
+
+  onCellMouseDown(ev: MouseEvent, pagedIndex: number, col: ColumnDef<T>): void {
+    if (ev.button !== 0) return;
+    this.tryStartIncellEdit(ev, pagedIndex, col);
+  }
+
+  private tryStartIncellEdit(ev: MouseEvent, pagedIndex: number, col: ColumnDef<T>): void {
     if (!this.isIncellEditMode() || !this.enableEdit) return;
     const row = this.paged[pagedIndex] as T;
     if (!this.isCellEditable(col, row, false)) return;
-    const el = ev.target as HTMLElement;
-    if (el.closest('button, a, input, select, textarea, label, .no-edit-trigger')) return;
+    const target = ev.target;
+    const el = target instanceof Element
+      ? target
+      : target instanceof Node
+        ? target.parentElement
+        : null;
+    if (el?.closest('button, a, input, select, textarea, label, .no-edit-trigger')) return;
     if (this.isCellInEditMode(pagedIndex, col)) return;
     if (this.editingCell) this.commitIncellEdit(false);
     this.startIncellEdit(pagedIndex, col.field as string);
@@ -2330,10 +3340,13 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.addingNew = false;
     this.editingIndex = pagedIndex;
     this.editingCell = { rowIndex: pagedIndex, field };
-    this.editForm = this.buildFormFromRow(this.paged[pagedIndex] as any);
+    const colIndex = this.visibleColumns.findIndex((col) => col.field === field);
+    if (colIndex >= 0) {
+      this.focusedCell = { rowIndex: pagedIndex, colIndex };
+    }
+    this.editForm = this.buildFormFromRow(this.toDraftValues(this.paged[pagedIndex]));
     this.saveAttemptedEdit = false;
-    this.cdr.markForCheck();
-    queueMicrotask(() => this.focusInlineEditor(field));
+    this.scheduleViewRefresh(() => this.focusInlineEditor(field));
   }
 
   private focusInlineEditor(preferredField?: string): void {
@@ -2364,7 +3377,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     const original = this.data[di];
     const rowId = this.getRowId(di, original);
     const service = this.getEditService();
-    const updated = service.assignValues(original, { ...(original as any), [field]: control?.value } as any);
+    const updated = service.assignValues(original, this.patchFieldValue(field, control?.value));
     const next = service.update(this.data ?? [], updated, di, rowId);
     this.data = service.saveChanges(next, di, rowId, updated);
     this.invalidateDataCaches();
@@ -2376,7 +3389,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       this.editForm = this.fb.group({});
       this.saveAttemptedEdit = false;
     }
-    this.cdr.markForCheck();
+    this.scheduleViewRefresh();
     return true;
   }
 
@@ -2390,7 +3403,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.editingIndex = null;
     this.editForm = this.fb.group({});
     this.saveAttemptedEdit = false;
-    this.cdr.markForCheck();
+    this.scheduleViewRefresh();
   }
 
   getSingleSelectedPagedIndex(): number | null {
@@ -2423,11 +3436,10 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.externalDialogFocusedOnce = false;
     this.externalEditIsNew = false;
     this.externalEditPagedIndex = pagedIndex;
-    this.externalForm = this.buildFormFromRow(this.paged[pagedIndex] as any);
+    this.externalForm = this.buildFormFromRow(this.toDraftValues(this.paged[pagedIndex]));
     this.saveAttemptedExternal = false;
     this.externalEditOpen = true;
-    this.cdr.markForCheck();
-    queueMicrotask(() => this.focusExternalDialogFirstField());
+    this.scheduleViewRefresh(() => this.focusExternalDialogFirstField());
   }
 
   openExternalAdd(): void {
@@ -2439,11 +3451,10 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.saveAttemptedExternal = false;
     this.externalEditOpen = true;
     const service = this.getEditService();
-    const draft = service.assignValues({} as T, this.externalForm.value as any);
+    const draft = this.assignDraftValues({} as T, this.formDraftValues(this.externalForm));
     this.addDraftRowId = Symbol('ngb-datagrid-new-row');
     service.create(this.data ?? [], draft, this.data.length, this.addDraftRowId);
-    this.cdr.markForCheck();
-    queueMicrotask(() => this.focusExternalDialogFirstField());
+    this.scheduleViewRefresh(() => this.focusExternalDialogFirstField());
   }
 
   saveExternalEdit(): void {
@@ -2455,7 +3466,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
     const service = this.getEditService();
     if (this.externalEditIsNew) {
-      const newRow = service.assignValues({} as T, this.externalForm.value as any);
+      const newRow = this.assignDraftValues({} as T, this.formDraftValues(this.externalForm));
       const rowIndex = this.data.length;
       const rowId = this.addDraftRowId ?? this.getRowId(rowIndex, newRow);
       service.create(this.data ?? [], newRow, rowIndex, rowId);
@@ -2466,7 +3477,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       const di = this.dataIndexOf(this.paged[pagedIndex]);
       const original = this.data[di];
       const rowId = this.getRowId(di, original);
-      const updated = service.assignValues(original, this.externalForm.value as any);
+      const updated = this.assignDraftValues(original, this.formDraftValues(this.externalForm));
       const next = service.update(this.data ?? [], updated, di, rowId);
       this.data = service.saveChanges(next, di, rowId, updated);
       this.invalidateDataCaches();
@@ -2690,6 +3701,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   get tableClassList(): string[] {
+    if (this.tableClassListCache) return this.tableClassListCache;
     const opts = this.tableOptions || {};
     const cls: string[] = ['table'];
     if (opts.stripedRows) cls.push('table-striped');
@@ -2701,14 +3713,21 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     if (opts.groupDividers) cls.push('table-group-divider');
     if (opts.align === 'middle') cls.push('align-middle');
     if (opts.align === 'bottom') cls.push('align-bottom');
+    this.tableClassListCache = cls;
     return cls;
   }
 
   get responsiveWrapperClasses(): string[] {
+    if (this.responsiveWrapperClassesCache) return this.responsiveWrapperClassesCache;
     const r = this.tableOptions?.responsive;
-    if (r === false) return [];
-    if (r === true || r === undefined) return ['table-responsive'];
-    return [`table-responsive-${r}`];
+    const classes =
+      r === false
+        ? []
+        : r === true || r === undefined
+          ? ['table-responsive']
+          : [`table-responsive-${r}`];
+    this.responsiveWrapperClassesCache = classes;
+    return classes;
   }
 
   get densityMode(): 'comfortable' | 'compact' {
@@ -2725,17 +3744,23 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     return this.isStackedLayout() && (this.tableOptions?.stackedLayout ?? 'list') === 'cards';
   }
 
-  stackedGroupFor(col: ColumnDef<T>): 'start' | 'center' | 'end' {
+  stackedGroupFor(col: ColumnDef<T>): StackedGroup {
     return col.stackedGroup ?? 'start';
   }
 
-  stackedColumnsInGroup(group: 'start' | 'center' | 'end'): ColumnDef<T>[] {
-    return this.visibleColumns.filter((col) => this.stackedGroupFor(col) === group);
+  stackedColumnsInGroup(group: StackedGroup): ColumnDef<T>[] {
+    const cached = this.stackedColumnsCache.get(group);
+    if (cached) return cached;
+    const columns = this.visibleColumns.filter((col) => this.stackedGroupFor(col) === group);
+    this.stackedColumnsCache.set(group, columns);
+    return columns;
   }
 
-  stackedCardGroups(): Array<'start' | 'center' | 'end'> {
-    const order: Array<'start' | 'center' | 'end'> = ['start', 'center', 'end'];
-    return order.filter((group) => this.stackedColumnsInGroup(group).length > 0);
+  stackedCardGroups(): StackedGroup[] {
+    if (this.stackedCardGroupsCache) return this.stackedCardGroupsCache;
+    const order: StackedGroup[] = ['start', 'center', 'end'];
+    this.stackedCardGroupsCache = order.filter((group) => this.stackedColumnsInGroup(group).length > 0);
+    return this.stackedCardGroupsCache;
   }
 
   visibleColumnIndex(col: ColumnDef<T>): number {
@@ -2826,7 +3851,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   updateHighlightCache(): void {
     this.highlightRowMap.clear();
-    (this.highlightedIndex || []).forEach(item => {
+    (this.highlightedIndex || []).forEach((item) => {
       const rowKey = item.row;
       if (!this.highlightRowMap.has(rowKey)) this.highlightRowMap.set(rowKey, []);
       this.highlightRowMap.get(rowKey)?.push(item);
@@ -2838,15 +3863,15 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   headerTitle(col: ColumnDef<T>): string {
-    const t = (col as any)?.title;
+    const t = col.title;
     return (t ?? this.headerText(col)) ?? '';
   }
 
   cellTitle(row: T, col: ColumnDef<T>): string {
-    const def = (col as any)?.cellTitle;
+    const def = col.cellTitle;
     if (typeof def === 'function') return def(row) ?? '';
     if (typeof def === 'string') return def;
-    const val = (row as any)?.[col.field];
+    const val = this.readFieldValue(row, col.field);
     return val === undefined || val === null ? '' : String(val);
   }
 
@@ -3127,8 +4152,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     const rest: T[] = [];
 
     rows.forEach(r => {
-      const di = this.dataIndexOf(r);
-      const id = this.getRowId(di >= 0 ? di : 0, r);
+      const { id } = this.resolveRowMeta(r, 0);
       (this.stickyRowIds.has(id) ? sticky : rest).push(r);
     });
 
@@ -3144,7 +4168,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   private rebuildFilterForm() {
-    const group: Record<string, any> = {};
+    const group: Record<string, unknown> = {};
     for (const c of this.resolvedColumns) {
       if (!c.filterable) continue;
       const descriptor = this.getColumnFilter(c.field as string);
@@ -3168,6 +4192,10 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   @ContentChildren(NgbFilterTemplate) private filterTplQ!: QueryList<NgbFilterTemplate<T>>;
   @ContentChildren(NgbFilterMenuTemplate) private filterMenuTplQ!: QueryList<NgbFilterMenuTemplate<T>>;
   @ContentChildren(NgbGlobalFilterTemplate) private globalTplQ!: QueryList<NgbGlobalFilterTemplate>;
+  @ContentChildren(NgbDataGridGroupHeaderColumnTemplateDirective)
+  private groupHeaderColumnTplQ!: QueryList<NgbDataGridGroupHeaderColumnTemplateDirective<T>>;
+  @ContentChildren(NgbDataGridGroupFooterTemplateDirective)
+  private groupFooterTplQ!: QueryList<NgbDataGridGroupFooterTemplateDirective<T>>;
   @ContentChildren(NgbGridColumnDirective) private gridColumnQ!: QueryList<NgbGridColumnDirective<T>>;
 
   /** Internal lookup maps */
@@ -3176,6 +4204,8 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   public filterTpls: Record<string, NgbFilterTemplate<T>> = {};
   public filterMenuTpls: Record<string, NgbFilterMenuTemplate<T>> = {};
   public globalTpl:  NgbGlobalFilterTemplate | null = null;
+  public groupHeaderColumnTpls: Record<string, NgbDataGridGroupHeaderColumnTemplateDirective<T>> = {};
+  public groupFooterTpls: Record<string, NgbDataGridGroupFooterTemplateDirective<T>> = {};
   private warnedDeclarativeColumns = false;
 
   private toRecord<T extends { field: string }>(
@@ -3199,7 +4229,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
         await this.exporter.exportPdf({
           fileName: this.exportOptions.fileName || 'export',
           columns: cols.map(c => c.key),
-          rows: data,
+          rows: data as Array<Record<string, unknown>>,
           options: this.exportOptions.pdf
         });
       } else {
@@ -3207,13 +4237,13 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
           fileName: this.exportOptions.fileName || 'export',
           sheetName: this.exportOptions.excel?.sheetName || 'Sheet1',
           columns: cols,
-          rows: data
+          rows: data as Array<Record<string, unknown>>
         });
       }
     } finally { this.exporting = false; }
   }
 
-  private async resolveDataset(): Promise<any[]> {
+  private async resolveDataset(): Promise<T[]> {
     const mode = this.exportOptions?.pages || 'current';
     if (mode === 'all') {
       if (!this.dataProviderAll) throw new Error('dataProviderAll required when pages="all"');
@@ -3236,6 +4266,8 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       this.filterTpls = this.toRecord(this.filterTplQ);
       this.filterMenuTpls = this.toRecord(this.filterMenuTplQ);
       this.globalTpl  = this.globalTplQ?.first ?? null;
+      this.groupHeaderColumnTpls = this.toRecord(this.groupHeaderColumnTplQ);
+      this.groupFooterTpls = this.toRecord(this.groupFooterTplQ);
       this.syncColumnWidthOverrides(true);
       this.syncColumnOrder(true);
       this.validateColumnConfig();
@@ -3250,7 +4282,10 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.filterTplQ?.changes.subscribe(rebuild);
     this.filterMenuTplQ?.changes.subscribe(rebuild);
     this.globalTplQ?.changes.subscribe(rebuild);
+    this.groupHeaderColumnTplQ?.changes.subscribe(rebuild);
+    this.groupFooterTplQ?.changes.subscribe(rebuild);
     this.gridColumnQ?.changes.subscribe(rebuild);
+    this.scheduleStickyGroupSync();
   }
 
   ngOnChanges(ch: SimpleChanges): void {
@@ -3288,6 +4323,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     if (ch['data'] || ch['columns'] || ch['labels'] || ch['locale'] || ch['dir']) {
       this.cdr.markForCheck();
     }
+    this.scheduleStickyGroupSync();
   }
 
   private resetEditingState(): void {
@@ -3299,12 +4335,16 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.cdr.markForCheck();
   }
 
-  private getRowId(rowIndex: number, row: T): any {
-    return this.trackBy ? this.trackBy(rowIndex, row) : rowIndex;
+  private getRowId(rowIndex: number, row: T): NgbDatagridRowId {
+    return this.resolveRowMeta(row, rowIndex).id;
+  }
+
+  private selectedDataRows(): T[] {
+    return (this.data ?? []).filter((row, index) => this.selectedRowIds.has(this.getRowId(index, row)));
   }
 
   /** Apply selection ids and refresh checkbox UI (for programmatic / OnPush sync). */
-  setSelectionIds(ids: Iterable<any>, options?: { emit?: boolean }): void {
+  setSelectionIds(ids: Iterable<NgbDatagridRowId>, options?: { emit?: boolean }): void {
     if (!this.isSelectionEnabled()) return;
     this.selectedRowIds.clear();
     for (const id of ids) {
@@ -3312,7 +4352,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     }
     if (options?.emit !== false) {
       this.selectionChange.emit({
-        selected: this.data.filter((row, idx) => this.selectedRowIds.has(this.getRowId(idx, row))),
+        selected: this.selectedDataRows(),
         lastAction: null,
       });
     }
@@ -3333,6 +4373,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   isRowReorderEnabled(): boolean {
     return this.rowReorderable &&
+      !this.isGroupingActive() &&
       !this.sort.active &&
       !this.hasActiveFilters() &&
       !this.addingNew &&
@@ -3359,7 +4400,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
     // Register a draft row with the edit service so implementations can track "new" state.
     const service = this.getEditService();
-    const draft = service.assignValues({} as T, this.addForm.value as any);
+    const draft = this.assignDraftValues({} as T, this.formDraftValues(this.addForm));
     this.addDraftRowId = Symbol('ngb-datagrid-new-row');
     service.create(this.data ?? [], draft, this.data.length, this.addDraftRowId);
     this.cdr.markForCheck();
@@ -3374,7 +4415,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     if (this.addForm.invalid) return;
 
     const service = this.getEditService();
-    const newRow = service.assignValues({} as T, this.addForm.value as any);
+    const newRow = this.assignDraftValues({} as T, this.formDraftValues(this.addForm));
     const rowIndex = this.data.length;
     const rowId = this.addDraftRowId ?? this.getRowId(rowIndex, newRow);
     service.create(this.data ?? [], newRow, rowIndex, rowId);
@@ -3409,16 +4450,15 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.addingNew = false;
     this.editingCell = null;
     this.editingIndex = i;
-    const row = this.paged[i] as any;
-    this.editForm = this.buildFormFromRow(this.paged[i] as any);
+    const row = this.paged[i];
+    this.editForm = this.buildFormFromRow(this.toDraftValues(row));
     this.saveAttemptedEdit = false;
     const di = this.dataIndexOf(row);
     const rowId = this.getRowId(di, this.data[di]);
     // Start tracking baseline for the row (service can snapshot original state).
     this.getEditService().update(this.data ?? [], this.data[di], di, rowId);
     this.rowEdit.emit({ row: this.data[di], index: di });
-    this.cdr.markForCheck();
-    queueMicrotask(() => this.focusInlineEditor());
+    this.scheduleViewRefresh(() => this.focusInlineEditor());
   }
 
   saveEdit(i: number) {
@@ -3433,7 +4473,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     const original = this.data[di];
     const rowId = this.getRowId(di, original);
     const service = this.getEditService();
-    const updated = service.assignValues(original, this.editForm.value as any);
+    const updated = this.assignDraftValues(original, this.formDraftValues(this.editForm));
     const next = service.update(this.data ?? [], updated, di, rowId);
     this.data = service.saveChanges(next, di, rowId, updated);
     this.invalidateDataCaches();
@@ -3461,13 +4501,13 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   onNewDraftChange(col: ColumnDef<T>) {
     if (this.draftNew) {
       const key = this.keyOf(col);
-      this.draftNew = this.getEditService().assignValues(this.draftNew as any, { [key]: (this.draftNew as any)[key] } as any) as any;
+      this.draftNew = { ...this.draftNew, [key]: this.draftNew[key] };
     }
     this.validateInto(col, this.draftNew, this.errorsNew);
   }
 
   validateInto(col: ColumnDef<T>,
-    targetDraft: Partial<Record<KeyOf<T>, any>> | null,
+    targetDraft: DraftValues<T> | null,
     targetErrors: Partial<Record<KeyOf<T>, string>>
   ) {
     if (!targetDraft) return;
@@ -3505,17 +4545,17 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     return this.trackBy ? this.trackBy(rowIndex, row) : rowIndex;
   };
 
-  private rowKeyValue(row: T, rowIndex: number): any {
+  private rowKeyValue(row: T, rowIndex: number): NgbDatagridRowId {
     const key = this.highlightRowKey;
-    if (typeof key === 'function') return (key as any)(row, rowIndex);
-    if (typeof key === 'string') return (row as any)?.[key];
+    if (typeof key === 'function') return key(row, rowIndex);
+    if (typeof key === 'string') return this.readFieldValue(row, key) as NgbDatagridRowId;
     return rowIndex;
   }
 
-  private colKeyValue(column: ColumnDef<T>, colIndex: number): any {
+  private colKeyValue(column: ColumnDef<T>, colIndex: number): unknown {
     const key = this.highlightColKey;
-    if (typeof key === 'function') return (key as any)(column, colIndex);
-    if (typeof key === 'string') return (column as any)?.[key];
+    if (typeof key === 'function') return key(column, colIndex);
+    if (typeof key === 'string') return this.readFieldValue(column, key);
     return colIndex;
   }
 
@@ -3578,9 +4618,9 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    const target = event.target as HTMLElement | null;
-    const insideMenu = !!target?.closest(
-      '.grid-filter-menu-host, .grid-filter-operator, .grid-filter-operator-menu, .ngb-datagrid-floating-panel, .ngb-grid__filter-menu-overlay'
+    const insideMenu = this.isEventInsideSelector(
+      event,
+      '.grid-filter-menu-host, .grid-filter-operator, .grid-filter-operator-menu, .ngb-datagrid-floating-panel, .ngb-grid__filter-menu-overlay',
     );
     if (insideMenu) {
       return;
@@ -3591,10 +4631,29 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
     if (this.isIncellEditMode()) {
       // Clicking outside the grid commits a valid in-cell edit and keeps invalid edits open.
-      if (!target?.closest('.ngb-grid')) {
+      if (!this.isEventInsideSelector(event, '.ngb-grid')) {
         this.commitIncellEdit(true);
       }
     }
+  }
+
+  private isEventInsideSelector(event: MouseEvent, selector: string): boolean {
+    const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+    for (const node of path) {
+      if (node instanceof Element && node.closest(selector)) {
+        return true;
+      }
+    }
+
+    const target = event.target;
+    if (target instanceof Element) {
+      return !!target.closest(selector);
+    }
+    if (target instanceof Node) {
+      return !!target.parentElement?.closest(selector);
+    }
+
+    return false;
   }
 
   canCancelToolbarEdit(): boolean {
@@ -3690,8 +4749,11 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       this.expanded.clear();
       if (!isOpen) this.expanded.add(i); // open the clicked row, or close all if it was open
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      isOpen ? this.expanded.delete(i) : this.expanded.add(i);
+      if (isOpen) {
+        this.expanded.delete(i);
+      } else {
+        this.expanded.add(i);
+      }
     }
   }
 
@@ -3744,8 +4806,9 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.cdr.markForCheck();
   }
 
-  asBool(v: any): boolean {
-    return typeof v === 'boolean' ? v : !!v?.enabled;
+  asBool(v: unknown): boolean {
+    if (typeof v === 'boolean') return v;
+    return typeof v === 'object' && v !== null && 'enabled' in v ? !!(v as { enabled?: unknown }).enabled : false;
   }
 
   triggerExport(kind: 'pdf'|'excel') {
@@ -3759,8 +4822,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   isRowSticky(row: T, pagedIndex: number): boolean {
     if (!this.stickyRows) return false;
-    const di = this.dataIndexOf(row);
-    const id = this.getRowId(di >= 0 ? di : pagedIndex, row);
+    const { id } = this.resolveRowMeta(row, pagedIndex);
     return this.stickyRowIds.has(id);
   }
 
@@ -3768,8 +4830,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     if (!this.stickyRows) return;
     const row = this.paged[pagedIndex];
     if (!row) return;
-    const di = this.dataIndexOf(row);
-    const id = this.getRowId(di >= 0 ? di : pagedIndex, row);
+    const { id } = this.resolveRowMeta(row, pagedIndex);
     if (this.stickyRowIds.has(id)) this.stickyRowIds.delete(id);
     else this.stickyRowIds.add(id);
     this.invalidateSortedCaches();
@@ -3828,8 +4889,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   isRowSelected(row: T, pagedIndex: number): boolean {
-    const di = this.dataIndexOf(this.paged[pagedIndex]);
-    const id = this.getRowId(di >= 0 ? di : pagedIndex, row);
+    const { id } = this.resolveRowMeta(row, pagedIndex);
     return this.selectedRowIds.has(id);
   }
 
@@ -3838,13 +4898,12 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     const row = this.paged[pagedIndex];
     if (!row || this.isSelectionDisabled(row, pagedIndex)) return;
 
-    const di = this.dataIndexOf(row);
-    const id = this.getRowId(di >= 0 ? di : pagedIndex, row);
+    const { index: resolvedIndex, id } = this.resolveRowMeta(row, pagedIndex);
+    const di = resolvedIndex >= 0 ? resolvedIndex : pagedIndex;
     const currentlySelected = this.selectedRowIds.has(id);
     const isMulti = this.selectionMode === 'multiple';
     const desktop = this.selectionKeyMode === 'desktop';
-    const shift = desktop && !!(event && 'shiftKey' in event && (event as any).shiftKey);
-    const meta = desktop && !!(event && (('metaKey' in event && (event as any).metaKey) || ('ctrlKey' in event && (event as any).ctrlKey)));
+    const { shift, meta } = this.readModifierKeys(event);
     const fromCheckbox = !!(event?.target instanceof HTMLInputElement && event.target.type === 'checkbox');
 
     if (!isMulti) {
@@ -3863,7 +4922,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       for (let i = start; i <= end; i++) {
         const r = this.paged[i];
         if (!r || this.isSelectionDisabled(r, i)) continue;
-        const rid = this.getRowId(this.dataIndexOf(r), r);
+        const { id: rid } = this.resolveRowMeta(r, i);
         this.selectedRowIds.add(rid);
       }
       this.emitSelection(row, di, true);
@@ -3886,7 +4945,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   private emitSelection(row: T, dataIndex: number, selected: boolean) {
     this.selectionChange.emit({
-      selected: this.data.filter((r, idx) => this.selectedRowIds.has(this.getRowId(idx, r))),
+      selected: this.selectedDataRows(),
       lastAction: { row, index: dataIndex, selected }
     });
   }
@@ -3897,31 +4956,52 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     const allSelected = allSelectable.every((r, i) => this.isRowSelected(r, i));
     if (allSelected) {
       allSelectable.forEach((r, i) => {
-        const rid = this.getRowId(this.dataIndexOf(r), r);
+        const { id: rid } = this.resolveRowMeta(r, i);
         this.selectedRowIds.delete(rid);
       });
     } else {
       allSelectable.forEach((r, i) => {
-        const rid = this.getRowId(this.dataIndexOf(r), r);
+        const { id: rid } = this.resolveRowMeta(r, i);
         this.selectedRowIds.add(rid);
       });
     }
     this.selectionChange.emit({
-      selected: this.data.filter((r, idx) => this.selectedRowIds.has(this.getRowId(idx, r))),
+      selected: this.selectedDataRows(),
       lastAction: null
     });
     this.cdr.markForCheck();
   }
 
   isPageAllSelected(): boolean {
-    const selectable = this.paged.filter((r, i) => !this.isSelectionDisabled(r, i));
-    return selectable.length > 0 && selectable.every((r, i) => this.isRowSelected(r, i));
+    let selectableCount = 0;
+    for (let index = 0; index < this.paged.length; index++) {
+      const row = this.paged[index];
+      if (!row) continue;
+      if (this.isSelectionDisabled(row, index)) return false;
+      selectableCount++;
+      if (!this.isRowSelected(row, index)) return false;
+    }
+    return selectableCount > 0;
   }
 
   isPageIndeterminate(): boolean {
-    const selectable = this.paged.filter((r, i) => !this.isSelectionDisabled(r, i));
-    const selectedCount = selectable.filter((r, i) => this.isRowSelected(r, i)).length;
-    return selectedCount > 0 && selectedCount < selectable.length;
+    let selectableCount = 0;
+    let selectedCount = 0;
+    let hasDisabledRows = false;
+
+    for (let index = 0; index < this.paged.length; index++) {
+      const row = this.paged[index];
+      if (!row) continue;
+      if (this.isSelectionDisabled(row, index)) {
+        hasDisabledRows = true;
+        continue;
+      }
+      selectableCount++;
+      if (this.isRowSelected(row, index)) selectedCount++;
+    }
+
+    if (selectedCount === 0) return false;
+    return selectedCount < selectableCount || hasDisabledRows;
   }
 
   selectAllLabel(): string {

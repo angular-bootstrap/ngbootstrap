@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.1.0 - 2026-07-25
+
+### Added
+
+- Added DataGrid grouping with `groupable`, `group`, `groupChange`, and grouped `dataStateChange` support for local or manual/server-driven workflows.
+- Added group panel interactions so users can group by dragging column headers, reorder grouped fields, and remove active groups without duplicating descriptors.
+- Added grouped rendering helpers for nested group headers, expand/collapse behavior, aggregates, custom group header/footer templates, and sticky group headers/footers.
+- Added grouping-focused docs, API coverage, examples, and library tests for grouping, aggregates, templates, and sticky group overlays.
+
+### Changed
+
+- Updated DataGrid docs and package positioning to emphasize Angular UI for data-heavy apps, including DataGrid depth and Angular-native Form Builder workflows.
+- Expanded the public package README and release notes to document grouping, aggregate templates, and dependency-free export defaults more clearly.
+
+### Fixed
+
+- Fixed grouped sorting and grouped render paths so sorting continues to work correctly across grouping examples and grouped datasets.
+- Fixed several DataGrid behavior regressions surfaced during the docs pass, including in-cell editing activation, sticky column behavior, and column reordering/data alignment.
+
 ## 2.0.3 - 2026-07-05
 
 ### Fixed

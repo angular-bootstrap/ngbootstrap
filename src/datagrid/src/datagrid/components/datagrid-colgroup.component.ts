@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
+import type { Datagrid } from '../datagrid.component';
 
 @Component({
   selector: 'colgroup[ngbDatagridColgroup]',
@@ -27,5 +28,5 @@ import { Component, Input } from '@angular/core';
   `
 })
 export class NgbDatagridColgroupComponent {
-  @Input({ required: true }) grid!: any;
+  @Input({ required: true }) grid!: Datagrid<any>;
 }

@@ -121,4 +121,49 @@ describe('NgbDndItemDirective', () => {
     handle.onDragEnd();
     expect(state.getCurrent()).toBeNull();
   });
+
+  it('emits a drop event when keyboard reorder is confirmed with Enter', () => {
+    const listDirective = fixture.debugElement.query(By.directive(NgbDndListDirective))
+      .injector.get(NgbDndListDirective);
+    const itemDirectives = fixture.debugElement.queryAll(By.directive(NgbDndItemDirective))
+      .map((debugEl) => debugEl.injector.get(NgbDndItemDirective));
+    const dropped = jest.fn();
+
+    listDirective.dndDropped.subscribe(dropped);
+
+    itemDirectives[0].onKeydown(new KeyboardEvent('keydown', { code: 'Space' }));
+    itemDirectives[0].onKeydown(new KeyboardEvent('keydown', { code: 'ArrowDown' }));
+    itemDirectives[0].onKeydown(new KeyboardEvent('keydown', { code: 'Enter' }));
+
+    expect(fixture.componentInstance.items).toEqual(['b', 'a']);
+    expect(dropped).toHaveBeenCalledWith(
+      expect.objectContaining({
+        item: 'a',
+        fromIndex: 0,
+        toIndex: 1,
+        sameList: true,
+      })
+    );
+    expect(itemDirectives[0].dragging).toBe(false);
+  });
+
+  it('restores the original order when keyboard drag is canceled with Escape', () => {
+    const listDirective = fixture.debugElement.query(By.directive(NgbDndListDirective))
+      .injector.get(NgbDndListDirective);
+    const itemDirectives = fixture.debugElement.queryAll(By.directive(NgbDndItemDirective))
+      .map((debugEl) => debugEl.injector.get(NgbDndItemDirective));
+    const dropped = jest.fn();
+
+    listDirective.dndDropped.subscribe(dropped);
+
+    itemDirectives[0].onKeydown(new KeyboardEvent('keydown', { code: 'Space' }));
+    itemDirectives[0].onKeydown(new KeyboardEvent('keydown', { code: 'ArrowDown' }));
+    expect(fixture.componentInstance.items).toEqual(['b', 'a']);
+
+    itemDirectives[0].onKeydown(new KeyboardEvent('keydown', { code: 'Escape' }));
+
+    expect(fixture.componentInstance.items).toEqual(['a', 'b']);
+    expect(dropped).not.toHaveBeenCalled();
+    expect(itemDirectives[0].dragging).toBe(false);
+  });
 });

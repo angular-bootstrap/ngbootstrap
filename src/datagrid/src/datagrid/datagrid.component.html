@@ -1,5 +1,3 @@
-<!-- eslint-disable @angular-eslint/template/interactive-supports-focus -->
-<!-- eslint-disable @angular-eslint/template/click-events-have-key-events -->
 <div
   class="ngb-grid"
   [attr.dir]="resolvedDir()"
@@ -16,6 +14,7 @@
   [class.ngb-grid--column-reorderable]="isColumnReorderEnabled()"
   [class.ngb-grid--loading]="loading"
   [attr.aria-busy]="loading ? 'true' : null"
+  [style.--ngb-render-tick]="renderTick"
 >
   <div class="ngb-grid__layout-toolbar-host">
     <ng-content select="ngb-datagrid-layout-toolbar"></ng-content>
@@ -38,6 +37,44 @@
     aria-live="polite"
     aria-atomic="true"
   >{{ statusMessage }}</div>
+
+  @if (isGroupingEnabled()) {
+    <div
+      class="ngb-grid__group-panel"
+      [class.ngb-grid__group-panel--active]="groupPanelDragActive && !groupPanelDragDenied"
+      [class.ngb-grid__group-panel--denied]="groupPanelDragDenied"
+      (dragover)="onGroupPanelDragOver($event)"
+      (dragleave)="onGroupPanelDragLeave($event)"
+      (drop)="onGroupPanelDrop($event)"
+    >
+      <div class="ngb-grid__group-panel-label">{{ groupPanelLabel() }}</div>
+      @if (groupedColumns().length) {
+        <div class="ngb-grid__group-chip-list">
+          @for (descriptor of groupedColumns(); track descriptor.field) {
+            <div class="ngb-grid__group-chip">
+              <button
+                type="button"
+                class="ngb-grid__group-chip-button"
+                (click)="toggleGroupDirection(descriptor.field)"
+                [attr.aria-label]="groupDirectionAriaLabel(descriptor)"
+              >
+                <span class="ngb-grid__group-chip-label">{{ groupFieldLabel(descriptor) }}</span>
+                <span class="ngb-grid__group-chip-dir">{{ descriptor.dir === 'desc' ? '↓' : '↑' }}</span>
+              </button>
+              <button
+                type="button"
+                class="ngb-grid__group-chip-remove"
+                (click)="removeGroupField(descriptor.field)"
+                [attr.aria-label]="groupRemoveAriaLabel(descriptor)"
+              >
+                <span class="bi bi-x-lg" aria-hidden="true"></span>
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
 
   <div class="table-wrapper" [ngClass]="responsiveWrapperClasses">
     @if (loading) {
@@ -69,13 +106,102 @@
         class="table-light"
         ngbDatagridHeader
         [grid]="gridHost"
+        [renderTick]="renderTick"
       ></thead>
     </table>
     </div>
 
     <div [class.table-body-scroll]="shouldEnableScroll" #bodyScroller (scroll)="onBodyHorizontalScroll()">
+      @if (hasStickyGroupHeaders()) {
+        <div
+          class="ngb-grid__group-sticky-layer ngb-grid__group-sticky-layer--top"
+          [style.transform]="'translateY(' + stickyGroupHeaderTranslateY + 'px)'"
+        >
+          <table
+            class="grid-table grid-group-sticky-table mb-0"
+            [ngClass]="tableClassList"
+            [style.width.px]="tablePixelWidth"
+            role="presentation"
+          >
+            <colgroup>
+              @for (width of stickyGroupOverlayColumnWidths; track $index) {
+                <col [style.width.px]="width || null" />
+              }
+            </colgroup>
+            <tbody>
+              @for (item of stickyGroupHeaderRows; track item.key) {
+                <tr class="grid-group-row grid-group-row--overlay">
+                  @if (showSelectionColumn()) {
+                    <td class="grid-group-row__utility-cell"></td>
+                  }
+                  @if (rowDetailTpl) {
+                    <td class="grid-group-row__utility-cell"></td>
+                  }
+                  @if (stickyRowsEnabled) {
+                    <td class="grid-group-row__utility-cell"></td>
+                  }
+                  @for (col of visibleColumns; track col.field) {
+                    @if (shouldRenderGroupCell(col, item.group)) {
+                    <td
+                      class="grid-group-row__cell"
+                      [class.grid-group-row__cell--lead]="isGroupLeadColumn(col, item.group)"
+                      [attr.colspan]="groupCellColspan(col, item.group)"
+                    >
+                      @if (isGroupLeadColumn(col, item.group)) {
+                        <button
+                          type="button"
+                          class="grid-group-row__toggle"
+                          (click)="toggleGroupCollapsed(item.group, item.level, item.startIndex)"
+                          [attr.aria-expanded]="!item.collapsed"
+                        >
+                          <span
+                            class="bi"
+                            [ngClass]="item.collapsed ? 'bi-chevron-right' : 'bi-chevron-down'"
+                            aria-hidden="true"
+                          ></span>
+                          <span class="grid-group-row__content" [style.padding-inline-start.rem]="groupRowIndent(item.level)">
+                            @if (groupHeaderTpl) {
+                              <ng-container
+                                [ngTemplateOutlet]="groupHeaderTpl.template"
+                                [ngTemplateOutletContext]="groupHeaderContext(item.group)"
+                              ></ng-container>
+                            } @else {
+                              <span class="grid-group-row__label">{{ groupRowLabel(item.group) }}</span>
+                              <span class="grid-group-row__count">{{ groupRowCountLabel(item.group) }}</span>
+                            }
+                          </span>
+                        </button>
+                        @if (groupHeaderColumnTemplate(groupColumnField(col)); as tpl) {
+                          <div class="grid-group-row__column-slot">
+                            <ng-container
+                              [ngTemplateOutlet]="tpl.template"
+                              [ngTemplateOutletContext]="groupColumnContext(item.group, col)"
+                            ></ng-container>
+                          </div>
+                        }
+                      } @else if (groupHeaderColumnTemplate(groupColumnField(col)); as tpl) {
+                        <div class="grid-group-row__column-slot">
+                          <ng-container
+                            [ngTemplateOutlet]="tpl.template"
+                            [ngTemplateOutletContext]="groupColumnContext(item.group, col)"
+                          ></ng-container>
+                        </div>
+                      }
+                    </td>
+                    }
+                  }
+                  @if (showActionsColumn()) {
+                    <td class="grid-group-row__utility-cell"></td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
       <table
-        class="grid-table grid-body mb-0"
+        class="grid-table grid-body grid-body--main mb-0"
         [ngClass]="tableClassList"
         [style.width.px]="tablePixelWidth"
         role="grid"
@@ -97,7 +223,7 @@
           [dndDisabled]="!isRowReorderEnabled()"
           (dndDropped)="onRowDrop($event)"
         >
-          @if (!paged.length) {
+          @if (!hasRenderableRows()) {
           <tr class="ngb-grid__empty-row">
             <td [attr.colspan]="ariaColCount()" class="ngb-grid__empty text-center text-muted py-4">
               {{ emptyStateLabel() }}
@@ -113,42 +239,195 @@
           ></tr>
           }
 
-          @for (row of paged; track trackRow($index, row); let i = $index) {
-            <tr
-              class="grid-data-row"
-              ngbDatagridDataRow
-              [grid]="gridHost"
-              [row]="row"
-              [index]="i"
-              [selected]="isRowSelected(row, i)"
-              [ngbDndItem]="row"
-              [dndIndex]="i"
-              [dndDisabled]="!isRowReorderEnabled()"
-              (click)="onRowSelect($event, i); onRowClick($event, i)"
-              [formGroup]="editForm"
-              [class.sticky-row]="isRowSticky(row, i)"
-              [class.row-selected]="isRowSelected(row, i)"
-              [class.row-highlight]="isRowHighlighted(row, i)"
-              [class.grid-row--reorderable]="isRowReorderEnabled()"
-              [ngClass]="resolveRowClass(row, i)"
-              [ngStyle]="resolveRowStyle(row, i)"
-              [attr.aria-selected]="isRowSelected(row, i) ? 'true' : null"
-              [style.top.px]="stickyTop(row, i)"
-              [style.z-index]="isRowSticky(row, i) ? 3 : null"
-            ></tr>
+          @for (item of renderRows; track item.key) {
+            @if (item.kind === 'group') {
+              <tr
+                class="grid-group-row"
+                [attr.data-group-key]="item.key"
+                [attr.data-group-level]="item.level"
+              >
+                @if (showSelectionColumn()) {
+                  <td class="grid-group-row__utility-cell"></td>
+                }
+                @if (rowDetailTpl) {
+                  <td class="grid-group-row__utility-cell"></td>
+                }
+                @if (stickyRowsEnabled) {
+                  <td class="grid-group-row__utility-cell"></td>
+                }
+                @for (col of visibleColumns; track col.field) {
+                  @if (shouldRenderGroupCell(col, item.group)) {
+                  <td
+                    class="grid-group-row__cell"
+                    [class.grid-group-row__cell--lead]="isGroupLeadColumn(col, item.group)"
+                    [attr.colspan]="groupCellColspan(col, item.group)"
+                  >
+                    @if (isGroupLeadColumn(col, item.group)) {
+                      <button
+                        type="button"
+                        class="grid-group-row__toggle"
+                        (click)="toggleGroupCollapsed(item.group, item.level, item.startIndex)"
+                        [attr.aria-expanded]="!item.collapsed"
+                      >
+                        <span
+                          class="bi"
+                          [ngClass]="item.collapsed ? 'bi-chevron-right' : 'bi-chevron-down'"
+                          aria-hidden="true"
+                        ></span>
+                        <span class="grid-group-row__content" [style.padding-inline-start.rem]="groupRowIndent(item.level)">
+                          @if (groupHeaderTpl) {
+                            <ng-container
+                              [ngTemplateOutlet]="groupHeaderTpl.template"
+                              [ngTemplateOutletContext]="groupHeaderContext(item.group)"
+                            ></ng-container>
+                          } @else {
+                            <span class="grid-group-row__label">{{ groupRowLabel(item.group) }}</span>
+                            <span class="grid-group-row__count">{{ groupRowCountLabel(item.group) }}</span>
+                          }
+                        </span>
+                      </button>
+                      @if (groupHeaderColumnTemplate(groupColumnField(col)); as tpl) {
+                        <div class="grid-group-row__column-slot">
+                          <ng-container
+                            [ngTemplateOutlet]="tpl.template"
+                            [ngTemplateOutletContext]="groupColumnContext(item.group, col)"
+                          ></ng-container>
+                        </div>
+                      }
+                    } @else if (groupHeaderColumnTemplate(groupColumnField(col)); as tpl) {
+                      <div class="grid-group-row__column-slot">
+                        <ng-container
+                          [ngTemplateOutlet]="tpl.template"
+                          [ngTemplateOutletContext]="groupColumnContext(item.group, col)"
+                        ></ng-container>
+                      </div>
+                    }
+                  </td>
+                  }
+                }
+                @if (showActionsColumn()) {
+                  <td class="grid-group-row__utility-cell"></td>
+                }
+              </tr>
+            } @else if (item.kind === 'group-footer') {
+              <tr
+                class="grid-group-footer-row"
+                [attr.data-group-key]="item.key"
+                [attr.data-group-level]="item.level"
+              >
+                @if (showSelectionColumn()) {
+                  <td class="grid-group-row__utility-cell"></td>
+                }
+                @if (rowDetailTpl) {
+                  <td class="grid-group-row__utility-cell"></td>
+                }
+                @if (stickyRowsEnabled) {
+                  <td class="grid-group-row__utility-cell"></td>
+                }
+                @for (col of visibleColumns; track col.field) {
+                  <td class="grid-group-footer-row__cell">
+                    @if (groupFooterTemplate(groupColumnField(col)); as tpl) {
+                      <div class="grid-group-row__column-slot">
+                        <ng-container
+                          [ngTemplateOutlet]="tpl.template"
+                          [ngTemplateOutletContext]="groupColumnContext(item.group, col)"
+                        ></ng-container>
+                      </div>
+                    }
+                  </td>
+                }
+                @if (showActionsColumn()) {
+                  <td class="grid-group-row__utility-cell"></td>
+                }
+              </tr>
+            } @else {
+              <tr
+                class="grid-data-row"
+                ngbDatagridDataRow
+                [grid]="gridHost"
+                [renderTick]="renderTick"
+                [row]="item.row"
+                [index]="item.pagedIndex"
+                [selected]="isRowSelected(item.row, item.pagedIndex)"
+                [ngbDndItem]="item.row"
+                [dndIndex]="item.pagedIndex"
+                [dndDisabled]="!isRowReorderEnabled()"
+                (click)="onRowSelect($event, item.pagedIndex); onRowClick($event, item.pagedIndex)"
+                [formGroup]="editForm"
+                [class.sticky-row]="isRowSticky(item.row, item.pagedIndex)"
+                [class.row-selected]="isRowSelected(item.row, item.pagedIndex)"
+                [class.row-highlight]="isRowHighlighted(item.row, item.pagedIndex)"
+                [class.grid-row--reorderable]="isRowReorderEnabled()"
+                [ngClass]="resolveRowClass(item.row, item.pagedIndex)"
+                [ngStyle]="resolveRowStyle(item.row, item.pagedIndex)"
+                [attr.aria-selected]="isRowSelected(item.row, item.pagedIndex) ? 'true' : null"
+                [style.top.px]="stickyTop(item.row, item.pagedIndex)"
+                [style.z-index]="isRowSticky(item.row, item.pagedIndex) ? 3 : null"
+              ></tr>
 
-            @if (rowDetailTpl && isExpanded(i)) {
-            <tr
-              ngbDatagridDetailRow
-              [grid]="gridHost"
-              [row]="row"
-              [index]="i"
-              [attr.id]="'dg-row-detail-' + i"
-            ></tr>
+              @if (rowDetailTpl && isExpanded(item.pagedIndex)) {
+              <tr
+                ngbDatagridDetailRow
+                [grid]="gridHost"
+                [row]="item.row"
+                [index]="item.pagedIndex"
+                [attr.id]="'dg-row-detail-' + item.pagedIndex"
+              ></tr>
+              }
             }
           }
         </tbody>
       </table>
+
+      @if (hasStickyGroupFooters()) {
+        <div
+          class="ngb-grid__group-sticky-layer ngb-grid__group-sticky-layer--bottom"
+          [style.transform]="'translateY(' + stickyGroupFooterTranslateY + 'px)'"
+        >
+          <table
+            class="grid-table grid-group-sticky-table mb-0"
+            [ngClass]="tableClassList"
+            [style.width.px]="tablePixelWidth"
+            role="presentation"
+          >
+            <colgroup>
+              @for (width of stickyGroupOverlayColumnWidths; track $index) {
+                <col [style.width.px]="width || null" />
+              }
+            </colgroup>
+            <tbody>
+              @for (item of stickyGroupFooterRows; track item.key) {
+                <tr class="grid-group-footer-row grid-group-footer-row--overlay">
+                  @if (showSelectionColumn()) {
+                    <td class="grid-group-row__utility-cell"></td>
+                  }
+                  @if (rowDetailTpl) {
+                    <td class="grid-group-row__utility-cell"></td>
+                  }
+                  @if (stickyRowsEnabled) {
+                    <td class="grid-group-row__utility-cell"></td>
+                  }
+                  @for (col of visibleColumns; track col.field) {
+                    <td class="grid-group-footer-row__cell">
+                      @if (groupFooterTemplate(groupColumnField(col)); as tpl) {
+                        <div class="grid-group-row__column-slot">
+                          <ng-container
+                            [ngTemplateOutlet]="tpl.template"
+                            [ngTemplateOutletContext]="groupColumnContext(item.group, col)"
+                          ></ng-container>
+                        </div>
+                      }
+                    </td>
+                  }
+                  @if (showActionsColumn()) {
+                    <td class="grid-group-row__utility-cell"></td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
     </div>
 
     <table class="table grid-table grid-foot mb-0" [style.width.px]="tablePixelWidth">

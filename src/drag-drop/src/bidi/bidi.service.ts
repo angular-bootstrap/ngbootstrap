@@ -4,5 +4,7 @@ import { DOCUMENT } from '@angular/common';
 @Injectable({ providedIn: 'root' })
 export class NgbBidi {
   private doc = inject(DOCUMENT);
-  get dir(): 'ltr'|'rtl' { return (this.doc?.documentElement.getAttribute('dir') as any) || 'ltr'; }
+  get dir(): 'ltr' | 'rtl' {
+    return this.doc?.documentElement.getAttribute('dir') === 'rtl' ? 'rtl' : 'ltr';
+  }
 }

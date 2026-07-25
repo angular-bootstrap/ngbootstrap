@@ -1,10 +1,11 @@
 # @angular-bootstrap/ngbootstrap
 
-Standalone Angular UI components with Bootstrap-friendly styling.
+Angular UI for data-heavy apps, with a focus on DataGrid depth, Angular-native Form Builder workflows, and practical standalone components that fit naturally into Bootstrap-based Angular projects.
 
 ## What Is Included
 
 - DataGrid
+- DataGrid grouping, aggregates, and custom group templates
 - Pagination
 - Typeahead
 - Tree
@@ -12,6 +13,13 @@ Standalone Angular UI components with Bootstrap-friendly styling.
 - Stepper
 - Chips
 - Drag and drop
+- Angular-native Form Builder workflows
+
+## Positioning
+
+This project is not affiliated with `ng-bootstrap` or `ngx-bootstrap`.
+
+Those projects focus mainly on Bootstrap components for Angular. `@angular-bootstrap/ngbootstrap` focuses more on practical Angular UI for data-heavy apps, including DataGrid workflows, grouping, drag and drop, Form Builder scenarios, and documentation examples that map to real library APIs.
 
 ## Requirements
 
@@ -62,6 +70,8 @@ import { NgbDatagridComponent, type ColumnDef } from '@angular-bootstrap/ngboots
       [columns]="columns"
       [enableSorting]="true"
       filterable="row"
+      [groupable]="true"
+      [group]="[{ field: 'role', dir: 'asc' }]"
       [enablePagination]="true"
       [pageSize]="10"
     />
@@ -80,6 +90,13 @@ export class UsersGridComponent {
   ];
 }
 ```
+
+## DataGrid Highlights
+
+- Sorting, filtering, pagination, editing, export, sticky rows and columns, and row detail workflows
+- Grouping by one or more fields with grouped state events for local or server-driven data flows
+- Custom group header/footer templates, aggregate output, and sticky group headers/footers
+- Dependency-free PDF and Excel export defaults for common table export scenarios
 
 ## Development
 

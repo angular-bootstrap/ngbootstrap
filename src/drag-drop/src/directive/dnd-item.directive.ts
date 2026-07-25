@@ -2,7 +2,13 @@ import {
   Directive, ElementRef, EventEmitter, HostBinding, HostListener, Input, Output, inject, Optional
 } from '@angular/core';
 import { NgbDndState } from '../service/drag-state.service';
-import { NgbDndListDirective } from './dnd-list.directive';
+import { NgbDndDropEvent, NgbDndListDirective } from './dnd-list.directive';
+
+interface DndKeyboardDragState<T> {
+  list: T[];
+  originalIndex: number;
+  currentIndex: number;
+}
 
 @Directive({
   selector: '[ngbDndItem]',
@@ -34,6 +40,51 @@ export class NgbDndItemDirective<T = unknown> {
   @HostBinding('attr.tabindex') tabIndex = 0;                 // keyboard focusable
 
   private sessionId: string | null = null;
+  private keyboardDragState: DndKeyboardDragState<T> | null = null;
+
+  private sourceList(): T[] | undefined {
+    return this.dndSourceList ?? this.parentList?.list;
+  }
+
+  private resolveIndex(list: T[] | undefined): number {
+    if (typeof this.dndIndex === 'number') return this.dndIndex;
+    return list ? list.indexOf(this.item) : -1;
+  }
+
+  private beginDragSession(dataTransfer?: DataTransfer | null): boolean {
+    if (this.dndDisabled || this.item == null) {
+      return false;
+    }
+
+    this.sessionId = this.state.createSession({
+      item: this.item,
+      group: this.dndGroup ?? this.parentList?.dndGroup,
+      fromList: this.sourceList(),
+      fromIndex: this.resolveIndex(this.sourceList()),
+      fromListRef: this.parentList,
+      fromIsPalette: this.parentList?.dndIsPalette === true
+    });
+
+    if (dataTransfer) {
+      dataTransfer.setData('text/ngb-dnd', this.sessionId);
+      dataTransfer.setData('text/plain', 'ngb');
+      dataTransfer.effectAllowed = 'copyMove';
+      dataTransfer.setDragImage(this.el.nativeElement, 16, 16);
+    }
+
+    this.dragging = true;
+    this.dndDragStart.emit(this.item);
+    this.state.announce?.(this.state.i18n.pickedUp());
+    return true;
+  }
+
+  private endDragSession(): void {
+    this.dragging = false;
+    this.state.clear(this.sessionId);
+    this.sessionId = null;
+    this.keyboardDragState = null;
+    this.dndDragEnd.emit();
+  }
 
   @HostListener('dragstart', ['$event'])
   onDragStart(ev: DragEvent) {
@@ -41,35 +92,60 @@ export class NgbDndItemDirective<T = unknown> {
     if (eventWithFlag.__ngbDndItemStarted) return;
     eventWithFlag.__ngbDndItemStarted = true;
 
-    if (this.dndDisabled || this.item == null) { ev.preventDefault(); return; }
-
-    this.sessionId = this.state.createSession({
-        item: this.item,
-        group: this.dndGroup ?? this.parentList?.dndGroup,
-        fromList: this.dndSourceList ?? this.parentList?.list,
-        fromIndex: this.dndIndex,
-        fromListRef: this.parentList,
-        fromIsPalette: this.parentList?.dndIsPalette === true
-
-    });
-
-    // ✅ set both a custom and a plain text payload; keep plain text non-empty
-    ev.dataTransfer?.setData('text/ngb-dnd', this.sessionId);
-    ev.dataTransfer?.setData('text/plain', 'ngb'); // some browsers require non-empty
-    if (ev.dataTransfer) ev.dataTransfer.effectAllowed = 'copyMove';
-
-    ev.dataTransfer?.setDragImage(this.el.nativeElement, 16, 16);
-
-    this.dragging = true;
-    this.dndDragStart.emit(this.item);
+    if (!this.beginDragSession(ev.dataTransfer)) {
+      ev.preventDefault();
+    }
   }
 
   @HostListener('dragend')
   onDragEnd() {
-    this.dragging = false;
-    this.state.clear(this.sessionId);
-    this.sessionId = null;
-    this.dndDragEnd.emit();
+    this.endDragSession();
+  }
+
+  private moveWithinKeyboardList(offset: -1 | 1): void {
+    const keyboardDragState = this.keyboardDragState;
+    if (!keyboardDragState) return;
+
+    const list = keyboardDragState.list;
+    const from = keyboardDragState.currentIndex;
+    let to = from + offset;
+    to = Math.max(0, Math.min(list.length - 1, to));
+    if (to === from) return;
+
+    const [movedItem] = list.splice(from, 1);
+    list.splice(to, 0, movedItem);
+    keyboardDragState.currentIndex = to;
+    this.dndIndex = to;
+    this.state.announce?.(this.state.i18n.moveToIndex(to + 1, list.length));
+  }
+
+  private emitKeyboardDrop(): void {
+    const keyboardDragState = this.keyboardDragState;
+    if (!keyboardDragState || !this.parentList) return;
+
+    const event: NgbDndDropEvent<T> = {
+      item: this.item,
+      fromIndex: keyboardDragState.originalIndex,
+      toIndex: keyboardDragState.currentIndex,
+      fromList: keyboardDragState.list,
+      toList: keyboardDragState.list,
+      sameList: true,
+    };
+
+    this.parentList.emitDropEvent(event);
+  }
+
+  private cancelKeyboardDrag(): void {
+    const keyboardDragState = this.keyboardDragState;
+    if (!keyboardDragState) return;
+
+    if (keyboardDragState.currentIndex !== keyboardDragState.originalIndex) {
+      const [movedItem] = keyboardDragState.list.splice(keyboardDragState.currentIndex, 1);
+      keyboardDragState.list.splice(keyboardDragState.originalIndex, 0, movedItem);
+      this.dndIndex = keyboardDragState.originalIndex;
+    }
+
+    this.state.announce?.(this.state.i18n.canceled?.() ?? 'Canceled.');
   }
 
   @HostListener('keydown', ['$event'])
@@ -79,34 +155,37 @@ export class NgbDndItemDirective<T = unknown> {
     // start dragging (keyboard mode)
     if (ev.code === 'Space' && !this.dragging) {
       ev.preventDefault();
-      this.onDragStart(new DragEvent('dragstart')); // reuse logic
+      const list = this.sourceList();
+      const index = this.resolveIndex(list);
+      if (!list || index < 0) return;
+      this.keyboardDragState = {
+        list,
+        originalIndex: index,
+        currentIndex: index,
+      };
+      this.beginDragSession();
       return;
     }
 
     if (!this.dragging) return;
 
-    // move within same list
-    const parent = this.parentList;
-    if (!parent || typeof this.dndIndex !== 'number') return;
-
     if (ev.code === 'ArrowUp' || ev.code === 'ArrowDown') {
       ev.preventDefault();
-      const list = parent.list;
-      const from = this.dndIndex!;
-      let to = ev.code === 'ArrowUp' ? from - 1 : from + 1;
-      to = Math.max(0, Math.min(list.length - 1, to));
-      if (to !== from) {
-        const [it] = list.splice(from, 1);
-        list.splice(to, 0, it);
-        this.dndIndex = to;
-        // announce (see live region below)
-        this.state.announce?.(this.state.i18n.moveToIndex(to + 1, list.length));
-      }
+      this.moveWithinKeyboardList(ev.code === 'ArrowUp' ? -1 : 1);
+      return;
     }
 
-    if (ev.code === 'Enter') { ev.preventDefault(); this.onDragEnd(); }   // drop
-    if (ev.code === 'Escape') { ev.preventDefault(); this.onDragEnd(); }  // cancel
+    if (ev.code === 'Enter') {
+      ev.preventDefault();
+      this.emitKeyboardDrop();
+      this.endDragSession();
+      return;
+    }
+
+    if (ev.code === 'Escape') {
+      ev.preventDefault();
+      this.cancelKeyboardDrag();
+      this.endDragSession();
+    }
   }
-
-
 }

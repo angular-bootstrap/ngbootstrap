@@ -27,7 +27,7 @@ export interface ColumnDef<T = any> {
   filterPlaceholder?: string;
   editable?: boolean | ((row: T, isNew: boolean) => boolean);      // (default true)
   type?: ColumnType; // editor type
-  options?: Array<{ label: string; value: any }>; // <-- needed for select
+  options?: Array<{ label: string; value: unknown }>;
   width?: number;         // in pixels
   /** Groups cells in stacked card layout (`tableOptions.stackedLayout = 'cards'`). */
   stackedGroup?: 'start' | 'center' | 'end';

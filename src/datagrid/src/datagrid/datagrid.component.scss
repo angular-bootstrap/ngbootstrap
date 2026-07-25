@@ -1,5 +1,5 @@
-@import '../styles/_datagrid-tokens';
-@import '../foundation/datagrid-overlay.scss';
+@use '../styles/datagrid-tokens';
+@use '../foundation/datagrid-overlay';
 
 ngb-datagrid {
   display: block;
@@ -7,6 +7,11 @@ ngb-datagrid {
 
 .ngb-grid {
   color: var(--dg-text);
+  --dg-group-sticky-row-height: 3rem;
+}
+
+.ngb-grid.ngb-grid--compact {
+  --dg-group-sticky-row-height: 2.5rem;
 }
 
 .ngb-grid .table {
@@ -152,6 +157,95 @@ ngb-datagrid {
   color: var(--dg-text);
 }
 
+.ngb-grid .ngb-grid__group-panel {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  min-height: 3.25rem;
+  margin-bottom: 0.9rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px dashed var(--dg-border-strong);
+  border-radius: var(--dg-radius-md);
+  background: color-mix(in srgb, var(--dg-surface-muted) 72%, white);
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.ngb-grid .ngb-grid__group-panel--active {
+  border-color: var(--dg-primary);
+  background: color-mix(in srgb, var(--dg-primary-soft) 45%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dg-primary) 22%, transparent);
+}
+
+.ngb-grid .ngb-grid__group-panel--denied {
+  border-color: var(--dg-danger, #dc3545);
+  background: color-mix(in srgb, var(--dg-danger, #dc3545) 8%, white);
+}
+
+.ngb-grid .ngb-grid__group-panel-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--dg-text-muted);
+}
+
+.ngb-grid .ngb-grid__group-chip-list {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.ngb-grid .ngb-grid__group-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid color-mix(in srgb, var(--dg-primary) 26%, var(--dg-border));
+  border-radius: 999px;
+  background: var(--dg-surface);
+  box-shadow: var(--dg-shadow-sm);
+}
+
+.ngb-grid .ngb-grid__group-chip-button,
+.ngb-grid .ngb-grid__group-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  border: 0;
+  background: transparent;
+  color: var(--dg-text);
+}
+
+.ngb-grid .ngb-grid__group-chip-button {
+  padding: 0.35rem 0.55rem 0.35rem 0.8rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.ngb-grid .ngb-grid__group-chip-remove {
+  padding: 0.35rem 0.75rem 0.35rem 0.15rem;
+  color: var(--dg-text-muted);
+}
+
+.ngb-grid .ngb-grid__group-chip-button:hover,
+.ngb-grid .ngb-grid__group-chip-remove:hover {
+  color: var(--dg-primary);
+}
+
+.ngb-grid .ngb-grid__group-chip-button:focus-visible,
+.ngb-grid .ngb-grid__group-chip-remove:focus-visible,
+.ngb-grid .grid-column-group-handle:focus-visible,
+.ngb-grid .grid-group-row__toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--dg-focus-shadow);
+  border-radius: 999px;
+}
+
+.ngb-grid .ngb-grid__group-chip-dir {
+  font-size: 0.8rem;
+  color: var(--dg-primary);
+}
+
 .ngb-grid .table-wrapper {
   position: relative;
   overflow-x: hidden;
@@ -172,6 +266,27 @@ ngb-datagrid {
   scrollbar-gutter: stable both-edges;
   position: relative;
   z-index: 0;
+}
+
+.ngb-grid .ngb-grid__group-sticky-layer {
+  position: absolute;
+  inset-inline-start: 0;
+  z-index: 35;
+  min-width: 100%;
+  pointer-events: none;
+}
+
+.ngb-grid .ngb-grid__group-sticky-layer--top {
+  top: 0;
+}
+
+.ngb-grid .ngb-grid__group-sticky-layer--bottom {
+  top: 0;
+}
+
+.ngb-grid .grid-group-sticky-table {
+  min-width: 100%;
+  pointer-events: auto;
 }
 
 .ngb-grid .grid-table {
@@ -299,18 +414,38 @@ body.ngb-datagrid-column-resizing {
 .ngb-grid .grid-column-reorder-handle {
   flex: 0 0 auto;
   margin-right: 0.15rem;
-  padding: 0 0.1rem;
+  padding: 0.1rem 0.18rem;
+  border-radius: 999px;
   color: var(--dg-text-muted);
   cursor: grab;
   touch-action: none;
   user-select: none;
-  opacity: 0.55;
+  opacity: 0.82;
   line-height: 1;
+  font-size: 0.95rem;
 }
 
 .ngb-grid .grid-header__column--reorderable:hover .grid-column-reorder-handle,
 .ngb-grid .grid-column-reorder-handle:focus-visible {
   opacity: 1;
+  background: color-mix(in srgb, var(--dg-accent) 12%, transparent);
+}
+
+.ngb-grid .grid-column-group-handle {
+  flex: 0 0 auto;
+  padding: 0.15rem 0.25rem;
+  border-radius: 999px;
+  color: var(--dg-text-muted);
+  cursor: grab;
+  user-select: none;
+  line-height: 1;
+  font-size: 0.9rem;
+}
+
+.ngb-grid .grid-column-group-handle--active,
+.ngb-grid .grid-column-group-handle:hover {
+  color: var(--dg-primary);
+  background: color-mix(in srgb, var(--dg-primary-soft) 55%, transparent);
 }
 
 .ngb-grid .grid-header__column--drag-over {
@@ -546,6 +681,84 @@ body.ngb-datagrid-column-resizing {
 .ngb-grid .grid-filter-cancel--secondary:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.ngb-grid .grid-group-row td,
+.ngb-grid .grid-group-footer-row td {
+  background: color-mix(in srgb, var(--dg-surface-muted) 88%, white);
+  border-bottom: 1px solid var(--dg-border);
+}
+
+.ngb-grid .grid-group-row--overlay td {
+  box-shadow: inset 0 -1px 0 var(--dg-border), 0 1px 0 color-mix(in srgb, var(--dg-border) 36%, transparent);
+}
+
+.ngb-grid .grid-group-footer-row--overlay td {
+  box-shadow: inset 0 1px 0 var(--dg-border), 0 -1px 0 color-mix(in srgb, var(--dg-border) 36%, transparent);
+}
+
+.ngb-grid .grid-group-row__cell {
+  padding: 0;
+  vertical-align: top;
+}
+
+.ngb-grid .grid-group-footer-row__cell,
+.ngb-grid .grid-group-row__utility-cell {
+  padding: 0.7rem 0.75rem;
+  vertical-align: top;
+}
+
+.ngb-grid .grid-group-row__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: 0;
+  background: transparent;
+  color: var(--dg-text);
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.ngb-grid .grid-group-row__cell--lead .grid-group-row__toggle {
+  padding-inline-end: 0.75rem;
+}
+
+.ngb-grid .grid-group-row__toggle:hover {
+  background: color-mix(in srgb, var(--dg-primary-soft) 34%, transparent);
+}
+
+.ngb-grid .grid-group-row__content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.ngb-grid .grid-group-row__label {
+  color: var(--dg-text);
+}
+
+.ngb-grid .grid-group-row__count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--dg-text-muted);
+}
+
+.ngb-grid .grid-group-row__column-slot {
+  padding: 0.25rem 0.75rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--dg-text-muted);
+}
+
+.ngb-grid .grid-group-row__cell--lead .grid-group-row__column-slot {
+  padding-inline-start: 2.75rem;
+}
+
+.ngb-grid .grid-group-footer-row td {
+  background: color-mix(in srgb, var(--dg-surface-muted) 94%, white);
 }
 
 .ngb-grid .grid-filter-menu-popover .grid-filter-menu-surface:has(.grid-filter-menu-surface__multi) {
@@ -1356,6 +1569,11 @@ body.ngb-datagrid-column-resizing {
 
 .ngb-grid .grid-cell--incell {
   cursor: cell;
+}
+
+.ngb-grid .grid-cell--incell:not(.grid-cell--editing) .grid-cell-content,
+.ngb-grid .grid-cell--incell:not(.grid-cell--editing) .grid-cell-content * {
+  pointer-events: none;
 }
 
 .ngb-grid .grid-cell--editing .grid-edit-control {

@@ -1,14 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { ControlContainer, FormGroupDirective, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NgbDatagridButtonDirective } from '../../foundation/datagrid-button.directive';
 import { NgbDatagridControlDirective } from '../../foundation/datagrid-control.directive';
+import type { Datagrid } from '../datagrid.component';
 
 @Component({
   selector: 'tr[ngbDatagridAddRow]',
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, NgbDatagridButtonDirective, NgbDatagridControlDirective],
   viewProviders: [{ provide: ControlContainer, useExisting: FormGroupDirective }],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (grid.showSelectionColumn()) {
     <td
@@ -161,5 +163,5 @@ import { NgbDatagridControlDirective } from '../../foundation/datagrid-control.d
   `
 })
 export class NgbDatagridAddRowComponent {
-  @Input({ required: true }) grid!: any;
+  @Input({ required: true }) grid!: Datagrid<any>;
 }

@@ -21,7 +21,7 @@ export class NgbGridColumnDirective<T = any> implements ColumnDef<T> {
   @Input() showFilterOperator?: boolean;
   @Input() editable?: boolean;
   @Input() type?: ColumnType;
-  @Input() options?: Array<{ label: string; value: any }>;
+  @Input() options?: Array<{ label: string; value: unknown }>;
   @Input() width?: number;
   @Input() stackedGroup?: 'start' | 'center' | 'end';
   @Input() required?: boolean;

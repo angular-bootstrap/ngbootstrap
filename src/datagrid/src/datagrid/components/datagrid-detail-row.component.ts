@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
+import type { Datagrid } from '../datagrid.component';
 
 @Component({
   selector: 'tr[ngbDatagridDetailRow]',
@@ -9,7 +10,7 @@ import { Component, Input } from '@angular/core';
     <td [attr.colspan]="grid.detailColspan" role="region" class="grid-detail-row__cell">
       <div class="grid-detail-row__content">
         <ng-container
-          [ngTemplateOutlet]="grid.rowDetailTpl.template"
+          [ngTemplateOutlet]="grid.rowDetailTpl!.template"
           [ngTemplateOutletContext]="{ $implicit: row, index: index }"
         >
         </ng-container>
@@ -18,7 +19,7 @@ import { Component, Input } from '@angular/core';
   `
 })
 export class NgbDatagridDetailRowComponent {
-  @Input({ required: true }) grid!: any;
-  @Input({ required: true }) row!: any;
+  @Input({ required: true }) grid!: Datagrid<any>;
+  @Input({ required: true }) row!: unknown;
   @Input({ required: true }) index!: number;
 }

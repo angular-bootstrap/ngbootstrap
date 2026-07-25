@@ -32,7 +32,7 @@ export interface NgbAdvancedSearchOperator {
 export interface NgbAdvancedSearchRule {
   field: string;
   operator: NgbFilterOperator;
-  value: any;
+  value: unknown;
 }
 
 @Component({

@@ -111,6 +111,7 @@ describe('Datagrid data binding', () => {
       sort: [{ field: 'name', direction: 'asc' }],
       filter: { logic: 'and', filters: [] },
       globalFilter: '',
+      group: [],
     });
   });
 
@@ -140,6 +141,7 @@ describe('Datagrid data binding', () => {
       sort: [],
       filter,
       globalFilter: '',
+      group: [],
     });
   });
 
@@ -157,6 +159,7 @@ describe('Datagrid data binding', () => {
       sort: [],
       filter: { logic: 'and', filters: [] },
       globalFilter: '',
+      group: [],
     });
   });
 

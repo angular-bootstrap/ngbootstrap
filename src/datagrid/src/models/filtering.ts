@@ -22,14 +22,14 @@ export type NgbFilterOperator =
 export interface NgbFilterDescriptor {
   field: string;
   operator: NgbFilterOperator;
-  value?: any;
+  value?: unknown;
   ignoreCase?: boolean;
 }
 
 /** Single condition in a column filter menu or layout-toolbar filter tool. */
 export interface NgbMenuFilterConditionDraft {
   operator: NgbFilterOperator;
-  value: any;
+  value: unknown;
 }
 
 export interface NgbCompositeFilterDescriptor {
@@ -233,7 +233,7 @@ export function ngbSetFieldFilter(
   composite: NgbCompositeFilterDescriptor,
   field: string,
   operator: NgbFilterOperator,
-  value?: any,
+  value?: unknown,
   options?: { requiresValue?: (operator: NgbFilterOperator) => boolean }
 ): NgbCompositeFilterDescriptor {
   const requiresValue = options?.requiresValue ?? ngbOperatorRequiresFilterValue;

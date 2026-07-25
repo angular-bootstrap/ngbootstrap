@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, Input, OnChanges, SimpleChanges, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, Input, OnChanges, SimpleChanges, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ColumnDef } from '../../models/column-def';
 import { NgbDatagridButtonDirective } from '../../foundation/datagrid-button.directive';
@@ -21,6 +21,7 @@ import type { Datagrid } from '../datagrid.component';
     NgbDatagridSurfaceCardComponent,
     NgbDatagridFloatingPanelDirective,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
       class="grid-filter-menu-popover ngb-grid__filter-menu-overlay"

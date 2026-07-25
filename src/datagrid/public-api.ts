@@ -34,6 +34,7 @@ export * from './src/theme/datagrid-theme-picker.component';
 export * from './src/datagrid.types';
 export * from './src/data-operations';
 export * from './src/models/datagrid-labels';
+export * from './src/datagrid/directives/grid-highlight.directive';
 
 //service
 export * from './src/services/export.services'

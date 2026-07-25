@@ -1,13 +1,14 @@
 import { Directive, Input, OnChanges, OnInit, Optional, SimpleChanges } from '@angular/core';
+import { NgbDatagridRowId } from '../../services/editing.service';
 import { Datagrid } from '../datagrid.component';
 
 export interface HighlightItem {
-  row: any;
-  columnKey?: any;
+  row: NgbDatagridRowId;
+  columnKey?: unknown;
 }
 
-type RowKeyFn = (row: any, rowIndex: number) => any;
-type ColKeyFn = (column: any, columnIndex: number) => any;
+type RowKeyFn = (row: unknown, rowIndex: number) => NgbDatagridRowId;
+type ColKeyFn = (column: unknown, columnIndex: number) => unknown;
 
 @Directive({
   selector: '[ngbGridHighlight]',
@@ -18,7 +19,7 @@ export class NgbGridHighlightDirective implements OnInit, OnChanges {
   @Input() highlightColumnIndex?: string | ColKeyFn;
   @Input() highlightedIndex: HighlightItem[] = [];
 
-  constructor(@Optional() private grid: Datagrid<any>) {}
+  constructor(@Optional() private grid: Datagrid<unknown>) {}
 
   ngOnInit(): void {
     this.apply();

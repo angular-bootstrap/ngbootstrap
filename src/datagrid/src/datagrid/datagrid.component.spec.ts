@@ -4,10 +4,23 @@ import { Component, SimpleChange, ViewChild } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Datagrid } from './datagrid.component';
 import { ColumnDef } from '../models/column-def';
-import { NgbDataGridResponsiveOptions } from '../datagrid.types';
+import {
+  NgbDataGridAggregateDescriptor,
+  NgbDataGridGroupDescriptor,
+  NgbDataGridGroupResult,
+  NgbDataGridGroupingSettings,
+  NgbDataGridResponsiveOptions
+} from '../datagrid.types';
 import { NgbExportService } from '../services/export.services';
 import { DATAGRID_TEMPLATE_DIRECTIVES, NgbPagerTemplate } from '../directives/datagrid-templates.directive';
 import { NgbGridColumnDirective } from '../directives/grid-column.directive';
+import { NgbDatagridAddRowComponent } from './components/datagrid-add-row.component';
+import { NgbDatagridDataRowComponent } from './components/datagrid-data-row.component';
+import { NgbDatagridEditingToolbarComponent } from './components/datagrid-editing-toolbar.component';
+import { NgbDatagridExternalEditorComponent } from './components/datagrid-external-editor.component';
+import { NgbDatagridFilterMenuPanelComponent } from './components/datagrid-filter-menu-panel.component';
+import { NgbDatagridHeaderComponent } from './components/datagrid-header.component';
+import { NgbDatagridRowFilterOperatorPanelComponent } from './components/datagrid-row-filter-operator-panel.component';
 import {
   ngbDefaultFilterOperator,
   ngbFlattenFilterDescriptors,
@@ -22,6 +35,13 @@ interface Person {
   score: number;
   active: boolean;
   created: string;
+}
+
+interface TransactionRow {
+  id: number;
+  transactionType: 'Credit' | 'Debit';
+  owner: 'Maya' | 'Jon' | 'Ari';
+  amount: number;
 }
 
 class MockExportService {
@@ -149,6 +169,96 @@ class AddRowSelectHostComponent {
   data = [{ status: 'new' }];
 }
 
+@Component({
+  standalone: true,
+  imports: [Datagrid, ...DATAGRID_TEMPLATE_DIRECTIVES],
+  template: `
+    <ngb-datagrid
+      [columns]="columns"
+      [data]="data"
+      [groupable]="groupable"
+      [group]="group"
+      [groupedData]="groupedData"
+      [scrollable]="true"
+    >
+      <ng-template ngbDatagridGroupHeaderTemplate let-field="field" let-value="value" let-count="count">
+        <span class="custom-group-header">{{ field }}={{ value }} ({{ count }})</span>
+      </ng-template>
+
+      <ng-template ngbDatagridGroupHeaderColumnTemplate="amount" let-aggregates="aggregates">
+        <span class="custom-group-header-amount">sum={{ aggregates['amount']?.sum ?? 'n/a' }}</span>
+      </ng-template>
+
+      <ng-template ngbDatagridGroupFooterTemplate="amount" let-aggregates="aggregates">
+        <span class="custom-group-footer-amount">footer={{ aggregates['amount']?.sum ?? 'n/a' }}</span>
+      </ng-template>
+    </ngb-datagrid>
+  `
+})
+class GroupTemplateHostComponent {
+  @ViewChild(Datagrid, { static: true }) grid!: Datagrid<TransactionRow>;
+
+  readonly columns: ColumnDef<TransactionRow>[] = [
+    { field: 'transactionType', header: 'Type', sortable: true },
+    { field: 'owner', header: 'Owner', sortable: true },
+    { field: 'amount', header: 'Amount', type: 'number', sortable: true },
+  ];
+
+  readonly data: TransactionRow[] = [
+    { id: 1, transactionType: 'Credit', owner: 'Maya', amount: 120 },
+    { id: 2, transactionType: 'Credit', owner: 'Jon', amount: 180 },
+    { id: 3, transactionType: 'Debit', owner: 'Ari', amount: 90 },
+    { id: 4, transactionType: 'Debit', owner: 'Ari', amount: 60 },
+  ];
+
+  readonly amountAggregates: NgbDataGridAggregateDescriptor[] = [
+    { field: 'amount', aggregate: 'sum' },
+  ];
+
+  groupable: boolean | NgbDataGridGroupingSettings = true;
+  group: NgbDataGridGroupDescriptor[] = [
+    { field: 'transactionType', dir: 'asc', aggregates: this.amountAggregates },
+  ];
+  groupedData: NgbDataGridGroupResult<TransactionRow>[] | null = null;
+}
+
+@Component({
+  standalone: true,
+  imports: [Datagrid, ...DATAGRID_TEMPLATE_DIRECTIVES],
+  template: `
+    <ngb-datagrid
+      [columns]="columns"
+      [data]="data"
+      [groupable]="true"
+      [group]="group"
+    >
+      <ng-template ngbDatagridGroupHeaderTemplate let-field="field" let-value="value" let-count="count">
+        <span class="custom-group-header">{{ field }}={{ value }} ({{ count }})</span>
+      </ng-template>
+    </ngb-datagrid>
+  `
+})
+class GroupHeaderOnlyTemplateHostComponent {
+  @ViewChild(Datagrid, { static: true }) grid!: Datagrid<TransactionRow>;
+
+  readonly columns: ColumnDef<TransactionRow>[] = [
+    { field: 'transactionType', header: 'Type', sortable: true },
+    { field: 'owner', header: 'Owner', sortable: true },
+    { field: 'amount', header: 'Amount', type: 'number', sortable: true },
+  ];
+
+  readonly data: TransactionRow[] = [
+    { id: 1, transactionType: 'Credit', owner: 'Maya', amount: 120 },
+    { id: 2, transactionType: 'Credit', owner: 'Jon', amount: 180 },
+    { id: 3, transactionType: 'Debit', owner: 'Ari', amount: 90 },
+    { id: 4, transactionType: 'Debit', owner: 'Ari', amount: 60 },
+  ];
+
+  readonly group: NgbDataGridGroupDescriptor[] = [
+    { field: 'transactionType', dir: 'asc' },
+  ];
+}
+
 describe('Datagrid', () => {
   let component: Datagrid<Person>;
   let fixture: ComponentFixture<Datagrid<Person>>;
@@ -182,9 +292,18 @@ describe('Datagrid', () => {
     fixture.detectChanges();
   };
 
-  const createEventForTarget = (target: HTMLElement): MouseEvent => {
+  const createEventForTarget = (target: EventTarget): MouseEvent => {
     const event = new MouseEvent('click', { bubbles: true });
     Object.defineProperty(event, 'target', { value: target, configurable: true });
+    return event;
+  };
+
+  const createEventWithPath = (target: EventTarget, path: EventTarget[]): MouseEvent => {
+    const event = createEventForTarget(target);
+    Object.defineProperty(event, 'composedPath', {
+      value: () => path,
+      configurable: true,
+    });
     return event;
   };
 
@@ -196,7 +315,8 @@ describe('Datagrid', () => {
         ManualFilterChangeHostComponent,
         SetFieldFilterHostComponent,
         DeclarativeColumnsHostComponent,
-        AddRowSelectHostComponent
+        AddRowSelectHostComponent,
+        GroupTemplateHostComponent
       ],
       providers: [{ provide: NgbExportService, useClass: MockExportService }]
     }).compileComponents();
@@ -281,11 +401,31 @@ describe('Datagrid', () => {
     component.searchHighlightFields = ['name'];
 
     expect(component.getSearchHighlightSegments('Alice Johnson', 'name')).toEqual([
-      { text: 'Ali', match: true },
-      { text: 'ce Johnson', match: false },
+      { key: '0:m', text: 'Ali', match: true },
+      { key: '3:n', text: 'ce Johnson', match: false },
     ]);
     expect(component.getSearchHighlightSegments('Alice Johnson', 'email')).toEqual([
-      { text: 'Alice Johnson', match: false },
+      { key: '0:n', text: 'Alice Johnson', match: false },
+    ]);
+  });
+
+  it('reuses cached search highlight segments until highlight inputs change', () => {
+    component.searchHighlightTerm = 'ali';
+    component.searchHighlightFields = ['name'];
+
+    const first = component.getSearchHighlightSegments('Alice Johnson', 'name');
+    const second = component.getSearchHighlightSegments('Alice Johnson', 'name');
+
+    expect(second).toBe(first);
+
+    component.searchHighlightTerm = 'john';
+    const third = component.getSearchHighlightSegments('Alice Johnson', 'name');
+
+    expect(third).not.toBe(first);
+    expect(third).toEqual([
+      { key: '0:n', text: 'Alice ', match: false },
+      { key: '6:m', text: 'John', match: true },
+      { key: '10:n', text: 'son', match: false },
     ]);
   });
 
@@ -336,6 +476,430 @@ describe('Datagrid', () => {
     expect(paged).toEqual([component.sorted[2]]);
     expect(component.startIndex).toBe(3);
     expect(component.endIndex).toBe(component.sorted.length);
+  });
+
+  describe('grouping', () => {
+    const groupDragEvent = (field = 'active'): DragEvent =>
+      ({
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+        dataTransfer: {
+          effectAllowed: 'none',
+          dropEffect: 'none',
+          setData: jest.fn(),
+          getData: jest.fn((type: string) => (type === 'text/ngb-datagrid-group-field' ? field : '')),
+        },
+      }) as unknown as DragEvent;
+
+    beforeEach(() => {
+      component.enablePagination = false;
+      component.groupable = true;
+      fixture.detectChanges();
+    });
+
+    it('applies initial grouping from the group input', () => {
+      component.group = [{ field: 'active', dir: 'asc' }];
+      fixture.detectChanges();
+
+      expect(component.renderRows.map((row) => row.kind)).toEqual(['group', 'data', 'group', 'data', 'data']);
+      expect(fixture.nativeElement.querySelectorAll('.grid-group-row').length).toBe(2);
+      expect(fixture.nativeElement.querySelector('.grid-group-row__label')?.textContent).toContain('Active: No');
+    });
+
+    it('emits groupChange and includes group in dataStateChange', () => {
+      const groupSpy = jest.spyOn(component.groupChange, 'emit');
+      const stateSpy = jest.spyOn(component.dataStateChange, 'emit');
+
+      component.addGroupField('name');
+
+      expect(groupSpy).toHaveBeenCalledWith({
+        group: [{ field: 'name', dir: 'asc' }],
+      });
+      expect(stateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          group: [{ field: 'name', dir: 'asc' }],
+        }),
+      );
+    });
+
+    it('keeps group in the unified state alongside paging, sorting, filtering, and global search', () => {
+      const stateSpy = jest.spyOn(component.dataStateChange, 'emit');
+      component.group = [{ field: 'active', dir: 'asc' }];
+      component.sort = { active: 'score', direction: 'desc' };
+      component.pageSize = 1;
+      component.page = 1;
+      component.globalFilter = 'example.com';
+      component.localFilter = {
+        logic: 'and',
+        filters: [{ field: 'name', operator: 'contains', value: 'a', ignoreCase: true }],
+      };
+
+      component.onPage(2);
+
+      expect(stateSpy).toHaveBeenCalledWith({
+        page: 2,
+        pageIndex: 1,
+        skip: 1,
+        pageSize: 1,
+        sort: [{ field: 'score', direction: 'desc' }],
+        group: [{ field: 'active', dir: 'asc' }],
+        filter: {
+          logic: 'and',
+          filters: [{ field: 'name', operator: 'contains', value: 'a', ignoreCase: true }],
+        },
+        globalFilter: 'example.com',
+      });
+    });
+
+    it('prevents duplicate grouped fields and removes grouped fields cleanly', () => {
+      component.group = [{ field: 'active', dir: 'asc' }];
+
+      component.addGroupField('active');
+      expect(component.group).toEqual([{ field: 'active', dir: 'asc' }]);
+
+      component.removeGroupField('active');
+      expect(component.group).toEqual([]);
+    });
+
+    it('adds a grouped field from the group panel drop flow', () => {
+      const dragStart = groupDragEvent('email');
+      component.onGroupHandleDragStart(dragStart, 'email');
+      component.onGroupPanelDrop(groupDragEvent('email'));
+
+      expect(component.group).toEqual([{ field: 'email', dir: 'asc' }]);
+    });
+
+    it('toggles group direction and keeps grouped headers rendered', () => {
+      component.group = [{ field: 'active', dir: 'asc' }];
+
+      component.toggleGroupDirection('active');
+      fixture.detectChanges();
+
+      expect(component.group).toEqual([{ field: 'active', dir: 'desc' }]);
+      expect(fixture.nativeElement.querySelectorAll('.grid-group-row').length).toBe(2);
+      expect(fixture.nativeElement.querySelector('.grid-group-row__label')?.textContent).toContain('Active: Yes');
+    });
+
+    it('uses local data operations before grouping when automatic local processing is enabled', () => {
+      component.dataOperations = true;
+      component.pageable = true;
+      component.pageSize = 1;
+      component.enableSorting = true;
+      component.sort = { active: 'score', direction: 'desc' };
+      component.enableGlobalFilter = true;
+      component.globalFilter = 'example.com';
+      component.group = [{ field: 'active', dir: 'desc' }];
+      fixture.detectChanges();
+
+      expect(component.recordTotal()).toBe(2);
+      expect(component.paged.map((row) => row.id)).toEqual([1]);
+      expect(component.renderRows.map((row) => row.kind)).toEqual(['group', 'data']);
+      expect(fixture.nativeElement.querySelector('.grid-group-row__label')?.textContent).toContain('Active: Yes');
+      expect(fixture.nativeElement.querySelectorAll('tbody tr.grid-data-row').length).toBe(1);
+    });
+
+    it('sorts grouped text rows within each group when sorting is active', () => {
+      component.enableSorting = true;
+      component.group = [{ field: 'active', dir: 'asc' }];
+      component.toggleSort('name');
+      fixture.detectChanges();
+
+      const readNames = () =>
+        Array.from(fixture.nativeElement.querySelectorAll('tbody tr.grid-data-row td:nth-child(2)'))
+          .map((cell: Element) => cell.textContent?.trim());
+
+      expect(readNames()).toEqual(['Bob', 'Alice', 'Charlie']);
+
+      component.toggleSort('name');
+      fixture.detectChanges();
+
+      expect(readNames()).toEqual(['Bob', 'Charlie', 'Alice']);
+    });
+
+    it('collapses and expands grouped rows without mutating the source data', () => {
+      component.group = [{ field: 'active', dir: 'asc' }];
+      const original = [...component.data];
+      fixture.detectChanges();
+
+      const toggles = fixture.nativeElement.querySelectorAll('.grid-group-row__toggle');
+      (toggles[1] as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(component.paged.map((row) => row.id)).toEqual([2]);
+      expect(fixture.nativeElement.querySelectorAll('tbody tr.grid-data-row').length).toBe(1);
+      expect(component.data).toEqual(original);
+
+      (fixture.nativeElement.querySelectorAll('.grid-group-row__toggle')[1] as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(component.paged.map((row) => row.id)).toEqual([2, 1, 3]);
+      expect(fixture.nativeElement.querySelectorAll('tbody tr.grid-data-row').length).toBe(3);
+    });
+
+    it('does not render the empty state while grouped rows are still visible', () => {
+      component.group = [{ field: 'active', dir: 'asc' }];
+      fixture.detectChanges();
+
+      const toggles = fixture.nativeElement.querySelectorAll('.grid-group-row__toggle');
+      (toggles[0] as HTMLButtonElement).click();
+      (toggles[1] as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelectorAll('.grid-group-row').length).toBe(2);
+      expect(fixture.nativeElement.querySelector('.ngb-grid__empty-row')).toBeNull();
+    });
+
+    it('does not re-page current server rows while grouping in manual or server-bound mode', () => {
+      component.dataOperations = true;
+      component.total = 20;
+      component.filterManual = true;
+      component.pageable = true;
+      component.pageSize = 1;
+      component.page = 3;
+      component.group = [{ field: 'active', dir: 'asc' }];
+      component.localFilter = {
+        logic: 'and',
+        filters: [{ field: 'name', operator: 'contains', value: 'Alice', ignoreCase: true }],
+      };
+      fixture.detectChanges();
+
+      expect(component.recordTotal()).toBe(20);
+      expect(component.paged.map((row) => row.id)).toEqual([2, 1, 3]);
+      expect(fixture.nativeElement.querySelectorAll('tbody tr.grid-data-row').length).toBe(3);
+      expect(fixture.nativeElement.querySelectorAll('.grid-group-row').length).toBe(2);
+    });
+
+    it('renders custom group header template content', () => {
+      const hostFixture = TestBed.createComponent(GroupTemplateHostComponent);
+      hostFixture.detectChanges();
+
+      const headers = Array.from(hostFixture.nativeElement.querySelectorAll('.custom-group-header')).map((node: Element) =>
+        node.textContent?.trim(),
+      );
+
+      expect(headers).toEqual(['transactionType=Credit (2)', 'transactionType=Debit (2)']);
+    });
+
+    it('renders the group header column template in the configured column cell', () => {
+      const hostFixture = TestBed.createComponent(GroupTemplateHostComponent);
+      hostFixture.detectChanges();
+
+      const firstGroupCells = hostFixture.nativeElement.querySelectorAll('.grid-group-row')[0].querySelectorAll('td');
+      expect(firstGroupCells[0]?.colSpan).toBe(2);
+      expect(firstGroupCells[1]?.textContent).toContain('sum=300');
+      expect(firstGroupCells[0]?.textContent).not.toContain('sum=300');
+    });
+
+    it('spans the group lead cell across the remaining columns when no header column templates exist', () => {
+      const hostFixture = TestBed.createComponent(GroupHeaderOnlyTemplateHostComponent);
+      hostFixture.detectChanges();
+
+      const firstGroupCells = hostFixture.nativeElement.querySelectorAll('.grid-group-row')[0].querySelectorAll('td');
+      expect(firstGroupCells.length).toBe(1);
+      expect(firstGroupCells[0]?.colSpan).toBe(3);
+    });
+
+    it('renders group footers only when showFooter is enabled', () => {
+      const hostFixture = TestBed.createComponent(GroupTemplateHostComponent);
+      hostFixture.detectChanges();
+      expect(hostFixture.nativeElement.querySelectorAll('.grid-group-footer-row').length).toBe(0);
+
+      hostFixture.componentInstance.groupable = { showFooter: true };
+      hostFixture.componentInstance.grid.groupable = { showFooter: true };
+      hostFixture.detectChanges();
+
+      expect(hostFixture.componentInstance.grid.showGroupFooters()).toBe(true);
+      expect(hostFixture.nativeElement.querySelectorAll('.grid-group-footer-row').length).toBe(2);
+      expect(hostFixture.nativeElement.textContent).toContain('footer=300');
+      expect(hostFixture.nativeElement.textContent).toContain('footer=150');
+    });
+
+    it('renders nested group footers when showFooter is enabled', () => {
+      const hostFixture = TestBed.createComponent(GroupTemplateHostComponent);
+      hostFixture.componentInstance.groupable = { showFooter: true };
+      hostFixture.componentInstance.group = [
+        { field: 'transactionType', dir: 'asc', aggregates: hostFixture.componentInstance.amountAggregates },
+        { field: 'owner', dir: 'asc', aggregates: hostFixture.componentInstance.amountAggregates },
+      ];
+      hostFixture.detectChanges();
+
+      expect(hostFixture.nativeElement.querySelectorAll('.grid-group-footer-row').length).toBe(5);
+    });
+
+    it('builds sticky header overlay rows from the active grouped branch', () => {
+      const hostFixture = TestBed.createComponent(GroupTemplateHostComponent);
+      hostFixture.componentInstance.groupable = { stickyHeaders: true };
+      hostFixture.componentInstance.group = [
+        { field: 'transactionType', dir: 'asc', aggregates: hostFixture.componentInstance.amountAggregates },
+        { field: 'owner', dir: 'asc', aggregates: hostFixture.componentInstance.amountAggregates },
+      ];
+      hostFixture.detectChanges();
+
+      const scroller = hostFixture.nativeElement.querySelector('.table-body-scroll') as HTMLElement;
+      Object.defineProperty(scroller, 'scrollTop', { value: 180, writable: true, configurable: true });
+      Object.defineProperty(scroller, 'clientHeight', { value: 240, configurable: true });
+      scroller.getBoundingClientRect = () => ({ top: 100, bottom: 340, left: 0, right: 600, width: 600, height: 240, x: 0, y: 100, toJSON: () => ({}) }) as DOMRect;
+
+      const groupRows = Array.from(hostFixture.nativeElement.querySelectorAll('table.grid-body--main tbody > tr.grid-group-row')) as HTMLTableRowElement[];
+      groupRows.forEach((row, index) => {
+        const top = [60, 110, 220, 360, 520][index] ?? (700 + index * 48);
+        row.getBoundingClientRect = () => ({
+          top,
+          bottom: top + 48,
+          left: 0,
+          right: 600,
+          width: 600,
+          height: 48,
+          x: 0,
+          y: top,
+          toJSON: () => ({}),
+        }) as DOMRect;
+      });
+
+      (hostFixture.componentInstance.grid as any).syncStickyGroupOverlays();
+
+      expect(hostFixture.componentInstance.grid.stickyGroupHeaderRows).toHaveLength(2);
+      expect(hostFixture.componentInstance.grid.stickyGroupHeaderRows.map((row) => row.group.field)).toEqual([
+        'transactionType',
+        'owner',
+      ]);
+      expect(hostFixture.componentInstance.grid.stickyGroupHeaderTranslateY).toBe(180);
+    });
+
+    it('builds sticky footer overlay rows only for active groups with footers below the viewport', () => {
+      const hostFixture = TestBed.createComponent(GroupTemplateHostComponent);
+      hostFixture.componentInstance.groupable = { showFooter: true, stickyHeaders: true, stickyFooters: true };
+      hostFixture.componentInstance.group = [
+        { field: 'transactionType', dir: 'asc', aggregates: hostFixture.componentInstance.amountAggregates },
+        { field: 'owner', dir: 'asc', aggregates: hostFixture.componentInstance.amountAggregates },
+      ];
+      hostFixture.detectChanges();
+
+      const scroller = hostFixture.nativeElement.querySelector('.table-body-scroll') as HTMLElement;
+      Object.defineProperty(scroller, 'scrollTop', { value: 180, writable: true, configurable: true });
+      Object.defineProperty(scroller, 'clientHeight', { value: 240, configurable: true });
+      scroller.getBoundingClientRect = () => ({ top: 100, bottom: 340, left: 0, right: 600, width: 600, height: 240, x: 0, y: 100, toJSON: () => ({}) }) as DOMRect;
+
+      const groupRows = Array.from(hostFixture.nativeElement.querySelectorAll('table.grid-body--main tbody > tr.grid-group-row')) as HTMLTableRowElement[];
+      groupRows.forEach((row, index) => {
+        const top = [60, 110, 220, 360, 520][index] ?? (700 + index * 48);
+        row.getBoundingClientRect = () => ({
+          top,
+          bottom: top + 48,
+          left: 0,
+          right: 600,
+          width: 600,
+          height: 48,
+          x: 0,
+          y: top,
+          toJSON: () => ({}),
+        }) as DOMRect;
+      });
+
+      const footerRows = Array.from(hostFixture.nativeElement.querySelectorAll('table.grid-body--main tbody > tr.grid-group-footer-row')) as HTMLTableRowElement[];
+      footerRows.forEach((row, index) => {
+        const top = [420, 620, 760, 920, 1080][index] ?? (1240 + index * 48);
+        row.getBoundingClientRect = () => ({
+          top,
+          bottom: top + 48,
+          left: 0,
+          right: 600,
+          width: 600,
+          height: 48,
+          x: 0,
+          y: top,
+          toJSON: () => ({}),
+        }) as DOMRect;
+      });
+
+      (hostFixture.componentInstance.grid as any).syncStickyGroupOverlays();
+
+      expect(hostFixture.componentInstance.grid.stickyGroupFooterRows).toHaveLength(2);
+      expect(hostFixture.componentInstance.grid.stickyGroupFooterRows.map((row) => row.group.field)).toEqual([
+        'transactionType',
+        'owner',
+      ]);
+      expect(hostFixture.componentInstance.grid.stickyGroupFooterTranslateY).toBe(324);
+    });
+
+    it('sorts grouped numeric rows while keeping grouped footer totals rendered', () => {
+      const hostFixture = TestBed.createComponent(GroupTemplateHostComponent);
+      hostFixture.detectChanges();
+      hostFixture.componentInstance.grid.enableSorting = true;
+      hostFixture.componentInstance.groupable = { showFooter: true };
+      hostFixture.componentInstance.grid.groupable = { showFooter: true };
+      hostFixture.componentInstance.grid.toggleSort('amount');
+      hostFixture.detectChanges();
+
+      const readAmounts = () =>
+        Array.from(hostFixture.nativeElement.querySelectorAll('tbody tr.grid-data-row td:nth-child(3)'))
+          .map((cell: Element) => Number(cell.textContent?.trim()));
+
+      expect(readAmounts()).toEqual([120, 180, 60, 90]);
+      expect(hostFixture.nativeElement.textContent).toContain('footer=300');
+      expect(hostFixture.nativeElement.textContent).toContain('footer=150');
+
+      hostFixture.componentInstance.grid.toggleSort('amount');
+      hostFixture.detectChanges();
+
+      expect(readAmounts()).toEqual([180, 120, 90, 60]);
+      expect(hostFixture.nativeElement.textContent).toContain('footer=300');
+      expect(hostFixture.nativeElement.textContent).toContain('footer=150');
+    });
+
+    it('does not enable sticky footers when showFooter is false', () => {
+      const hostFixture = TestBed.createComponent(GroupTemplateHostComponent);
+      hostFixture.componentInstance.groupable = { stickyFooters: true };
+      hostFixture.detectChanges();
+
+      expect(hostFixture.componentInstance.grid.showGroupFooters()).toBe(false);
+      expect(hostFixture.componentInstance.grid.showStickyGroupFooters()).toBe(false);
+      expect(hostFixture.nativeElement.querySelectorAll('.grid-group-footer-row').length).toBe(0);
+    });
+
+    it('uses aggregates from developer-provided grouped data in template context', () => {
+      const hostFixture = TestBed.createComponent(GroupTemplateHostComponent);
+      hostFixture.componentInstance.groupable = { showFooter: true };
+      hostFixture.componentInstance.groupedData = [
+        {
+          field: 'transactionType',
+          value: 'Credit',
+          dir: 'asc',
+          level: 0,
+          count: 2,
+          aggregates: { amount: { sum: 999 } },
+          items: hostFixture.componentInstance.data.slice(0, 2),
+        },
+        {
+          field: 'transactionType',
+          value: 'Debit',
+          dir: 'asc',
+          level: 0,
+          count: 2,
+          aggregates: { amount: { sum: 555 } },
+          items: hostFixture.componentInstance.data.slice(2),
+        },
+      ];
+      hostFixture.detectChanges();
+
+      expect(hostFixture.nativeElement.textContent).toContain('sum=999');
+      expect(hostFixture.nativeElement.textContent).toContain('footer=555');
+    });
+
+    it('keeps boolean groupable backward compatible and object groupable enables footers', () => {
+      component.groupable = true;
+      component.group = [{ field: 'active', dir: 'asc' }];
+      fixture.detectChanges();
+
+      expect(component.isGroupingEnabled()).toBe(true);
+      expect(component.showGroupFooters()).toBe(false);
+
+      component.groupable = { showFooter: true };
+      fixture.detectChanges();
+
+      expect(component.isGroupingEnabled()).toBe(true);
+      expect(component.showGroupFooters()).toBe(true);
+    });
   });
 
   it('computes metadata helpers for headers and detail column spans', () => {
@@ -523,6 +1087,65 @@ describe('Datagrid', () => {
 
     component.trackBy = (_i, r) => (r as any).id;
     expect(component.trackRow(0, row)).toBe(1);
+  });
+
+  it('preserves selection and sticky state across sort reordering when trackBy is stable', () => {
+    component.trackBy = (_i, row) => row.id;
+    component.selectionMode = 'multiple';
+    component.selectionBehavior = 'both';
+    component.stickyRows = true;
+    component.enablePagination = false;
+    component.enableSorting = true;
+    fixture.detectChanges();
+
+    component.toggleSelection(1);
+    component.toggleStickyRow(1);
+
+    expect(component.selectedRowIds.has(2)).toBe(true);
+    expect(component.stickyRowIds.has(2)).toBe(true);
+
+    component.toggleSort('score');
+    component.toggleSort('score');
+
+    const bobIndex = component.paged.findIndex((row) => row.id === 2);
+    expect(bobIndex).toBeGreaterThanOrEqual(0);
+    expect(component.selectedRowIds.has(2)).toBe(true);
+    expect(component.stickyRowIds.has(2)).toBe(true);
+    expect(component.isRowSticky(component.paged[bobIndex], bobIndex)).toBe(true);
+  });
+
+  it('preserves selection and sticky state across filter changes when trackBy is stable', () => {
+    component.trackBy = (_i, row) => row.id;
+    component.selectionMode = 'multiple';
+    component.selectionBehavior = 'both';
+    component.stickyRows = true;
+    component.enablePagination = false;
+    component.filterable = true;
+    component.enableFiltering = true;
+    fixture.detectChanges();
+
+    component.toggleSelection(1);
+    component.toggleStickyRow(1);
+
+    component.filter = {
+      logic: 'and',
+      filters: [{ field: 'name', operator: 'eq', value: 'Bob' }],
+    };
+
+    expect(component.filtered.map((row) => row.id)).toEqual([2]);
+    expect(component.selectedRowIds.has(2)).toBe(true);
+    expect(component.stickyRowIds.has(2)).toBe(true);
+    expect(component.isRowSelected(component.paged[0], 0)).toBe(true);
+    expect(component.isRowSticky(component.paged[0], 0)).toBe(true);
+
+    component.filter = null;
+
+    const bobIndex = component.paged.findIndex((row) => row.id === 2);
+    expect(bobIndex).toBeGreaterThanOrEqual(0);
+    expect(component.selectedRowIds.has(2)).toBe(true);
+    expect(component.stickyRowIds.has(2)).toBe(true);
+    expect(component.isRowSelected(component.paged[bobIndex], bobIndex)).toBe(true);
+    expect(component.isRowSticky(component.paged[bobIndex], bobIndex)).toBe(true);
   });
 
   it('uses the custom editService when provided', () => {
@@ -940,6 +1563,29 @@ describe('Datagrid', () => {
     expect(component.editingIndex).toBeNull();
   });
 
+  it('keeps in-cell editing open when the click target is detached but its event path stays inside the grid', () => {
+    component.enableEdit = true;
+    component.editMode = 'incell';
+    triggerColumnsChange();
+    fixture.detectChanges();
+
+    const nameColumn = component.columns.find((c) => c.field === 'name')!;
+    component.startIncellEdit(0, nameColumn.field);
+    fixture.detectChanges();
+
+    const detachedTarget = document.createElement('div');
+    const gridRoot = document.createElement('div');
+    gridRoot.className = 'ngb-grid';
+
+    component.onDocumentClick(
+      createEventWithPath(detachedTarget, [detachedTarget, gridRoot, document.body, document]) as any,
+    );
+    fixture.detectChanges();
+
+    expect(component.editingCell).toEqual({ rowIndex: 0, field: 'name' });
+    expect(component.editingIndex).toBe(0);
+  });
+
   it('navigates in-cell editors with arrow keys and commits on Enter', () => {
     component.enableEdit = true;
     component.editMode = 'incell';
@@ -1195,6 +1841,34 @@ describe('Datagrid', () => {
     expect(row).toBeTruthy();
     expect(labeledCell?.getAttribute('data-title')).toBe('Name');
     expect(row?.style.gridTemplateColumns).toBeFalsy();
+  });
+
+  it('reuses cached stacked-card column groups until columns change', () => {
+    component.tableOptions = { stacked: true, stackedLayout: 'cards' };
+    component.columns = [
+      { field: 'name', header: 'Name', stackedGroup: 'start' },
+      { field: 'price', header: 'Price', stackedGroup: 'center' },
+      { field: 'qty', header: 'Qty', stackedGroup: 'end' },
+    ] as any;
+    component.data = [{ name: 'A', price: 1, qty: 2 }] as any;
+    triggerColumnsChange();
+
+    const firstGroups = component.stackedCardGroups();
+    const secondGroups = component.stackedCardGroups();
+    const firstStartColumns = component.stackedColumnsInGroup('start');
+    const secondStartColumns = component.stackedColumnsInGroup('start');
+
+    expect(secondGroups).toBe(firstGroups);
+    expect(secondStartColumns).toBe(firstStartColumns);
+
+    component.columns = [...component.columns, { field: 'status', header: 'Status', stackedGroup: 'center' }] as any;
+    triggerColumnsChange();
+
+    const refreshedGroups = component.stackedCardGroups();
+    const refreshedCenterColumns = component.stackedColumnsInGroup('center');
+
+    expect(refreshedGroups).not.toBe(firstGroups);
+    expect(refreshedCenterColumns.map((column) => column.field)).toEqual(['price', 'status']);
   });
 
   it('clears sorting and applies column visibility', () => {
@@ -1521,6 +2195,36 @@ describe('Datagrid', () => {
     component.toggleFilterMenu(nameColumn.field);
     fixture.detectChanges();
     expect(component.multiCheckboxSelectedCount(nameColumn)).toBe(3);
+  });
+
+  it('reuses cached multi-checkbox option collections until data changes', () => {
+    component.filterable = 'multi';
+    component.enableFiltering = true;
+    triggerColumnsChange();
+    fixture.detectChanges();
+
+    const nameColumn = component.columns[1];
+    const initialOptions = component.multiCheckboxOptions(nameColumn);
+    const repeatedOptions = component.multiCheckboxOptions(nameColumn);
+
+    expect(repeatedOptions).toBe(initialOptions);
+
+    component.multiCheckboxSearch[nameColumn.field as string] = 'ali';
+    const visibleOptions = component.multiCheckboxVisibleOptions(nameColumn);
+    const repeatedVisibleOptions = component.multiCheckboxVisibleOptions(nameColumn);
+
+    expect(repeatedVisibleOptions).toBe(visibleOptions);
+    expect(visibleOptions.map((option) => option.label)).toEqual(['Alice']);
+
+    component.data = [
+      ...component.data,
+      { id: 4, name: 'Dora', email: 'dora@example.com', score: 88, active: true, created: '2024-04-01' },
+    ];
+
+    const refreshedOptions = component.multiCheckboxOptions(nameColumn);
+
+    expect(refreshedOptions).not.toBe(initialOptions);
+    expect(refreshedOptions.map((option) => option.label)).toContain('Dora');
   });
 
   it('opens filter menu, applies and clears menu filters, and closes on escape', () => {
@@ -2504,6 +3208,37 @@ describe('Datagrid', () => {
       expect(component.isCellInEditMode(0, emailColumn())).toBe(false);
     });
 
+    it('incell: text-node clicks still start editing for the full cell surface', () => {
+      component.editMode = 'incell';
+      component.enableEdit = true;
+      fixture.detectChanges();
+
+      const textNode = document.createTextNode('Website Redesign');
+      component.onCellClick(createEventForTarget(textNode), 0, nameColumn());
+      fixture.detectChanges();
+
+      expect(component.editingCell).toEqual({ rowIndex: 0, field: 'name' });
+      expect(component.isCellInEditMode(0, nameColumn())).toBe(true);
+    });
+
+    it('incell: switching to another cell updates the roving focused cell', () => {
+      component.editMode = 'incell';
+      component.enableEdit = true;
+      fixture.detectChanges();
+
+      const targetColumn = emailColumn();
+      const targetColIndex = component.visibleColumns.findIndex((col) => col.field === targetColumn.field);
+
+      component.startIncellEdit(0, 'name');
+      expect(component.focusedCell).toEqual({ rowIndex: 0, colIndex: 1 });
+
+      component.onCellClick(createEventForTarget(document.createElement('div')), 1, targetColumn);
+      fixture.detectChanges();
+
+      expect(component.editingCell).toEqual({ rowIndex: 1, field: targetColumn.field });
+      expect(component.focusedCell).toEqual({ rowIndex: 1, colIndex: targetColIndex });
+    });
+
     it('incell: Enter commits and Escape cancels', () => {
       component.editMode = 'incell';
       component.enableEdit = true;
@@ -2620,6 +3355,18 @@ describe('Datagrid', () => {
       expect(component.editingCell).toBeNull();
       expect(component.editingIndex).toBeNull();
       expect(component.externalEditOpen).toBe(false);
+    });
+  });
+
+  describe('change detection strategy', () => {
+    it('uses OnPush for bounded datagrid leaf components', () => {
+      expect(NgbDatagridAddRowComponent.ɵcmp.onPush).toBe(true);
+      expect(NgbDatagridDataRowComponent.ɵcmp.onPush).toBe(true);
+      expect(NgbDatagridEditingToolbarComponent.ɵcmp.onPush).toBe(true);
+      expect(NgbDatagridExternalEditorComponent.ɵcmp.onPush).toBe(true);
+      expect(NgbDatagridFilterMenuPanelComponent.ɵcmp.onPush).toBe(true);
+      expect(NgbDatagridHeaderComponent.ɵcmp.onPush).toBe(true);
+      expect(NgbDatagridRowFilterOperatorPanelComponent.ɵcmp.onPush).toBe(true);
     });
   });
 });

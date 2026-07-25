@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NgbDatagridButtonDirective } from '../../foundation/datagrid-button.directive';
 import { NgbDatagridControlDirective } from '../../foundation/datagrid-control.directive';
 import { NgbDatagridFieldShellComponent } from '../../foundation/datagrid-field-shell.component';
+import type { Datagrid } from '../datagrid.component';
 
 @Component({
   selector: 'thead[ngbDatagridHeader]',
@@ -16,6 +17,7 @@ import { NgbDatagridFieldShellComponent } from '../../foundation/datagrid-field-
     NgbDatagridControlDirective,
     NgbDatagridFieldShellComponent,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <tr>
       @if (grid.showSelectionColumn()) {
@@ -83,6 +85,20 @@ import { NgbDatagridFieldShellComponent } from '../../foundation/datagrid-field-
         [attr.aria-sort]="grid.enableSorting && col.sortable ? grid.ariaSortFor(col.field) : null"
       >
         <div class="grid-header__cell">
+          @if (grid.isColumnGroupable(col)) {
+          <span
+            class="grid-column-group-handle bi bi-diagram-3"
+            [class.grid-column-group-handle--active]="grid.isFieldGrouped(col.field)"
+            draggable="true"
+            role="button"
+            tabindex="0"
+            [attr.aria-label]="grid.groupHandleAriaLabel(col)"
+            (dragstart)="grid.onGroupHandleDragStart($event, col.field); $event.stopPropagation()"
+            (dragend)="grid.onGroupHandleDragEnd()"
+            (keydown.enter)="grid.toggleGroupField(col.field); $event.preventDefault(); $event.stopPropagation()"
+            (keydown.space)="grid.toggleGroupField(col.field); $event.preventDefault(); $event.stopPropagation()"
+          ></span>
+          }
           @if (grid.isColumnReorderable(col)) {
           <span
             class="grid-column-reorder-handle bi bi-grip-vertical"
@@ -282,5 +298,6 @@ import { NgbDatagridFieldShellComponent } from '../../foundation/datagrid-field-
   `
 })
 export class NgbDatagridHeaderComponent {
-  @Input({ required: true }) grid!: any;
+  @Input({ required: true }) grid!: Datagrid<any>;
+  @Input() renderTick = 0;
 }

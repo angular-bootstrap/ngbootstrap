@@ -1,4 +1,4 @@
-import { ngbApplyDataGridOperations, ngbCalculateDataGridAggregates } from './data-operations';
+import { ngbApplyDataGridOperations, ngbCalculateDataGridAggregates, ngbGroupData } from './data-operations';
 import { NgbCompositeFilterDescriptor } from './models/filtering';
 
 interface OrderRow {
@@ -97,10 +97,189 @@ describe('ngbApplyDataGridOperations', () => {
     expect(result.aggregates?.['total']).toEqual({
       count: 2,
       sum: 750,
+      avg: 375,
       average: 375,
       min: 300,
       max: 450,
     });
+  });
+
+  it('returns grouped data for the processed rows when group descriptors are present', () => {
+    const result = ngbApplyDataGridOperations(rows, {
+      columns,
+      state: {
+        page: 1,
+        pageSize: 4,
+        group: [{ field: 'status', dir: 'asc' }],
+      },
+    });
+
+    expect(result.groupedData).toEqual([
+      expect.objectContaining({
+        field: 'status',
+        value: 'Closed',
+        count: 2,
+      }),
+      expect.objectContaining({
+        field: 'status',
+        value: 'Open',
+        count: 2,
+      }),
+    ]);
+  });
+
+  it('keeps grouping aligned with filtering, sorting, and pagination in one local pass', () => {
+    const result = ngbApplyDataGridOperations(rows, {
+      columns,
+      globalFilterFields: ['customer'],
+      state: {
+        page: 1,
+        pageSize: 1,
+        sort: [{ field: 'total', direction: 'desc' }],
+        group: [{ field: 'status', dir: 'desc' }],
+        filter: {
+          logic: 'and',
+          filters: [{ field: 'customer', operator: 'contains', value: 'acme', ignoreCase: true }],
+        },
+      },
+    });
+
+    expect(result.total).toBe(2);
+    expect(result.data).toEqual([rows[2]]);
+    expect(result.groupedData).toEqual([
+      expect.objectContaining({
+        field: 'status',
+        value: 'Open',
+        count: 1,
+      }),
+    ]);
+  });
+
+  it('returns developer-provided grouped data unchanged in manual or server mode', () => {
+    const groupedData = [
+      {
+        field: 'status',
+        value: 'Open',
+        dir: 'asc' as const,
+        level: 0,
+        count: 2,
+        aggregates: {
+          total: { sum: 750, count: 2 },
+        },
+        items: [rows[0], rows[2]],
+      },
+    ];
+
+    const result = ngbApplyDataGridOperations(rows, {
+      columns,
+      groupedData,
+      state: {
+        group: [{ field: 'status', dir: 'asc', aggregates: [{ field: 'total', aggregate: 'sum' }] }],
+      },
+    });
+
+    expect(result.groupedData).toEqual(groupedData);
+  });
+});
+
+describe('ngbGroupData', () => {
+  it('groups rows by a single field in ascending order by default', () => {
+    expect(ngbGroupData(rows, [{ field: 'status' }])).toEqual([
+      expect.objectContaining({
+        field: 'status',
+        value: 'Closed',
+        dir: 'asc',
+        count: 2,
+      }),
+      expect.objectContaining({
+        field: 'status',
+        value: 'Open',
+        dir: 'asc',
+        count: 2,
+      }),
+    ]);
+  });
+
+  it('supports descending group direction', () => {
+    expect(ngbGroupData(rows, [{ field: 'status', dir: 'desc' }]).map((group) => group.value)).toEqual([
+      'Open',
+      'Closed',
+    ]);
+  });
+
+  it('supports nested multi-field grouping', () => {
+    const grouped = ngbGroupData(rows, [
+      { field: 'status', dir: 'asc' },
+      { field: 'customer', dir: 'asc' },
+    ]);
+
+    expect(grouped[0].items[0]).toEqual(
+      expect.objectContaining({
+        field: 'customer',
+        value: 'Blue River Labs',
+        count: 1,
+      }),
+    );
+    expect(grouped[1].items[0]).toEqual(
+      expect.objectContaining({
+        field: 'customer',
+        value: 'Acme Health',
+        count: 1,
+      }),
+    );
+  });
+
+  it('calculates per-group sum, count, avg, min, and max aggregates', () => {
+    const grouped = ngbGroupData(rows, [
+      {
+        field: 'status',
+        dir: 'asc',
+        aggregates: [
+          { field: 'total', aggregate: 'sum' },
+          { field: 'total', aggregate: 'count' },
+          { field: 'total', aggregate: 'avg' },
+          { field: 'total', aggregate: 'min' },
+          { field: 'total', aggregate: 'max' },
+        ],
+      },
+    ]);
+
+    expect(grouped[0].aggregates?.['total']).toEqual({
+      sum: 200,
+      count: 2,
+      avg: 100,
+      average: 100,
+      min: 80,
+      max: 120,
+    });
+    expect(grouped[1].aggregates?.['total']).toEqual({
+      sum: 750,
+      count: 2,
+      avg: 375,
+      average: 375,
+      min: 300,
+      max: 450,
+    });
+  });
+
+  it('propagates aggregates through multi-level grouping', () => {
+    const grouped = ngbGroupData(rows, [
+      {
+        field: 'status',
+        dir: 'asc',
+        aggregates: [{ field: 'total', aggregate: 'sum' }],
+      },
+      {
+        field: 'customer',
+        dir: 'asc',
+        aggregates: [{ field: 'total', aggregate: 'count' }],
+      },
+    ]);
+
+    expect(grouped[0].aggregates?.['total']?.sum).toBe(200);
+    expect((grouped[0].items[0] as any).aggregates?.['total']?.count).toBe(1);
+    expect(grouped[1].aggregates?.['total']?.sum).toBe(750);
+    expect((grouped[1].items[1] as any).aggregates?.['total']?.count).toBe(1);
   });
 });
 

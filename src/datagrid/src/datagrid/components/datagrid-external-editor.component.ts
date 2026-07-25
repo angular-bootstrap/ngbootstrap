@@ -1,13 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { NgbDatagridButtonDirective } from '../../foundation/datagrid-button.directive';
 import { NgbDatagridControlDirective } from '../../foundation/datagrid-control.directive';
+import type { Datagrid } from '../datagrid.component';
 
 @Component({
   selector: 'ngb-datagrid-external-editor',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, NgbDatagridButtonDirective, NgbDatagridControlDirective],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (grid.externalEditOpen) {
     <div
@@ -69,5 +71,5 @@ import { NgbDatagridControlDirective } from '../../foundation/datagrid-control.d
   `,
 })
 export class NgbDatagridExternalEditorComponent {
-  @Input({ required: true }) grid!: any;
+  @Input({ required: true }) grid!: Datagrid<any>;
 }

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, Input, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, Input, ViewChild } from '@angular/core';
 import { ColumnDef } from '../../models/column-def';
 import { NgbDatagridFloatingPanelDirective } from '../../foundation/datagrid-floating-panel.directive';
 import type { Datagrid } from '../datagrid.component';
@@ -8,6 +8,7 @@ import type { Datagrid } from '../datagrid.component';
   selector: 'ngb-datagrid-row-filter-operator-panel',
   standalone: true,
   imports: [CommonModule, NgbDatagridFloatingPanelDirective],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
       class="dropdown-menu show ngb-datagrid-floating-panel grid-filter-operator-menu"

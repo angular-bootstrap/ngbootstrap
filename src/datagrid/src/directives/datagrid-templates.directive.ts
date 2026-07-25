@@ -2,6 +2,7 @@ import { Directive, Input, TemplateRef } from '@angular/core';
 import { AbstractControl, FormGroup } from '@angular/forms';
 import { ColumnDef } from '../models/column-def';
 import { NgbCompositeFilterDescriptor, NgbFilterDescriptor, NgbFilterOperator } from '../models/filtering';
+import { NgbDataGridAggregateResults, NgbDataGridGroupResult } from '../datagrid.types';
 
 export interface CellCtx<T = any>   { $implicit: any; row: T; col: ColumnDef<T>; index: number; }
 export interface EditCtx<T = any>   { $implicit: AbstractControl | null; control: AbstractControl | null; row: T; col: ColumnDef<T>; form: FormGroup; index: number; isNew: boolean; }
@@ -31,6 +32,21 @@ export interface PagerCtx<T = any> {
   pageSize: number;
   total: number;
   pageCount: number;
+}
+
+export interface GroupHeaderCtx<T = any> {
+  $implicit: NgbDataGridGroupResult<T>;
+  group: NgbDataGridGroupResult<T>;
+  field: string;
+  value: unknown;
+  items: Array<NgbDataGridGroupResult<T> | T>;
+  level: number;
+  count: number;
+  aggregates: NgbDataGridAggregateResults;
+}
+
+export interface GroupColumnCtx<T = any> extends GroupHeaderCtx<T> {
+  col: ColumnDef<T>;
 }
 
 @Directive({ selector: 'ng-template[ngbCell]', standalone: true })
@@ -73,6 +89,35 @@ export class NgbPagerTemplate<T = any> {
   constructor(public readonly template: TemplateRef<PagerCtx<T>>) {}
 }
 
+@Directive({ selector: 'ng-template[ngbDatagridGroupHeaderTemplate], ng-template[ngbGroupHeader]', standalone: true })
+export class NgbDataGridGroupHeaderTemplateDirective<T = any> {
+  constructor(public readonly template: TemplateRef<GroupHeaderCtx<T>>) {}
+}
+
+@Directive({ selector: 'ng-template[ngbDatagridGroupHeaderColumnTemplate], ng-template[ngbGroupHeaderColumn]', standalone: true })
+export class NgbDataGridGroupHeaderColumnTemplateDirective<T = any> {
+  // Preserve the explicit public template binding names for compatibility.
+  @Input('ngbDatagridGroupHeaderColumnTemplate') field!: string;
+  // eslint-disable-next-line @angular-eslint/no-input-rename
+  @Input('ngbGroupHeaderColumn') set legacyField(value: string) {
+    this.field = value;
+  }
+
+  constructor(public readonly template: TemplateRef<GroupColumnCtx<T>>) {}
+}
+
+@Directive({ selector: 'ng-template[ngbDatagridGroupFooterTemplate], ng-template[ngbGroupFooter]', standalone: true })
+export class NgbDataGridGroupFooterTemplateDirective<T = any> {
+  // Preserve the explicit public template binding names for compatibility.
+  @Input('ngbDatagridGroupFooterTemplate') field!: string;
+  // eslint-disable-next-line @angular-eslint/no-input-rename
+  @Input('ngbGroupFooter') set legacyField(value: string) {
+    this.field = value;
+  }
+
+  constructor(public readonly template: TemplateRef<GroupColumnCtx<T>>) {}
+}
+
 /** Handy constant to import in consumer apps */
 export const DATAGRID_TEMPLATE_DIRECTIVES = [
   NgbCellTemplate,
@@ -82,4 +127,7 @@ export const DATAGRID_TEMPLATE_DIRECTIVES = [
   NgbGlobalFilterTemplate,
   NgbRowDetailTemplate,
   NgbPagerTemplate,
+  NgbDataGridGroupHeaderTemplateDirective,
+  NgbDataGridGroupHeaderColumnTemplateDirective,
+  NgbDataGridGroupFooterTemplateDirective,
 ];

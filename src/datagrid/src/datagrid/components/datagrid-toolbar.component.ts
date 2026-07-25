@@ -3,6 +3,7 @@ import { Component, Input } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { NgbDatagridButtonDirective } from '../../foundation/datagrid-button.directive';
 import { NgbDatagridFieldShellComponent } from '../../foundation/datagrid-field-shell.component';
+import type { Datagrid } from '../datagrid.component';
 
 @Component({
   selector: 'ngb-datagrid-toolbar',
@@ -96,5 +97,5 @@ import { NgbDatagridFieldShellComponent } from '../../foundation/datagrid-field-
   `
 })
 export class NgbDatagridToolbarComponent {
-  @Input({ required: true }) grid!: any;
+  @Input({ required: true }) grid!: Datagrid<any>;
 }

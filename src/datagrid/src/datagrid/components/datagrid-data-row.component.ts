@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { ControlContainer, FormGroupDirective, ReactiveFormsModule } from '@angular/forms';
 import { ColumnDef } from '../../models/column-def';
 import { NgbDatagridButtonDirective } from '../../foundation/datagrid-button.directive';
@@ -11,6 +11,7 @@ import type { Datagrid } from '../datagrid.component';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, NgbDatagridButtonDirective, NgbDatagridControlDirective],
   viewProviders: [{ provide: ControlContainer, useExisting: FormGroupDirective }],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (grid.showSelectionColumn()) {
     <td
@@ -97,6 +98,7 @@ import type { Datagrid } from '../datagrid.component';
                 [class.grid-cell--incell]="grid.isIncellEditMode()"
                 [ngClass]="grid.resolveCellClass(row, index, col)"
                 [ngStyle]="grid.resolveCellStyle(row, index, col)"
+                (mousedown)="grid.onCellMouseDown($event, index, col)"
                 (click)="grid.onCellClick($event, index, col)"
               >
                 <div class="ngb-stacked-card__label">{{ col.header }}</div>
@@ -140,6 +142,7 @@ import type { Datagrid } from '../datagrid.component';
         [style.right.px]="grid.isStackedLayout() ? null : grid.columnEndOffset(col)"
         (focus)="grid.onDataCellFocus(index, ci)"
         (keydown)="grid.onDataCellKeydown($event, index, ci, col)"
+        (mousedown)="grid.onCellMouseDown($event, index, col)"
         (click)="grid.onCellClick($event, index, col)"
       >
         <ng-container *ngTemplateOutlet="dataCell; context: { col: col, ci: ci }"></ng-container>
@@ -273,7 +276,7 @@ import type { Datagrid } from '../datagrid.component';
               @default {
               <span class="grid-cell-text">
                 @if (grid.isSearchHighlightEnabled() && grid.shouldHighlightSearchInColumn(col.field)) {
-                  @for (part of grid.getSearchHighlightSegments(valueFor(row, col), col.field); track $index) {
+                  @for (part of grid.getSearchHighlightSegments(valueFor(row, col), col.field); track part.key) {
                     @if (part.match) {
                       <mark class="grid-search-highlight">{{ part.text }}</mark>
                     } @else {
@@ -357,6 +360,7 @@ import type { Datagrid } from '../datagrid.component';
 })
 export class NgbDatagridDataRowComponent<T = unknown> {
   @Input({ required: true }) grid!: Datagrid<T>;
+  @Input() renderTick = 0;
   @Input({ required: true }) row!: T;
   @Input({ required: true }) index!: number;
   @Input() selected = false;

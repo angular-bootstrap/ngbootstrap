@@ -1,7 +1,24 @@
 import { inject, Injectable } from "@angular/core";
 
-export interface PdfExportPayload { fileName: string; columns: string[]; rows: any[]; options?: any; }
-export interface ExcelExportPayload { fileName: string; sheetName: string; columns: Array<{ key: string; title: string }>; rows: any[]; }
+export interface PdfExportOptions {
+  pageSize?: 'A4' | 'Letter' | string;
+  landscape?: boolean;
+  margins?: [number, number, number, number];
+}
+
+export interface PdfExportPayload {
+  fileName: string;
+  columns: string[];
+  rows: Array<Record<string, unknown>>;
+  options?: PdfExportOptions;
+}
+
+export interface ExcelExportPayload {
+  fileName: string;
+  sheetName: string;
+  columns: Array<{ key: string; title: string }>;
+  rows: Array<Record<string, unknown>>;
+}
 
 export abstract class PdfExportAdapter { abstract export(p: PdfExportPayload): Promise<void>; }
 export abstract class ExcelExportAdapter { abstract export(p: ExcelExportPayload): Promise<void>; }

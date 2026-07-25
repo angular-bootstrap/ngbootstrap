@@ -7,6 +7,16 @@ export interface NgbDataGridSortDescriptor {
   direction: NgbDataGridSortDirection;
 }
 
+export interface NgbDataGridGroupDescriptor {
+  field: string;
+  dir?: NgbDataGridSortDirection;
+  aggregates?: NgbDataGridAggregateDescriptor[];
+}
+
+export interface NgbDataGridGroupChange {
+  group: NgbDataGridGroupDescriptor[];
+}
+
 export interface NgbDataGridState {
   /** 1-based page number used by the DataGrid pager. */
   page?: number;
@@ -16,11 +26,13 @@ export interface NgbDataGridState {
   skip?: number;
   pageSize?: number;
   sort?: NgbDataGridSortDescriptor[];
+  group?: NgbDataGridGroupDescriptor[];
   filter?: NgbCompositeFilterDescriptor;
   globalFilter?: string;
 }
 
-export type NgbDataGridAggregateFunction = 'count' | 'sum' | 'average' | 'min' | 'max';
+export type NgbDataGridAggregateFunction = 'count' | 'sum' | 'average' | 'avg' | 'min' | 'max';
+export type NgbDataGridAggregateType = NgbDataGridAggregateFunction;
 
 export interface NgbDataGridAggregateDescriptor {
   field: string;
@@ -32,9 +44,16 @@ export type NgbDataGridAggregateResults = Record<
   Partial<Record<NgbDataGridAggregateFunction, number | string | Date | null>>
 >;
 
+export interface NgbDataGridGroupingSettings {
+  showFooter?: boolean;
+  stickyHeaders?: boolean;
+  stickyFooters?: boolean;
+}
+
 export interface NgbDataGridProcessOptions<T = unknown> {
   state?: NgbDataGridState | null;
   aggregates?: NgbDataGridAggregateDescriptor[];
+  groupedData?: NgbDataGridGroupResult<T>[] | null;
   globalFilterFields?: string[];
   columns?: Array<{ field: Extract<keyof T, string> | string; type?: string; filterType?: string }>;
   /**
@@ -48,6 +67,17 @@ export interface NgbDataGridDataResult<T = unknown> {
   data: T[];
   total: number;
   aggregates?: NgbDataGridAggregateResults;
+  groupedData?: NgbDataGridGroupResult<T>[];
+}
+
+export interface NgbDataGridGroupResult<T = unknown> {
+  field: string;
+  value: unknown;
+  dir: NgbDataGridSortDirection;
+  level: number;
+  count: number;
+  aggregates?: NgbDataGridAggregateResults;
+  items: Array<NgbDataGridGroupResult<T> | T>;
 }
 
 // datagrid.types.ts
@@ -112,6 +142,7 @@ export type NgbEditMode = 'inline' | 'incell' | 'external' | 'toolbar';
 /** Labels and visibility for the built-in multi-checkbox filter menu footer. */
 /** Segment returned by {@link Datagrid.getSearchHighlightSegments} for match highlighting. */
 export interface NgbSearchHighlightSegment {
+  key: string;
   text: string;
   match: boolean;
 }
@@ -122,7 +153,7 @@ export interface NgbColumnReorderOptions {
   before?: boolean;
 }
 
-export interface NgbColumnReorderEvent<T = any> {
+export interface NgbColumnReorderEvent<T = unknown> {
   /** Visible columns in their new order. */
   columns: Array<{ field: string; header: string } & Record<string, unknown>>;
   /** Column that was moved. */

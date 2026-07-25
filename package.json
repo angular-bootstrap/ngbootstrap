@@ -1,7 +1,7 @@
 {
   "name": "@angular-bootstrap/ngbootstrap",
-  "version": "2.0.3",
-  "description": "Bootstrap-friendly standalone Angular UI components, including DataGrid, pagination, typeahead, tree, splitter, stepper, chips, and drag-and-drop.",
+  "version": "2.1.0",
+  "description": "Angular UI for data-heavy apps with DataGrid grouping, Angular-native Form Builder, drag-and-drop workflows, pagination, typeahead, tree, splitter, stepper, and chips.",
   "author": {
     "name": "Harmeet Singh"
   },
@@ -11,8 +11,11 @@
     "bootstrap 5",
     "angular components",
     "UI library",
+    "data-heavy apps",
     "datagrid",
     "data grid",
+    "grouping",
+    "grouped grid",
     "table",
     "pagination",
     "stepper",
@@ -25,6 +28,7 @@
     "chips",
     "tags input",
     "drag and drop",
+    "form builder",
     "dnd",
     "accessibility",
     "a11y",

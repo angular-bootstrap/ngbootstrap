@@ -1,11 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { NgbDatagridButtonDirective } from '../../foundation/datagrid-button.directive';
+import type { Datagrid } from '../datagrid.component';
 
 @Component({
   selector: 'ngb-datagrid-editing-toolbar',
   standalone: true,
   imports: [CommonModule, NgbDatagridButtonDirective],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (grid.showEditingToolbar()) {
     <div class="datagrid-editing-toolbar">
@@ -84,7 +86,7 @@ import { NgbDatagridButtonDirective } from '../../foundation/datagrid-button.dir
   `,
 })
 export class NgbDatagridEditingToolbarComponent {
-  @Input({ required: true }) grid!: any;
+  @Input({ required: true }) grid!: Datagrid<any>;
 
   @Input() selectedCount = 0;
 

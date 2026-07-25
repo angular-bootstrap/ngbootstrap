@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { DND_LIVE_ANNOUNCE } from '../a11y/live-announcer.service';
 import { NgbDndListDirective } from './dnd-list.directive';
 import { NgbDndItemDirective } from './dnd-item.directive';
 import { NgbDndState } from '../service/drag-state.service';
@@ -50,12 +51,27 @@ class HintListHostComponent {
   items = ['a', 'b'];
 }
 
+@Component({
+  standalone: true,
+  imports: [NgbDndListDirective],
+  template: `
+    <div class="root-list" [ngbDndList]="items" dndChildrenKey="children"></div>
+    <div class="child-list" [ngbDndList]="items[0].children" dndChildrenKey="children"></div>
+  `,
+})
+class RecursiveListHostComponent {
+  items = [{ title: 'Section', children: [] as Array<{ title: string; children?: unknown[] }> }];
+}
+
 describe('NgbDndListDirective', () => {
   let fixture: ComponentFixture<TbodyHostComponent>;
+  let announce: jest.Mock;
 
   beforeEach(async () => {
+    announce = jest.fn();
     await TestBed.configureTestingModule({
       imports: [TbodyHostComponent],
+      providers: [{ provide: DND_LIVE_ANNOUNCE, useValue: announce }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TbodyHostComponent);
@@ -275,5 +291,76 @@ describe('NgbDndListDirective', () => {
     } as DragEvent);
 
     expect(index).toBe(2);
+  });
+
+  it('marks a guarded list as invalid during dragover and announces on denied drop', () => {
+    const debugEl = fixture.debugElement.query(By.directive(NgbDndListDirective));
+    const directive = debugEl.injector.get(NgbDndListDirective) as any;
+    const state = TestBed.inject(NgbDndState);
+    const source = ['nested'];
+
+    const sessionId = state.createSession({
+      item: 'nested',
+      fromList: source,
+      fromIndex: 0,
+    });
+
+    directive.dndCanDrop = () => false;
+    directive.onDragOver({
+      clientY: 0,
+      dataTransfer: {
+        getData: (type: string) => type === 'text/ngb-dnd' ? sessionId : '',
+        dropEffect: 'move',
+      },
+    } as unknown as DragEvent);
+
+    expect(directive.dataDropValid).toBe('false');
+    expect(directive.denied).toBe(true);
+    expect(directive.placeholder).toBeUndefined();
+
+    directive.performDrop({
+      preventDefault() {},
+      stopPropagation() {},
+      clientY: 0,
+      dataTransfer: {
+        getData: (type: string) => type === 'text/ngb-dnd' ? sessionId : '',
+      },
+    } as unknown as DragEvent);
+
+    expect(fixture.componentInstance.items).toEqual(['a', 'b']);
+    expect(source).toEqual(['nested']);
+    expect(announce).toHaveBeenCalledWith('Cannot drop here');
+  });
+
+  it('prevents dropping a parent item into its own descendant list and announces the rejection', () => {
+    const recursiveFixture = TestBed.createComponent(RecursiveListHostComponent);
+    recursiveFixture.detectChanges();
+    const directives = recursiveFixture.debugElement
+      .queryAll(By.directive(NgbDndListDirective))
+      .map((debugEl) => debugEl.injector.get(NgbDndListDirective) as any);
+    const childDirective = directives[1];
+    const state = TestBed.inject(NgbDndState);
+    const row = recursiveFixture.componentInstance.items[0];
+
+    const sessionId = state.createSession({
+      item: row,
+      fromList: recursiveFixture.componentInstance.items,
+      fromIndex: 0,
+    });
+
+    childDirective.lastIndex = 0;
+    childDirective.performDrop({
+      preventDefault() {},
+      stopPropagation() {},
+      clientY: 0,
+      dataTransfer: {
+        getData: (type: string) => type === 'text/ngb-dnd' ? sessionId : '',
+      },
+    } as unknown as DragEvent);
+
+    expect(recursiveFixture.componentInstance.items).toEqual([{ title: 'Section', children: [] }]);
+    expect(recursiveFixture.componentInstance.items[0].children).toEqual([]);
+    expect(announce).toHaveBeenCalledWith('Cannot drop here');
+    expect(childDirective.denied).toBe(true);
   });
 });
