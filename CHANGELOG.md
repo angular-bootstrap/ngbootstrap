@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.1.2 - 2026-07-27
+
+### Fixed
+
+- Removed an unused standalone directive import that created a circular DataGrid dependency and caused the published FESM bundle to throw `Cannot access 'Datagrid' before initialization` in Jest and other direct bundle-loading environments.
+
+### Changed
+
+- Extended release package verification to import the built FESM bundle and confirm that `Datagrid` and `NgbGridHighlightDirective` initialize and remain publicly exported.
+
+### Compatibility
+
+- No public component APIs, selectors, inputs, outputs, or Angular peer ranges changed.
+
 ## 2.1.1 - 2026-07-27
 
 ### Security

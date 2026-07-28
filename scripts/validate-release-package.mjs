@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const root = process.cwd();
 const distDir = join(root, 'dist', 'ngbootstrap');
@@ -50,5 +51,12 @@ for (const peerName of requiredOptionalPeers) {
   assert(sourcePkg.peerDependencies?.[peerName], `${peerName} must remain declared as a peer dependency.`);
   assert(sourcePkg.peerDependenciesMeta?.[peerName]?.optional === true, `${peerName} must remain an optional peer dependency.`);
 }
+
+// Load the partial-compiled bundle with the JIT compiler available to catch
+// top-level circular references that source-level tests cannot reproduce.
+await import('@angular/compiler');
+const bundle = await import(pathToFileURL(join(distDir, distPkg.module)).href);
+assert(typeof bundle.Datagrid === 'function', 'Built package must export Datagrid.');
+assert(typeof bundle.NgbGridHighlightDirective === 'function', 'Built package must export NgbGridHighlightDirective.');
 
 console.log(`Release package verified: ${distPkg.name}@${distPkg.version}`);

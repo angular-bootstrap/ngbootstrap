@@ -102,8 +102,11 @@ export class UsersGridComponent {
 
 ```bash
 pnpm install
+pnpm lint
 pnpm test
 pnpm build
+pnpm release:verify
+pnpm security:audit
 ```
 
 Build output is written to `dist/`.

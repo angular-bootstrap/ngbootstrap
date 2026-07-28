@@ -72,7 +72,7 @@ import { NgbDatagridRowFilterOperatorPanelComponent } from './components/datagri
 import { NgbDatagridToolbarComponent } from './components/datagrid-toolbar.component';
 import { NgbDatagridEditingToolbarComponent } from './components/datagrid-editing-toolbar.component';
 import { NgbDatagridExternalEditorComponent } from './components/datagrid-external-editor.component';
-import { NgbGridHighlightDirective, HighlightItem } from './directives/grid-highlight.directive';
+import { HighlightItem } from './directives/grid-highlight.directive';
 import { NgbSyncColgroupDirective } from './directives/colgroup-sync.directive';
 import { NgbDndDropEvent, NgbDndListDirective } from '../../../drag-drop/src/directive/dnd-list.directive';
 import { NgbDndItemDirective } from '../../../drag-drop/src/directive/dnd-item.directive';
@@ -222,7 +222,6 @@ const isReasonableEmail = (value: unknown): boolean => {
     FormsModule,
     ReactiveFormsModule,
     NgbSyncColgroupDirective,
-    NgbGridHighlightDirective,
     NgbDatagridToolbarComponent,
     NgbDatagridEditingToolbarComponent,
     NgbDatagridExternalEditorComponent,
