@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.1.1 - 2026-07-27
+
+### Security
+
+- Updated Angular 22, ng-packagr, Jest, ESLint, TypeScript tooling, and their transitive dependencies to patched compatible releases.
+- Added targeted Jest dependency overrides to remove vulnerable legacy glob and brace-expansion paths without changing the published library API.
+- Refreshed the pnpm lockfile so the complete library dependency graph reports no known vulnerabilities.
+
+### Changed
+
+- Updated the security audit command to include build and test dependencies while isolating the public library from any parent pnpm workspace.
+
+### Fixed
+
+- Removed a dead DataGrid test assignment surfaced by the updated ESLint rules.
+
 ## 2.1.0 - 2026-07-25
 
 ### Added

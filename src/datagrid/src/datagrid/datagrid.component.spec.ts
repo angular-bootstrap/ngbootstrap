@@ -2581,7 +2581,6 @@ describe('Datagrid', () => {
     triggers[nameIndex].click();
     fixture.detectChanges();
 
-    let items = Array.from(document.querySelectorAll('.grid-filter-operator-menu .dropdown-item')) as HTMLButtonElement[];
     component.setRowFilterOperator(nameCol, 'startswith');
     fixture.detectChanges();
 
@@ -2591,7 +2590,7 @@ describe('Datagrid', () => {
     triggers[nameIndex].click();
     fixture.detectChanges();
 
-    items = Array.from(document.querySelectorAll('.grid-filter-operator-menu .dropdown-item')) as HTMLButtonElement[];
+    const items = Array.from(document.querySelectorAll('.grid-filter-operator-menu .dropdown-item')) as HTMLButtonElement[];
     const activeItems = items.filter((item) => item.classList.contains('active'));
     const containsItem = items.find((item) => item.textContent?.trim() === component.rowFilterOperatorLabel(nameCol, 'contains'));
 
