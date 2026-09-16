@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Updated Angular development dependencies to 22.1.7, ng-packagr to 22.1.1, and Zone.js to 0.16 to address development-dependency security advisories. Published 2.2.0 artifacts and Angular peer ranges remain unchanged.
+
 ## 2.2.0 - 2026-09-16
 
 ### Added
