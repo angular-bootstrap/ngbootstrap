@@ -12,6 +12,7 @@ Angular UI for data-heavy apps, with a focus on DataGrid depth, Angular-native F
 - Splitter
 - Stepper
 - Chips
+- AI UI: Prompt Box, Chat, draft workspace, inline edits, and reviewed Smart Paste
 - Drag and drop
 - Angular-native Form Builder workflows
 
@@ -22,6 +23,9 @@ This project is not affiliated with `ng-bootstrap` or `ngx-bootstrap`.
 Those projects focus mainly on Bootstrap components for Angular. `@angular-bootstrap/ngbootstrap` focuses more on practical Angular UI for data-heavy apps, including DataGrid workflows, grouping, drag and drop, Form Builder scenarios, and documentation examples that map to real library APIs.
 
 ## Requirements
+
+For shared Bootstrap, Material, and Tailwind themes, palette swatches,
+installation, the optional Tailwind v4 utility preset, and CSS overrides, see the [theme reference and audit](THEMING.md).
 
 - Angular `>=21.0.0 <23.0.0`
 - RxJS `^7.8.0`
@@ -110,3 +114,5 @@ pnpm security:audit
 ```
 
 Build output is written to `dist/`.
+
+For provider-independent assistant controls and request lifecycle guidance, see the [AI UI reference](src/ai/README.md).

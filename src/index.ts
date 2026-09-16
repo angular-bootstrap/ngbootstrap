@@ -6,3 +6,4 @@ export * from './splitter';
 export * from './typeahead';
 export * from './tree';
 export * from './chips';
+export * from './ai';

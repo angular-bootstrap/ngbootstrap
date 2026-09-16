@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Datagrid } from '../datagrid/datagrid.component';
 import { NgbExportService } from '../services/export.services';
+import { NGB_DATAGRID_THEME_OPTIONS } from '../datagrid.types';
 
 class MockExportService {
   registerPdfAdapter() {}
@@ -24,10 +25,10 @@ describe('Datagrid named theme input', () => {
     fixture.componentInstance.data = [{ id: 1, name: 'Nordic row' }];
   });
 
-  it('reflects named theme variants on the grid root', () => {
-    fixture.componentRef.setInput('theme', 'bootstrap-nordic');
+  it.each(NGB_DATAGRID_THEME_OPTIONS)('reflects $label on the grid root', ({ value }) => {
+    fixture.componentRef.setInput('theme', value);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.ngb-grid')?.getAttribute('data-theme')).toBe('bootstrap-nordic');
+    expect(fixture.nativeElement.querySelector('.ngb-grid')?.getAttribute('data-theme')).toBe(value);
   });
 });

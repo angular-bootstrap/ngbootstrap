@@ -1,0 +1,4 @@
+{
+  "name": "ngbootstrap/ai",
+  "ngPackage": { "lib": { "entryFile": "index.ts" } }
+}

@@ -375,6 +375,32 @@ describe('Datagrid', () => {
     expect(panel?.parentElement).toBe(document.body);
   });
 
+  it('preserves resolved scoped theme tokens when a filter panel portals to body', () => {
+    component.filterable = 'row';
+    triggerColumnsChange();
+    fixture.detectChanges();
+    const grid = fixture.nativeElement.querySelector('.ngb-grid') as HTMLElement;
+    // jsdom does not resolve inherited CSS variables, so supply the computed
+    // values at the grid boundary. Browser coverage verifies ancestor mapping.
+    grid.style.setProperty('--ngb-primary', '#6750a4');
+    grid.style.setProperty('--ngb-radius-md', '12px');
+    grid.style.setProperty('--dg-surface', '#fffbfe');
+    grid.style.setProperty('--dg-primary', '#6750a4');
+    const trigger = fixture.nativeElement.querySelector(
+      '.filter-row .grid-filter-operator__button--compact'
+    ) as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+    const panel = document.querySelector('.ngb-datagrid-floating-panel') as HTMLElement;
+    expect(panel.parentElement).toBe(document.body);
+    expect(panel.style.getPropertyValue('--ngb-primary')).toBe('#6750a4');
+    expect(panel.style.getPropertyValue('--ngb-radius-md')).toBe('12px');
+    expect(panel.style.getPropertyValue('--dg-surface')).toBe('#fffbfe');
+    expect(panel.style.getPropertyValue('--dg-primary')).toBe('#6750a4');
+    fixture.destroy();
+    expect(panel.style.getPropertyValue('--ngb-primary')).toBe('');
+  });
+
   it('filters rows using per-column and global filters', () => {
     component.enableFiltering = true;
     component.enableGlobalFilter = true;

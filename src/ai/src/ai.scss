@@ -1,0 +1,184 @@
+@use "../../styles/controls";
+:host {
+  display: block;
+  min-width: 0;
+}
+.ngb-ai-panel {
+  color: var(--ngb-on-surface, var(--bs-body-color, #212529));
+  background: var(--ngb-surface, var(--bs-body-bg, #fff));
+  border: 1px solid var(--ngb-border-color, var(--bs-border-color, #dee2e6));
+  border-radius: var(--ngb-radius-lg, 0.5rem);
+  padding: var(--ngb-space-4, 1rem);
+}
+.ngb-ai-composer {
+  color: var(--ngb-on-surface, var(--bs-body-color, #212529));
+  background: var(--ngb-surface, var(--bs-body-bg, #fff));
+  border-radius: var(--ngb-radius-md, 0.375rem);
+  padding: var(--ngb-space-3, 0.75rem);
+}
+.ngb-ai-header,
+.ngb-ai-composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+.ngb-ai-composer-footer {
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+}
+.ngb-ai-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  font-weight: 500;
+}
+textarea {
+  resize: vertical;
+  min-height: 6rem;
+}
+.ngb-ai-actions {
+  display: flex;
+  gap: var(--ngb-space-2, 0.5rem);
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+.ngb-ai-actions [aria-pressed="true"] {
+  background: var(--ngb-selected-bg, var(--bs-primary-bg-subtle, #cfe2ff));
+  color: var(--ngb-on-surface, var(--bs-body-color, #212529));
+}
+.ngb-ai-muted {
+  color: var(--ngb-on-surface-variant, var(--bs-secondary-color, #6c757d));
+}
+.ngb-ai-transcript {
+  max-height: 28rem;
+  overflow: auto;
+  padding: 0.25rem;
+  margin-bottom: 1rem;
+}
+.ngb-ai-transcript:focus-visible {
+  outline: 2px solid var(--ngb-focus-ring, #86b7fe);
+  outline-offset: 2px;
+}
+.ngb-ai-message {
+  padding: 0.85rem;
+  margin-bottom: 0.75rem;
+  border-inline-start: 3px solid
+    var(--ngb-border-color, var(--bs-border-color, #dee2e6));
+}
+.ngb-ai-message-user {
+  background: var(--ngb-surface-container, var(--bs-tertiary-bg, #f8f9fa));
+  border-color: var(--ngb-primary, var(--bs-primary, #0d6efd));
+  border-radius: var(--ngb-radius-sm, 0.25rem);
+}
+.ngb-ai-text,
+.ngb-ai-context {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0.5rem 0;
+}
+.ngb-ai-error {
+  color: var(--ngb-danger, var(--bs-danger, #dc3545));
+  margin-block: 0.75rem;
+}
+.ngb-ai-result {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--ngb-border-color, var(--bs-border-color, #dee2e6));
+  border-radius: var(--ngb-radius-md, 0.375rem);
+}
+.ngb-ai-inline {
+  margin-top: 0.75rem;
+  box-shadow: var(--ngb-elevation-1, 0 1px 3px #0001);
+}
+.ngb-ai-context {
+  border-inline-start: 3px solid var(--ngb-border-color, #dee2e6);
+  padding-inline-start: 0.75rem;
+  max-height: 12rem;
+  overflow: auto;
+}
+.ngb-ai-review {
+  margin-block: 1rem;
+}
+.ngb-ai-field {
+  display: grid;
+  gap: 0.35rem;
+  padding-block: 0.75rem;
+  border-bottom: 1px solid
+    var(--ngb-border-color, var(--bs-border-color, #dee2e6));
+}
+.ngb-ai-check {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+// Distinct component layouts belong to the library, not to the docs demo.
+.ngb-ai-composer {
+  border: 1px solid var(--ngb-border-color, #dee2e6);
+  box-shadow: var(--ngb-elevation-1, 0 1px 3px #0001);
+}
+.ngb-ai-chat .ngb-ai-transcript {
+  min-height: 16rem;
+}
+.ngb-ai-chat .ngb-ai-message {
+  border: 0;
+  max-width: 90%;
+  padding: 0.8rem 1rem;
+}
+.ngb-ai-chat .ngb-ai-message-user {
+  margin-inline-start: auto;
+  max-width: 80%;
+  border-radius: var(--ngb-radius-lg, 0.5rem);
+  background: var(--ngb-selected-bg, #cfe2ff);
+}
+.ngb-ai-chat .ngb-ai-message:not(.ngb-ai-message-user) > strong {
+  color: var(--ngb-primary, #0d6efd);
+}
+.ngb-ai-workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 1.25rem;
+}
+.ngb-ai-brief,
+.ngb-ai-drafts {
+  min-width: 0;
+}
+.ngb-ai-drafts {
+  max-height: 38rem;
+  overflow: auto;
+  padding: 0.25rem;
+}
+.ngb-ai-section-label {
+  display: block;
+  margin-bottom: 0.8rem;
+  color: var(--ngb-on-surface-variant, #6c757d);
+  font-size: var(--ngb-font-size-sm, 0.875rem);
+  font-weight: 600;
+}
+.ngb-ai-workspace .ngb-ai-result {
+  background: var(--ngb-surface-container, #f8f9fa);
+}
+.ngb-ai-inline {
+  border-inline-start: 3px solid var(--ngb-primary, #0d6efd);
+}
+.ngb-ai-inline .ngb-ai-result {
+  background: var(--ngb-selected-bg, #cfe2ff);
+}
+@media (max-width: 640px) {
+  .ngb-ai-workspace-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ngb-ai-chat .ngb-ai-message,
+  .ngb-ai-chat .ngb-ai-message-user {
+    max-width: 100%;
+  }
+}
+.ngb-ai-panel h2, .ngb-ai-panel h3 {
+  color: var(--ngb-on-surface, var(--bs-body-color, #212529));
+}
+
+.ngb-ai-drafts:focus-visible { outline: 2px solid var(--ngb-primary, #0d6efd); outline-offset: 2px; }

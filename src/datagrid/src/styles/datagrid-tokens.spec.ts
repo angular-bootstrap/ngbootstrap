@@ -15,7 +15,7 @@ describe('datagrid bootstrap theme tokens', () => {
     expect(source).toContain('--bs-body-bg');
     expect(source).toContain('--bs-primary');
     expect(source).toContain('--bs-border-color');
-    expect(source).toContain('--dg-surface: var(--bs-body-bg');
+    expect(source).toContain('--dg-surface: var(--ngb-surface, var(--bs-body-bg');
     expect(source).toContain('--dg-dropdown-item-active-bg');
   });
 

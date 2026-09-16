@@ -14,12 +14,12 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
     .ngb-json-preview {
       margin: 0;
       overflow: auto;
-      padding: 0.75rem 1rem;
+      padding: var(--ngb-space-3, 0.75rem) var(--ngb-space-4, 1rem);
       border: 0;
-      background: var(--bs-body-bg, #fff);
-      color: var(--bs-body-color, #212529);
+      background: var(--ngb-surface, var(--bs-body-bg, #fff));
+      color: var(--ngb-on-surface, var(--bs-body-color, #212529));
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      font-size: 0.875rem;
+      font-size: var(--ngb-font-size-sm, 0.875rem);
       line-height: 1.4;
       white-space: pre;
     }

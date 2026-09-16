@@ -1,5 +1,6 @@
 <div
   class="ngb-stepper"
+  [attr.data-ngb-theme]="theme === 'bootstrap' ? null : theme"
   [class.horizontal]="orientation === 'horizontal'"
   [class.vertical]="orientation === 'vertical'"
   [class.ngb-responsive]="responsive"

@@ -1,0 +1,86 @@
+// Component-local Bootstrap bridges. No selectors escape Angular encapsulation.
+:host {
+  font-family: var(--ngb-font-family, inherit);
+  color: var(--ngb-on-surface, inherit);
+}
+.btn {
+  --bs-btn-color: var(--ngb-on-surface, var(--bs-body-color, #212529));
+  --bs-btn-hover-color: var(--ngb-on-surface, var(--bs-body-color, #212529));
+  --bs-btn-border-radius: var(--ngb-radius-md, var(--bs-border-radius, 0.375rem));
+  --bs-btn-disabled-opacity: var(--ngb-disabled-opacity, 0.65);
+}
+.btn-primary {
+  --bs-btn-bg: var(--ngb-primary, #0d6efd);
+  --bs-btn-border-color: var(--ngb-primary, #0d6efd);
+  --bs-btn-color: var(--ngb-on-primary, #fff);
+  --bs-btn-hover-bg: var(--ngb-primary-hover, #0b5ed7);
+  --bs-btn-hover-border-color: var(--ngb-primary-hover, #0a58ca);
+  --bs-btn-hover-color: var(--ngb-on-primary, #fff);
+  --bs-btn-active-bg: var(--ngb-primary-hover, #0a58ca);
+  --bs-btn-active-border-color: var(--ngb-primary-hover, #0a53be);
+  --bs-btn-active-color: var(--ngb-on-primary, #fff);
+  --bs-btn-disabled-bg: var(--ngb-primary, #0d6efd);
+  --bs-btn-disabled-border-color: var(--ngb-primary, #0d6efd);
+  --bs-btn-disabled-color: var(--ngb-on-primary, #fff);
+}
+.btn-outline-secondary {
+  --bs-btn-color: var(--ngb-on-surface-variant, #6c757d);
+  --bs-btn-border-color: var(--ngb-border-color, #6c757d);
+  --bs-btn-hover-bg: var(--ngb-hover-bg, #6c757d);
+  --bs-btn-hover-color: var(--ngb-on-surface, #fff);
+  --bs-btn-hover-border-color: var(--ngb-border-color, #6c757d);
+  --bs-btn-active-bg: var(--ngb-selected-bg, #6c757d);
+  --bs-btn-active-color: var(--ngb-on-surface, #fff);
+  --bs-btn-active-border-color: var(--ngb-border-color, #6c757d);
+  --bs-btn-disabled-color: var(--ngb-on-surface-variant, #6c757d);
+  --bs-btn-disabled-border-color: var(--ngb-border-color, #6c757d);
+}
+.form-control, .form-select {
+  color: var(--ngb-on-surface, var(--bs-body-color, #212529));
+  background-color: var(--ngb-surface, var(--bs-body-bg, #fff));
+  border-color: var(--ngb-border-color, var(--bs-border-color, #dee2e6));
+  border-radius: var(--ngb-radius-md, var(--bs-border-radius, 0.375rem));
+}
+.form-control::placeholder {
+  color: var(--ngb-on-surface-variant, var(--bs-secondary-color, #6c757d));
+}
+.form-control:disabled, .form-select:disabled {
+  background-color: var(--ngb-surface-variant, var(--bs-secondary-bg, #e9ecef));
+  opacity: var(--ngb-disabled-opacity, 1);
+}
+.form-check-input {
+  background-color: var(--ngb-surface, var(--bs-body-bg, #fff));
+  border-color: var(--ngb-border-color, var(--bs-border-color, #dee2e6));
+}
+.form-check-input:checked, .form-check-input:indeterminate {
+  background-color: var(--ngb-primary, #0d6efd);
+  border-color: var(--ngb-primary, #0d6efd);
+}
+.form-control:focus, .form-select:focus, .form-check-input:focus {
+  border-color: var(--ngb-primary, #86b7fe);
+  box-shadow: 0 0 0 0.25rem var(--ngb-focus-ring, rgba(13, 110, 253, 0.25));
+}
+.btn:focus-visible, .page-link:focus-visible {
+  outline: 2px solid var(--ngb-focus-ring, #86b7fe);
+  outline-offset: 2px;
+}
+.dropdown-menu {
+  --bs-dropdown-color: var(--ngb-on-surface, var(--bs-body-color, #212529));
+  --bs-dropdown-bg: var(--ngb-surface, var(--bs-body-bg, #fff));
+  --bs-dropdown-border-color: var(--ngb-border-color, var(--bs-border-color-translucent, rgba(0,0,0,.175)));
+  --bs-dropdown-border-radius: var(--ngb-radius-md, var(--bs-border-radius, 0.375rem));
+  --bs-dropdown-link-color: var(--ngb-on-surface, var(--bs-body-color, #212529));
+  --bs-dropdown-link-hover-bg: var(--ngb-hover-bg, var(--bs-tertiary-bg, #f8f9fa));
+  --bs-dropdown-link-hover-color: var(--ngb-on-surface, var(--bs-body-color, #212529));
+  --bs-dropdown-link-active-bg: var(--ngb-primary, #0d6efd);
+  --bs-dropdown-link-active-color: var(--ngb-on-primary, #fff);
+  --bs-dropdown-link-disabled-color: var(--ngb-on-surface-variant, var(--bs-tertiary-color, #adb5bd));
+  box-shadow: var(--ngb-elevation-2, none);
+}
+
+.form-select { background-image: var(--ngb-select-icon, var(--bs-form-select-bg-img)); }
+
+.form-check-input:disabled { opacity: var(--ngb-disabled-opacity, 0.5); }
+
+.btn-sm { --bs-btn-border-radius: var(--ngb-radius-sm, var(--bs-border-radius-sm, 0.25rem)); }
+.form-control-sm, .form-select-sm { border-radius: var(--ngb-radius-sm, var(--bs-border-radius-sm, 0.25rem)); }

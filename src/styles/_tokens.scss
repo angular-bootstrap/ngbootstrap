@@ -1,0 +1,6 @@
+// Public scoped themes. No :root aliases: local framework variables must resolve
+// on the wrapper, including nested light/dark scopes.
+@use './themes/bootstrap';
+@use './themes/material';
+@use './themes/tailwind';
+@use './themes/presets';

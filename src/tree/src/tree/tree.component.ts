@@ -14,6 +14,7 @@ import { NgbTreeNode, NgbTreeType, NgbTreeI18n } from './tree.types';
 @Component({
   selector: 'ngb-tree',
   standalone: true,
+  styleUrls: ['../../../styles/_controls.scss'],
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `

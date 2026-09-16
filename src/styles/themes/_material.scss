@@ -1,0 +1,44 @@
+@use "sass:map";
+// Public tokens for an explicitly scoped material theme.
+@mixin tokens($overrides: ()) {
+  $values: (
+    select-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"),
+    primary: var(--mat-sys-primary, #6750a4),
+    on-primary: var(--mat-sys-on-primary, #ffffff),
+    surface: var(--mat-sys-surface, #fffbfe),
+    surface-container: var(--mat-sys-surface-container, #f3edf7),
+    surface-variant: var(--mat-sys-surface-container-high, #ece6f0),
+    on-surface: var(--mat-sys-on-surface, #1d1b20),
+    on-surface-variant: var(--mat-sys-on-surface-variant, #49454f),
+    border-color: var(--mat-sys-outline-variant, #cac4d0),
+    primary-hover: color-mix(in srgb, var(--mat-sys-primary, #6750a4) 88%, var(--mat-sys-on-surface, #1d1b20)),
+    primary-container: var(--mat-sys-primary-container, #eaddff),
+    focus-ring: var(--mat-sys-primary, #6750a4),
+    radius-sm: 4px,
+    radius-md: 12px,
+    radius-lg: 16px,
+    font-family: var(--mat-sys-body-medium-font, Roboto, Arial, sans-serif),
+    font-size-sm: var(--mat-sys-body-medium-size, 0.875rem),
+    density-row-height: 48px,
+    elevation-1: var(--mat-sys-level1, 0 1px 3px rgba(0, 0, 0, 0.2)),
+    elevation-2: var(--mat-sys-level2, 0 2px 6px rgba(0, 0, 0, 0.2)),
+    disabled-opacity: 0.38,
+    hover-bg: color-mix(in srgb, var(--mat-sys-on-surface, #1d1b20) 8%, var(--mat-sys-surface, #fffbfe)),
+    selected-bg: var(--mat-sys-secondary-container, #e8def8),
+    success: #198754,
+    on-success: #ffffff,
+    danger: var(--mat-sys-error, #b3261e),
+    on-danger: var(--mat-sys-on-error, #ffffff),
+    space-1: 0.25rem,
+    space-2: 0.5rem,
+    space-3: 0.75rem,
+    space-4: 1rem,
+  );
+  @each $name, $value in map.merge($values, $overrides) {
+    --ngb-#{$name}: #{$value};
+  }
+}
+
+[data-ngb-theme="material"] {
+  @include tokens();
+}

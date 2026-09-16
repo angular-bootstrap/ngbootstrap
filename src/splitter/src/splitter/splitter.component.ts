@@ -32,10 +32,13 @@ type PaneState = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
-    :host { display: block; width: 100%; }
+    :host {
+        font-family: var(--ngb-font-family, inherit);
+        color: var(--ngb-on-surface, inherit); display: block; width: 100%; }
     .splitter-container { display: flex; height: 100%; width: 100%; }
+    .splitbar:focus-visible { outline: 2px solid var(--ngb-focus-ring, #86b7fe); outline-offset: -2px; }
     .splitter-container.vertical { flex-direction: column; }
-    .splitbar { background: #ccc; width: 5px; position: relative;
+    .splitbar { background: var(--ngb-border-color, #ccc); width: 5px; position: relative;
     align-items: center;
     justify-content: center; 
     flex: 0 0 auto; z-index: 10;
@@ -85,7 +88,7 @@ type PaneState = {
       cursor: col-resize;
     }
     .vertical .splitbar { width: 100%; }
-    .collapse-btn { cursor: pointer; background: #666; width: 10px; height: 10px; position: absolute; top: 50%; }
+    .collapse-btn { cursor: pointer; background: var(--ngb-on-surface-variant, #666); width: 10px; height: 10px; position: absolute; top: 50%; }
     .collapse-arrow {
       font-size: 0.95rem;
       user-select: none;
@@ -152,12 +155,12 @@ export class NgbSplitterComponent {
   @ContentChildren(NgbSplitterPaneComponent) panes!: QueryList<NgbSplitterPaneComponent>;
   @Input() orientation: 'horizontal' | 'vertical' = 'horizontal';
   @Input() handleThickness:number = 12;
-  @Input() handleIconColor: string = '#000';
+  @Input() handleIconColor: string = 'var(--ngb-on-surface, #000)';
   @Input() verticalMinHeight: string = '280px';
 
   @Input() resizable: boolean = true; // New Resize Input
-  @Input() barColor: string = '#ccc'; // Custom Bar Color
-  @Input() lineColor: string = '#000'; // Custom Line Color
+  @Input() barColor: string = 'var(--ngb-border-color, #ccc)'; // Custom Bar Color
+  @Input() lineColor: string = 'var(--ngb-on-surface, #000)'; // Custom Line Color
 
   private isDragging = false;
   private currentHandleIndex = -1;

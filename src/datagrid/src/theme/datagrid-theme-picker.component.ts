@@ -21,7 +21,7 @@ import { NgbDataGridTheme, NgbDataGridThemeOption, NGB_DATAGRID_THEME_OPTIONS } 
           (click)="toggle()"
         >
           <span class="ngb-datagrid-theme-picker__swatches" aria-hidden="true">
-            @for (color of selectedTheme.swatches; track color) {
+            @for (color of selectedTheme.swatches; track $index) {
             <span
               class="ngb-datagrid-theme-picker__swatch"
               [style.background]="color"
@@ -46,7 +46,7 @@ import { NgbDataGridTheme, NgbDataGridThemeOption, NGB_DATAGRID_THEME_OPTIONS } 
               (click)="select(theme)"
             >
               <span class="ngb-datagrid-theme-picker__swatches" aria-hidden="true">
-                @for (color of theme.swatches; track color) {
+                @for (color of theme.swatches; track $index) {
                 <span
                   class="ngb-datagrid-theme-picker__swatch"
                   [style.background]="color"

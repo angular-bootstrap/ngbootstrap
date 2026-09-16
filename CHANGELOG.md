@@ -1,5 +1,29 @@
 # Changelog
 
+## 2.2.0 - 2026-09-16
+
+### Added
+
+- Five standalone, provider-independent AI controls: Prompt Box, AI Chat, Inline AI Prompt, AI Prompt workspace, and Smart Paste. Exported from the package root.
+- Typed request, response, feedback, and reviewed-field events; application-owned streaming, cancellation, errors, and persistence.
+- Shared `--ngb-*` theme tokens, Bootstrap defaults, optional Material/Tailwind variable mappings, and named palettes.
+- Optional Tailwind v4 utility preset and token/theme integration documentation.
+
+### Changed
+
+- DataGrid consumes shared tokens and preserves theme values in portaled filter panels.
+- Shared theme coverage for pagination/pager, stepper, splitter, tree, typeahead, chips, and drag/drop styles and JSON preview.
+- AI controls provide keyboard instructions, busy-state focus continuity, expanded-panel relationships, live status announcements, and keyboard-focusable review regions.
+- Release validation checks AI exports, theme assets, and optional Tailwind integration packaging.
+- Patched vulnerable transitive build/test dependencies and synchronized the optional Tailwind peer in the lockfile.
+
+### Compatibility
+
+- Bootstrap remains the default; existing DataGrid theme selection remains supported.
+- Angular peer range remains `>=21.0.0 <23.0.0`. No AI provider or Angular Material dependency.
+- Tailwind is an optional peer, required only when compiling the utility integration.
+- AI output is plain text. Attachments, voice, Markdown rendering, AI Grid features, and WebMCP are outside this release.
+
 ## 2.1.2 - 2026-07-27
 
 ### Fixed

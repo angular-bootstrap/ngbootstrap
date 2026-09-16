@@ -11,6 +11,7 @@ import { FormsModule } from '@angular/forms';
 @Component({
   selector: 'ngb-pagination',
   standalone: true,
+  styleUrls: ['../../../styles/_controls.scss'],
   imports: [CommonModule, FormsModule],
   template: `
     @if (totalPages >= 1) {
@@ -111,6 +112,7 @@ import { FormsModule } from '@angular/forms';
     }
   `,
   styles: [`
+    .pagination { --bs-pagination-border-radius: var(--ngb-radius-md, var(--bs-border-radius, 0.375rem)); }
     .ngb-pagination--responsive .pagination {
       flex-wrap: wrap;
       justify-content: center;
@@ -119,30 +121,35 @@ import { FormsModule } from '@angular/forms';
 
     .ngb-pagination .page-link,
     .ngb-pagination .btn {
-      border-color: var(--dg-pager-control-border, var(--bs-border-color));
-      background-color: var(--dg-pager-control-bg, var(--bs-body-bg));
-      color: var(--dg-pager-link-text, var(--dg-primary, var(--bs-primary)));
+      border-color: var(--dg-pager-control-border, var(--ngb-border-color, var(--bs-border-color)));
+      background-color: var(--dg-pager-control-bg, var(--ngb-surface, var(--bs-body-bg)));
+      color: var(--dg-pager-link-text, var(--dg-primary, var(--ngb-primary, var(--bs-primary))));
     }
 
+    .ngb-pagination .page-link:focus,
     .ngb-pagination .page-link:hover,
     .ngb-pagination .btn:hover {
-      border-color: var(--dg-border-strong, var(--bs-border-color));
-      background-color: var(--dg-pager-control-hover-bg, var(--bs-tertiary-bg));
-      color: var(--dg-primary-hover, var(--bs-link-hover-color));
+      border-color: var(--dg-border-strong, var(--ngb-border-color, var(--bs-border-color)));
+      background-color: var(--dg-pager-control-hover-bg, var(--ngb-hover-bg, var(--bs-tertiary-bg)));
+      color: var(--dg-primary-hover, var(--ngb-primary-hover, var(--bs-link-hover-color)));
+    }
+
+    .ngb-pagination .page-link:focus {
+      box-shadow: var(--dg-focus-shadow, 0 0 0 0.25rem var(--ngb-focus-ring, rgba(13,110,253,.25)));
     }
 
     .ngb-pagination .page-item.active .page-link {
-      border-color: var(--dg-pager-active-border, var(--dg-primary, var(--bs-primary)));
-      background-color: var(--dg-pager-active-bg, var(--dg-primary, var(--bs-primary)));
-      color: var(--dg-pager-active-text, var(--dg-on-primary, #fff));
+      border-color: var(--dg-pager-active-border, var(--dg-primary, var(--ngb-primary, var(--bs-primary))));
+      background-color: var(--dg-pager-active-bg, var(--dg-primary, var(--ngb-primary, var(--bs-primary))));
+      color: var(--dg-pager-active-text, var(--dg-on-primary, var(--ngb-on-primary, #fff)));
     }
 
     .ngb-pagination .page-item.disabled .page-link,
     .ngb-pagination .btn:disabled {
-      border-color: var(--dg-pager-control-border, var(--bs-border-color));
-      background-color: var(--dg-pager-control-bg, var(--bs-body-bg));
-      color: var(--dg-text-subtle, var(--bs-secondary-color));
-      opacity: 0.55;
+      border-color: var(--dg-pager-control-border, var(--ngb-border-color, var(--bs-border-color)));
+      background-color: var(--dg-pager-control-bg, var(--ngb-surface, var(--bs-body-bg)));
+      color: var(--dg-text-subtle, var(--ngb-on-surface-variant, var(--bs-secondary-color)));
+      opacity: var(--ngb-disabled-opacity, 0.55);
     }
 
     .ngb-pagination__input-group {
@@ -156,9 +163,9 @@ import { FormsModule } from '@angular/forms';
     .ngb-pagination__page-input {
       width: 4.25rem;
       text-align: center;
-      border-color: var(--dg-pager-control-border, var(--bs-border-color));
-      background-color: var(--dg-pager-control-bg, var(--bs-body-bg));
-      color: var(--dg-text, var(--bs-body-color));
+      border-color: var(--dg-pager-control-border, var(--ngb-border-color, var(--bs-border-color)));
+      background-color: var(--dg-pager-control-bg, var(--ngb-surface, var(--bs-body-bg)));
+      color: var(--dg-text, var(--ngb-on-surface, var(--bs-body-color)));
     }
 
     .ngb-pagination__input-label {
@@ -167,7 +174,7 @@ import { FormsModule } from '@angular/forms';
 
     .ngb-pagination__input-total {
       font-size: 0.875rem;
-      color: var(--dg-pager-text, var(--bs-secondary-color));
+      color: var(--dg-pager-text, var(--ngb-on-surface-variant, var(--bs-secondary-color)));
       white-space: nowrap;
     }
   `],

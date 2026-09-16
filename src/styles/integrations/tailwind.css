@@ -1,0 +1,37 @@
+/* Optional Tailwind CSS v4 preset. Import in your Tailwind CSS entry, not Sass.
+ * Requires the ngbootstrap global theme stylesheet and a data-ngb-theme scope.
+ * The ngb namespace preserves Tailwind defaults and avoids circular mappings
+ * when the Tailwind-to-ngbootstrap bridge is also used.
+ * Inline references resolve on each utility element, including nested themes.
+ */
+@theme inline {
+  --color-ngb-primary: var(--ngb-primary);
+  --color-ngb-on-primary: var(--ngb-on-primary);
+  --color-ngb-primary-hover: var(--ngb-primary-hover);
+  --color-ngb-primary-container: var(--ngb-primary-container);
+  --color-ngb-surface: var(--ngb-surface);
+  --color-ngb-surface-container: var(--ngb-surface-container);
+  --color-ngb-surface-variant: var(--ngb-surface-variant);
+  --color-ngb-on-surface: var(--ngb-on-surface);
+  --color-ngb-on-surface-variant: var(--ngb-on-surface-variant);
+  --color-ngb-border: var(--ngb-border-color);
+  --color-ngb-focus: var(--ngb-focus-ring);
+  --color-ngb-hover: var(--ngb-hover-bg);
+  --color-ngb-selected: var(--ngb-selected-bg);
+  --color-ngb-success: var(--ngb-success);
+  --color-ngb-on-success: var(--ngb-on-success);
+  --color-ngb-danger: var(--ngb-danger);
+  --color-ngb-on-danger: var(--ngb-on-danger);
+  --radius-ngb-sm: var(--ngb-radius-sm);
+  --radius-ngb-md: var(--ngb-radius-md);
+  --radius-ngb-lg: var(--ngb-radius-lg);
+  --font-ngb: var(--ngb-font-family);
+  --text-ngb-sm: var(--ngb-font-size-sm);
+  --spacing-ngb-1: var(--ngb-space-1);
+  --spacing-ngb-2: var(--ngb-space-2);
+  --spacing-ngb-3: var(--ngb-space-3);
+  --spacing-ngb-4: var(--ngb-space-4);
+  --spacing-ngb-row: var(--ngb-density-row-height);
+  --shadow-ngb-1: var(--ngb-elevation-1);
+  --shadow-ngb-2: var(--ngb-elevation-2);
+}

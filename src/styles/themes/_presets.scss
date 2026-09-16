@@ -1,0 +1,344 @@
+// Fixed palettes shared by all library components. Keep colors aligned with DataGrid presets.
+@use "bootstrap";
+@use "material";
+
+[data-ngb-theme="bootstrap-main"] {
+  @include bootstrap.tokens((
+    primary: #1769e0,
+    on-primary: #ffffff,
+    surface: #f8fbff,
+    surface-container: #eaf3ff,
+    surface-variant: #d9eaff,
+    on-surface: #172554,
+    on-surface-variant: #45617f,
+    border-color: #bfd7f4,
+    primary-hover: #0f56bd,
+    primary-container: #dbeafe,
+    hover-bg: #eef6ff,
+    selected-bg: #dcecff,
+    focus-ring: #1769e0,
+    font-family: (system-ui, sans-serif),
+    font-size-sm: 0.875rem,
+    radius-sm: 0.25rem,
+    radius-md: 0.375rem,
+    radius-lg: 0.5rem,
+    success: #198754,
+    on-success: #ffffff,
+    danger: #dc3545,
+    on-danger: #ffffff,
+    elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12),
+    elevation-2: 0 4px 12px rgba(0, 0, 0, 0.18),
+    select-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"),
+  ));
+  color-scheme: light;
+}
+
+[data-ngb-theme="bootstrap-main-dark"] {
+  @include bootstrap.tokens((
+    primary: #38bdf8,
+    on-primary: #0f172a,
+    surface: #172033,
+    surface-container: #202b42,
+    surface-variant: #273653,
+    on-surface: #edf2ff,
+    on-surface-variant: #b8c3d9,
+    border-color: #33425f,
+    primary-hover: #7dd3fc,
+    primary-container: #12344f,
+    hover-bg: #22304a,
+    selected-bg: #153a67,
+    focus-ring: #60a5fa,
+    font-family: (system-ui, sans-serif),
+    font-size-sm: 0.875rem,
+    radius-sm: 0.25rem,
+    radius-md: 0.375rem,
+    radius-lg: 0.5rem,
+    success: #75b798,
+    on-success: #0f172a,
+    danger: #ea868f,
+    on-danger: #0f172a,
+    elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12),
+    elevation-2: 0 4px 12px rgba(0, 0, 0, 0.18),
+    select-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23dee2e6' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"),
+  ));
+  color-scheme: dark;
+}
+
+[data-ngb-theme="bootstrap-nordic"] {
+  @include bootstrap.tokens((
+    primary: #0ea5b7,
+    on-primary: #ffffff,
+    surface: #ffffff,
+    surface-container: #f2f7f8,
+    surface-variant: #e6f0f2,
+    on-surface: #263243,
+    on-surface-variant: #64748b,
+    border-color: #d5e4e7,
+    primary-hover: #0b8798,
+    primary-container: #d7f5f8,
+    hover-bg: #f0fbfd,
+    selected-bg: #e7f8fb,
+    focus-ring: #0ea5b7,
+    font-family: (system-ui, sans-serif),
+    font-size-sm: 0.875rem,
+    radius-sm: 0.25rem,
+    radius-md: 0.375rem,
+    radius-lg: 0.5rem,
+    success: #198754,
+    on-success: #ffffff,
+    danger: #dc3545,
+    on-danger: #ffffff,
+    elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12),
+    elevation-2: 0 4px 12px rgba(0, 0, 0, 0.18),
+    select-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"),
+  ));
+  color-scheme: light;
+}
+
+[data-ngb-theme="bootstrap-urban"] {
+  @include bootstrap.tokens((
+    primary: #468faf,
+    on-primary: #ffffff,
+    surface: #ffffff,
+    surface-container: #f5f8fa,
+    surface-variant: #edf4f7,
+    on-surface: #263445,
+    on-surface-variant: #5f6f84,
+    border-color: #d9e5ea,
+    primary-hover: #36748f,
+    primary-container: #e0f0f6,
+    hover-bg: #fff2eb,
+    selected-bg: #e8f4f9,
+    focus-ring: #468faf,
+    font-family: (system-ui, sans-serif),
+    font-size-sm: 0.875rem,
+    radius-sm: 0.25rem,
+    radius-md: 0.375rem,
+    radius-lg: 0.5rem,
+    success: #198754,
+    on-success: #ffffff,
+    danger: #dc3545,
+    on-danger: #ffffff,
+    elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12),
+    elevation-2: 0 4px 12px rgba(0, 0, 0, 0.18),
+    select-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"),
+  ));
+  color-scheme: light;
+}
+
+[data-ngb-theme="bootstrap-vintage"] {
+  @include bootstrap.tokens((
+    primary: #7f4f68,
+    on-primary: #ffffff,
+    surface: #fffdf8,
+    surface-container: #f6f0e7,
+    surface-variant: #eee4d8,
+    on-surface: #3d3440,
+    on-surface-variant: #766a72,
+    border-color: #dfd2c2,
+    primary-hover: #684057,
+    primary-container: #efdde8,
+    hover-bg: #fbf1e5,
+    selected-bg: #f1e4ec,
+    focus-ring: #7f4f68,
+    font-family: (system-ui, sans-serif),
+    font-size-sm: 0.875rem,
+    radius-sm: 0.25rem,
+    radius-md: 0.375rem,
+    radius-lg: 0.5rem,
+    success: #198754,
+    on-success: #ffffff,
+    danger: #dc3545,
+    on-danger: #ffffff,
+    elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12),
+    elevation-2: 0 4px 12px rgba(0, 0, 0, 0.18),
+    select-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"),
+  ));
+  color-scheme: light;
+}
+
+[data-ngb-theme="material-main"] {
+  @include material.tokens((
+    primary: #6750a4,
+    on-primary: #ffffff,
+    surface: #fffbfe,
+    surface-container: #f4eff4,
+    surface-variant: #e7e0ec,
+    on-surface: #1c1b1f,
+    on-surface-variant: #49454f,
+    border-color: #cac4d0,
+    primary-hover: #59468d,
+    primary-container: #eaddff,
+    hover-bg: #f5efff,
+    selected-bg: #eaddff,
+    focus-ring: #6750a4,
+    font-family: (system-ui, sans-serif),
+    font-size-sm: 0.875rem,
+    radius-sm: 0.25rem,
+    radius-md: 0.75rem,
+    radius-lg: 0.5rem,
+    success: #198754,
+    on-success: #ffffff,
+    danger: #dc3545,
+    on-danger: #ffffff,
+    elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12),
+    elevation-2: 0 4px 12px rgba(0, 0, 0, 0.18),
+    select-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"),
+  ));
+  color-scheme: light;
+}
+
+[data-ngb-theme="material-indigo"] {
+  @include material.tokens((
+    primary: #3f51b5,
+    on-primary: #ffffff,
+    surface: #fffbfe,
+    surface-container: #f4eff4,
+    surface-variant: #e7e0ec,
+    on-surface: #1c1b1f,
+    on-surface-variant: #49454f,
+    border-color: #cac4d0,
+    primary-hover: #303f9f,
+    primary-container: #e8eaf6,
+    hover-bg: #f0f2ff,
+    selected-bg: #eaddff,
+    focus-ring: #3f51b5,
+    font-family: (system-ui, sans-serif),
+    font-size-sm: 0.875rem,
+    radius-sm: 0.25rem,
+    radius-md: 0.75rem,
+    radius-lg: 0.5rem,
+    success: #198754,
+    on-success: #ffffff,
+    danger: #dc3545,
+    on-danger: #ffffff,
+    elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12),
+    elevation-2: 0 4px 12px rgba(0, 0, 0, 0.18),
+    select-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"),
+  ));
+  color-scheme: light;
+}
+
+[data-ngb-theme="material-deep-purple"] {
+  @include material.tokens((
+    primary: #7e57c2,
+    on-primary: #ffffff,
+    surface: #fffbfe,
+    surface-container: #f4eff4,
+    surface-variant: #e7e0ec,
+    on-surface: #1c1b1f,
+    on-surface-variant: #49454f,
+    border-color: #cac4d0,
+    primary-hover: #673ab7,
+    primary-container: #ede7f6,
+    hover-bg: #f5edff,
+    selected-bg: #ede7f6,
+    focus-ring: #7e57c2,
+    font-family: (system-ui, sans-serif),
+    font-size-sm: 0.875rem,
+    radius-sm: 0.25rem,
+    radius-md: 0.75rem,
+    radius-lg: 0.5rem,
+    success: #198754,
+    on-success: #ffffff,
+    danger: #dc3545,
+    on-danger: #ffffff,
+    elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12),
+    elevation-2: 0 4px 12px rgba(0, 0, 0, 0.18),
+    select-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"),
+  ));
+  color-scheme: light;
+}
+
+[data-ngb-theme="tailwind-main"] {
+  @include bootstrap.tokens((
+    primary: #2563eb,
+    on-primary: #ffffff,
+    surface: #ffffff,
+    surface-container: #f8fafc,
+    surface-variant: #f1f5f9,
+    on-surface: #0f172a,
+    on-surface-variant: #475569,
+    border-color: #cbd5e1,
+    primary-hover: #1d4ed8,
+    primary-container: #dbeafe,
+    hover-bg: #eff6ff,
+    selected-bg: #eef5ff,
+    focus-ring: #2563eb,
+    font-family: (system-ui, sans-serif),
+    font-size-sm: 0.875rem,
+    radius-sm: 0.25rem,
+    radius-md: 0.375rem,
+    radius-lg: 0.5rem,
+    success: #198754,
+    on-success: #ffffff,
+    danger: #dc3545,
+    on-danger: #ffffff,
+    elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12),
+    elevation-2: 0 4px 12px rgba(0, 0, 0, 0.18),
+    select-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"),
+  ));
+  color-scheme: light;
+}
+
+[data-ngb-theme="tailwind-slate"] {
+  @include bootstrap.tokens((
+    primary: #475569,
+    on-primary: #ffffff,
+    surface: #f8fafc,
+    surface-container: #e2e8f0,
+    surface-variant: #cbd5e1,
+    on-surface: #0f172a,
+    on-surface-variant: #475569,
+    border-color: #cbd5e1,
+    primary-hover: #334155,
+    primary-container: #e2e8f0,
+    hover-bg: #e2e8f0,
+    selected-bg: #eef5ff,
+    focus-ring: #475569,
+    font-family: (system-ui, sans-serif),
+    font-size-sm: 0.875rem,
+    radius-sm: 0.25rem,
+    radius-md: 0.375rem,
+    radius-lg: 0.5rem,
+    success: #198754,
+    on-success: #ffffff,
+    danger: #dc3545,
+    on-danger: #ffffff,
+    elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12),
+    elevation-2: 0 4px 12px rgba(0, 0, 0, 0.18),
+    select-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"),
+  ));
+  color-scheme: light;
+}
+
+[data-ngb-theme="tailwind-emerald"] {
+  @include bootstrap.tokens((
+    primary: #059669,
+    on-primary: #ffffff,
+    surface: #ffffff,
+    surface-container: #ecfdf5,
+    surface-variant: #d1fae5,
+    on-surface: #064e3b,
+    on-surface-variant: #047857,
+    border-color: #a7f3d0,
+    primary-hover: #047857,
+    primary-container: #d1fae5,
+    hover-bg: #f8fbff,
+    selected-bg: #eef5ff,
+    focus-ring: #059669,
+    font-family: (system-ui, sans-serif),
+    font-size-sm: 0.875rem,
+    radius-sm: 0.25rem,
+    radius-md: 0.375rem,
+    radius-lg: 0.5rem,
+    success: #198754,
+    on-success: #ffffff,
+    danger: #dc3545,
+    on-danger: #ffffff,
+    elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12),
+    elevation-2: 0 4px 12px rgba(0, 0, 0, 0.18),
+    select-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"),
+  ));
+  color-scheme: light;
+}

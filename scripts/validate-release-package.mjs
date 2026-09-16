@@ -7,7 +7,7 @@ const distDir = join(root, 'dist', 'ngbootstrap');
 const sourcePkgPath = join(root, 'package.json');
 const distPkgPath = join(distDir, 'package.json');
 const expectedPackageName = '@angular-bootstrap/ngbootstrap';
-const requiredOptionalPeers = ['chart.js'];
+const requiredOptionalPeers = ['chart.js', 'tailwindcss'];
 const requiredAngularPeers = ['@angular/common', '@angular/core', '@angular/forms'];
 const forbiddenPeerNames = ['x' + 'lsx', 'jspdf', 'jspdf-autotable'];
 
@@ -58,5 +58,13 @@ await import('@angular/compiler');
 const bundle = await import(pathToFileURL(join(distDir, distPkg.module)).href);
 assert(typeof bundle.Datagrid === 'function', 'Built package must export Datagrid.');
 assert(typeof bundle.NgbGridHighlightDirective === 'function', 'Built package must export NgbGridHighlightDirective.');
+
+for (const name of ['NgbPromptBoxComponent', 'NgbAiChatComponent', 'NgbAiPromptComponent', 'NgbInlineAiPromptComponent', 'NgbSmartPasteComponent']) {
+  assert(typeof bundle[name] === 'function', `Built package must export ${name}.`);
+}
+for (const asset of ['THEMING.md', 'src/ai/README.md', 'src/styles/themes.scss', 'src/styles/_tokens.scss', 'src/styles/integrations/tailwind.css']) {
+  assert(existsSync(join(distDir, asset)), `Missing packaged asset: ${asset}`);
+}
+assert(distPkg.exports?.['./styles/tailwind.css'] === './src/styles/integrations/tailwind.css', 'Tailwind utility export must resolve to the shipped stylesheet.');
 
 console.log(`Release package verified: ${distPkg.name}@${distPkg.version}`);

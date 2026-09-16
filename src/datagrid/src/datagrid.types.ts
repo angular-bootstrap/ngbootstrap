@@ -108,18 +108,18 @@ export interface NgbDataGridThemeOption {
 }
 
 export const NGB_DATAGRID_THEME_OPTIONS: NgbDataGridThemeOption[] = [
-  { value: 'bootstrap', label: 'Classic', group: 'Bootstrap', swatches: ['#ffffff', '#0d6efd', '#6c757d'] },
+  { value: 'bootstrap', label: 'Classic', group: 'Bootstrap', swatches: ['var(--bs-body-bg, #ffffff)', 'var(--bs-primary, #0d6efd)', 'var(--bs-body-color, #212529)'] },
   { value: 'bootstrap-main', label: 'Ocean', group: 'Bootstrap', swatches: ['#f8fbff', '#1769e0', '#172554'] },
-  { value: 'bootstrap-main-dark', label: 'Midnight', group: 'Bootstrap', swatches: ['#111827', '#38bdf8', '#e5e7eb'], dark: true },
-  { value: 'bootstrap-nordic', label: 'Aqua Rose', group: 'Bootstrap', swatches: ['#f8ffff', '#0891b2', '#fb7185'] },
-  { value: 'bootstrap-urban', label: 'Clay', group: 'Bootstrap', swatches: ['#fffaf7', '#c05621', '#256d85'] },
-  { value: 'bootstrap-vintage', label: 'Sage', group: 'Bootstrap', swatches: ['#fffdf7', '#6b705c', '#b08968'] },
-  { value: 'material-main', label: 'Orchid', group: 'Material', swatches: ['#fffbfe', '#9c27b0', '#2d1b33'] },
-  { value: 'material-indigo', label: 'Indigo', group: 'Material', swatches: ['#f7f8ff', '#3f51b5', '#263238'] },
-  { value: 'material-deep-purple', label: 'Plum', group: 'Material', swatches: ['#fdf8ff', '#7e57c2', '#4a148c'] },
-  { value: 'tailwind-main', label: 'Sky', group: 'Tailwind', swatches: ['#ffffff', '#0284c7', '#0f172a'] },
-  { value: 'tailwind-slate', label: 'Graphite', group: 'Tailwind', swatches: ['#f8fafc', '#334155', '#020617'] },
-  { value: 'tailwind-emerald', label: 'Mint', group: 'Tailwind', swatches: ['#f0fdfa', '#0f766e', '#064e3b'] },
+  { value: 'bootstrap-main-dark', label: 'Midnight', group: 'Bootstrap', swatches: ['#172033', '#38bdf8', '#edf2ff'], dark: true },
+  { value: 'bootstrap-nordic', label: 'Aqua Rose', group: 'Bootstrap', swatches: ['#ffffff', '#0ea5b7', '#263243'] },
+  { value: 'bootstrap-urban', label: 'Clay', group: 'Bootstrap', swatches: ['#ffffff', '#468faf', '#263445'] },
+  { value: 'bootstrap-vintage', label: 'Sage', group: 'Bootstrap', swatches: ['#fffdf8', '#7f4f68', '#3d3440'] },
+  { value: 'material-main', label: 'Orchid', group: 'Material', swatches: ['#fffbfe', '#6750a4', '#1c1b1f'] },
+  { value: 'material-indigo', label: 'Indigo', group: 'Material', swatches: ['#fffbfe', '#3f51b5', '#1c1b1f'] },
+  { value: 'material-deep-purple', label: 'Plum', group: 'Material', swatches: ['#fffbfe', '#7e57c2', '#1c1b1f'] },
+  { value: 'tailwind-main', label: 'Sky', group: 'Tailwind', swatches: ['#ffffff', '#2563eb', '#0f172a'] },
+  { value: 'tailwind-slate', label: 'Graphite', group: 'Tailwind', swatches: ['#f8fafc', '#475569', '#0f172a'] },
+  { value: 'tailwind-emerald', label: 'Mint', group: 'Tailwind', swatches: ['#ffffff', '#059669', '#064e3b'] },
 ];
 
 export interface NgbDataGridExportOptions {

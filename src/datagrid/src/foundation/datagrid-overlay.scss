@@ -1,3 +1,8 @@
+.ngb-datagrid-floating-panel {
+  font-family: var(--ngb-font-family, inherit);
+  color: var(--dg-text);
+}
+
 /* Styles for filter panels positioned with ngbDatagridFloatingPanel (fixed; may sit outside .ngb-grid). */
 
 .ngb-datagrid-floating-panel.grid-filter-menu-popover,
@@ -244,7 +249,7 @@
 .ngb-datagrid-floating-panel .grid-filter-cancel--secondary:disabled,
 .ngb-grid .grid-filter-apply--secondary:disabled,
 .ngb-grid .grid-filter-cancel--secondary:disabled {
-  opacity: 0.45;
+  opacity: var(--ngb-disabled-opacity, 0.45);
   cursor: not-allowed;
 }
 
@@ -362,5 +367,5 @@
 .ngb-datagrid-floating-panel[data-theme='bootstrap'] .grid-filter-value-select,
 .ngb-datagrid-floating-panel[data-theme='bootstrap'] .grid-filter-menu-surface__search,
 .ngb-datagrid-floating-panel[data-theme='bootstrap'] .grid-filter-join-select__control {
-  border-radius: var(--bs-border-radius, var(--dg-radius-sm));
+  border-radius: var(--ngb-radius-md, var(--bs-border-radius, var(--dg-radius-sm)));
 }

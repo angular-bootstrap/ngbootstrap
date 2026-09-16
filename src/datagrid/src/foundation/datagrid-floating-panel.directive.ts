@@ -43,6 +43,7 @@ export class NgbDatagridFloatingPanelDirective implements OnChanges, AfterViewIn
   private portaled = false;
   private originalParent: HTMLElement | null = null;
   private originalNextSibling: Node | null = null;
+  private copiedThemeTokens: string[] = [];
 
   private scrollListeners: Array<{ target: EventTarget; handler: () => void }> = [];
   private resizeObserver: ResizeObserver | null = null;
@@ -109,6 +110,8 @@ export class NgbDatagridFloatingPanelDirective implements OnChanges, AfterViewIn
     this.renderer.removeClass(node, 'ngb-datagrid-floating-panel');
     this.renderer.removeClass(node, 'show');
     this.renderer.removeAttribute(node, 'data-theme');
+    for (const token of this.copiedThemeTokens) node.style.removeProperty(token);
+    this.copiedThemeTokens = [];
     this.panelTop = 0;
     this.panelLeft = 0;
     this.clearPositionStyles(node);
@@ -223,6 +226,18 @@ export class NgbDatagridFloatingPanelDirective implements OnChanges, AfterViewIn
       this.renderer.setAttribute(panel, 'data-theme', theme);
     } else {
       this.renderer.removeAttribute(panel, 'data-theme');
+    }
+
+    // Portaling to body loses ancestor theme variables. Copy resolved tokens,
+    // including custom overrides, so scoped themes and named presets both work.
+    if (grid) {
+      const styles = getComputedStyle(grid);
+      for (let i = 0; i < styles.length; i++) {
+        const token = styles.item(i);
+        if (!token.startsWith('--dg-') && !token.startsWith('--ngb-')) continue;
+        panel.style.setProperty(token, styles.getPropertyValue(token));
+        this.copiedThemeTokens.push(token);
+      }
     }
   }
 

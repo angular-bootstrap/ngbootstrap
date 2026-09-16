@@ -37,4 +37,19 @@ describe('NgbDatagridThemePickerComponent', () => {
     expect(emitSpy).toHaveBeenCalledWith('bootstrap-nordic');
     expect(component.open).toBe(false);
   });
+
+  it.each(NGB_DATAGRID_THEME_OPTIONS)('selects $label from the rendered dropdown', ({ label, value }) => {
+    const emitSpy = jest.spyOn(component.valueChange, 'emit');
+    fixture.nativeElement.querySelector('.ngb-datagrid-theme-picker__trigger').click();
+    fixture.detectChanges();
+    const options = Array.from(
+      fixture.nativeElement.querySelectorAll('[role="option"]')
+    ) as HTMLButtonElement[];
+    options.find(option => option.textContent?.trim() === label)!.click();
+    fixture.detectChanges();
+
+    expect(emitSpy).toHaveBeenCalledWith(value);
+    expect(fixture.nativeElement.querySelector('[role="listbox"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.ngb-datagrid-theme-picker__selected').textContent).toContain(label);
+  });
 });

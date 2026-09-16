@@ -1,0 +1,3 @@
+// Same optional drag/drop skin used by the legacy CSS entry point.
+@use "sass:meta";
+@include meta.load-css("./styles.css");

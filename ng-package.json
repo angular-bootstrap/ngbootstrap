@@ -8,7 +8,9 @@
   "assets": [
     "CHANGELOG.md",
     "RELEASE_NOTES.md",
+    "THEMING.md",
     "src/styles/**/*.scss",
-    "src/styles/**/*.css"
+    "src/styles/**/*.css",
+    "src/ai/README.md"
   ]
 }

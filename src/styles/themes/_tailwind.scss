@@ -1,0 +1,32 @@
+// Optional Tailwind v4 system-variable bridge; Tailwind itself is not required.
+@use 'bootstrap';
+[data-ngb-theme="tailwind"] {
+  @include bootstrap.tokens();
+  --ngb-select-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  --ngb-primary: var(--color-blue-600, #2563eb);
+  --ngb-on-primary: var(--color-white, #ffffff);
+  --ngb-primary-hover: var(--color-blue-700, #1d4ed8);
+  --ngb-primary-container: var(--color-blue-100, #dbeafe);
+  --ngb-surface: var(--color-white, #ffffff);
+  --ngb-surface-container: var(--color-slate-50, #f8fafc);
+  --ngb-surface-variant: var(--color-slate-100, #f1f5f9);
+  --ngb-on-surface: var(--color-slate-900, #0f172a);
+  --ngb-on-surface-variant: var(--color-slate-600, #475569);
+  --ngb-border-color: var(--color-slate-300, #cbd5e1);
+  --ngb-focus-ring: var(--color-blue-500, #3b82f6);
+  --ngb-hover-bg: var(--color-blue-50, #eff6ff);
+  --ngb-selected-bg: var(--color-blue-100, #dbeafe);
+  --ngb-font-family: var(--font-sans, system-ui, sans-serif);
+  --ngb-font-size-sm: var(--text-sm, 0.875rem);
+  --ngb-radius-sm: var(--radius-sm, 0.25rem);
+  --ngb-radius-md: var(--radius-md, 0.375rem);
+  --ngb-radius-lg: var(--radius-lg, 0.5rem);
+  --ngb-elevation-1: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.1));
+  --ngb-elevation-2: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.1));
+  --ngb-success: var(--color-green-700, #15803d);
+  --ngb-danger: var(--color-red-700, #b91c1c);
+  --ngb-space-1: var(--spacing, 0.25rem);
+  --ngb-space-2: calc(var(--spacing, 0.25rem) * 2);
+  --ngb-space-3: calc(var(--spacing, 0.25rem) * 3);
+  --ngb-space-4: calc(var(--spacing, 0.25rem) * 4);
+}

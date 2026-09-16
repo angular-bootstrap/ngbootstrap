@@ -26,6 +26,7 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
 @Component({
   selector: 'ngb-typeahead',
   standalone: true,
+  styleUrls: ['../../../styles/_controls.scss'],
   imports: [CommonModule, NgbChipsComponent],
   providers: [
     {
@@ -62,6 +63,7 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
         padding: 0;
         margin: 0;
         background: transparent;
+        color: inherit;
       }
 
       .typeahead-chips-control input:focus {

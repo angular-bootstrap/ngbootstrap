@@ -26,6 +26,7 @@ import {
 @Component({
   selector: 'ngb-pager',
   standalone: true,
+  styleUrls: ['../../../styles/_controls.scss'],
   imports: [CommonModule, FormsModule, NgbPaginationComponent],
   template: `
     <div
@@ -96,13 +97,13 @@ import {
       align-items: center;
       gap: 0.5rem 0.75rem;
       width: 100%;
-      color: var(--dg-pager-text, var(--bs-secondary-color));
+      color: var(--dg-pager-text, var(--ngb-on-surface-variant, var(--bs-secondary-color)));
     }
 
     .ngb-pager__range {
       justify-self: start;
       min-width: 0;
-      color: var(--dg-pager-text, var(--bs-secondary-color)) !important;
+      color: var(--dg-pager-text, var(--ngb-on-surface-variant, var(--bs-secondary-color))) !important;
     }
 
     .ngb-pager__pagination {
@@ -125,20 +126,20 @@ import {
       white-space: nowrap;
       font-size: 0.875rem;
       line-height: 1.25;
-      color: var(--dg-pager-text, var(--bs-secondary-color));
+      color: var(--dg-pager-text, var(--ngb-on-surface-variant, var(--bs-secondary-color)));
     }
 
     .ngb-pager__page-size-select {
       width: auto;
       min-width: 4.5rem;
       flex: 0 0 auto;
-      border-color: var(--dg-pager-control-border, var(--bs-border-color));
-      background-color: var(--dg-pager-control-bg, var(--bs-body-bg));
-      background-image: var(--dg-pager-select-icon);
+      border-color: var(--dg-pager-control-border, var(--ngb-border-color, var(--bs-border-color)));
+      background-color: var(--dg-pager-control-bg, var(--ngb-surface, var(--bs-body-bg)));
+      background-image: var(--dg-pager-select-icon, var(--ngb-select-icon, var(--bs-form-select-bg-img)));
       background-position: right 0.75rem center;
       background-repeat: no-repeat;
       background-size: 16px 12px;
-      color: var(--dg-text, var(--bs-body-color));
+      color: var(--dg-text, var(--ngb-on-surface, var(--bs-body-color)));
       padding-right: 2.25rem;
       appearance: none;
     }

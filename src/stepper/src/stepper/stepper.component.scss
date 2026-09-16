@@ -1,3 +1,5 @@
+@use '../../../styles/controls';
+
 .ngb-stepper {
   display: flex;
   flex-direction: column;
@@ -49,7 +51,7 @@
 
 .ngb-stepper-step.disabled {
   cursor: default;
-  opacity: 0.6;
+  opacity: var(--ngb-disabled-opacity, 0.6);
 }
 
 .ngb-stepper-indicator {
@@ -63,24 +65,24 @@
   flex-shrink: 0;
 }
 
-.ngb-stepper.bootstrap .ngb-stepper-indicator {
-  border: 1px solid var(--bs-border-color, #dee2e6);
-  background-color: var(--bs-body-bg, #fff);
+.ngb-stepper .ngb-stepper-indicator {
+  border: 1px solid var(--ngb-border-color, var(--bs-border-color, #dee2e6));
+  background-color: var(--ngb-surface, var(--bs-body-bg, #fff));
 }
 
-.ngb-stepper.bootstrap .ngb-stepper-step.active .ngb-stepper-indicator {
-  background-color: var(--bs-primary, #0d6efd);
-  color: #fff;
+.ngb-stepper .ngb-stepper-step.active .ngb-stepper-indicator {
+  background-color: var(--ngb-primary, var(--bs-primary, #0d6efd));
+  color: var(--ngb-on-primary, #fff);
 }
 
-.ngb-stepper.bootstrap .ngb-stepper-step.done .ngb-stepper-indicator {
-  background-color: var(--bs-success, #198754);
-  color: #fff;
+.ngb-stepper .ngb-stepper-step.done .ngb-stepper-indicator {
+  background-color: var(--ngb-success, var(--bs-success, #198754));
+  color: var(--ngb-on-success, #fff);
 }
 
-.ngb-stepper.bootstrap .ngb-stepper-step.error .ngb-stepper-indicator {
-  background-color: var(--bs-danger, #dc3545);
-  color: #fff;
+.ngb-stepper .ngb-stepper-step.error .ngb-stepper-indicator {
+  background-color: var(--ngb-danger, var(--bs-danger, #dc3545));
+  color: var(--ngb-on-danger, #fff);
 }
 
 .ngb-stepper-label-container {
@@ -115,12 +117,12 @@
 .ngb-stepper-buttons {
   display: flex;
   justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: var(--ngb-space-2, 0.5rem);
+  margin-top: var(--ngb-space-4, 1rem);
 }
 
 .ngb-stepper-error {
-  color: var(--bs-danger, #dc3545);
+  color: var(--ngb-danger, var(--bs-danger, #dc3545));
   font-size: 0.875rem;
   margin-top: 0.25rem;
 }
@@ -146,3 +148,5 @@
     transform: translateY(0);
   }
 }
+
+.ngb-stepper-step:focus-visible { outline: 2px solid var(--ngb-focus-ring, #86b7fe); outline-offset: 2px; }
