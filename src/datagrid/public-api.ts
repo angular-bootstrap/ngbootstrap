@@ -39,3 +39,7 @@ export * from './src/datagrid/directives/grid-highlight.directive';
 //service
 export * from './src/services/export.services'
 export * from './src/services/editing.service'
+
+export * from './src/views/grid-view';
+
+export * from './src/views/datagrid-views.component';

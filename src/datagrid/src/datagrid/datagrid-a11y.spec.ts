@@ -88,9 +88,11 @@ describe('Datagrid accessibility', () => {
   });
 
   it('exposes aria-rowcount and aria-colcount on the data grid', () => {
-    const grid = fixture.nativeElement.querySelector('table.grid-body[role="grid"]') as HTMLElement;
+    const grid = fixture.nativeElement.querySelector('.ngb-grid__data[role="grid"]') as HTMLElement;
     expect(grid.getAttribute('aria-rowcount')).toBe(String(component.ariaRowCount()));
     expect(grid.getAttribute('aria-colcount')).toBe(String(component.ariaColCount()));
+    expect(component.ariaRowCount()).toBe(Math.max(1, component.recordTotal()) + 1 + (component.anyFilterable ? 1 : 0));
+    expect(fixture.nativeElement.querySelector('.grid-data-row').getAttribute('aria-rowindex')).toBe(String(component.ariaDataRowIndex(0)));
   });
 
   it('sets aria-sort on sortable headers', () => {

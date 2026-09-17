@@ -11,6 +11,7 @@
     "THEMING.md",
     "src/styles/**/*.scss",
     "src/styles/**/*.css",
-    "src/ai/README.md"
+    "src/ai/README.md",
+    "SAVED_VIEWS.md"
   ]
 }

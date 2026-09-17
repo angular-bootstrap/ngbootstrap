@@ -13,21 +13,21 @@ import type { Datagrid } from '../datagrid.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (grid.showSelectionColumn()) {
-    <td
+    <td role="gridcell"
       [style.width.px]="grid.utilityColumnWidth('selection')"
       [class.column-pinned-start]="grid.shouldPinLeadingUtilityColumns()"
       [style.left.px]="grid.utilityStickyOffset('selection')"
     ></td>
     }
     @if (grid.rowDetailTpl) {
-    <td
+    <td role="gridcell"
       [style.width.px]="grid.utilityColumnWidth('detail')"
       [class.column-pinned-start]="grid.shouldPinLeadingUtilityColumns()"
       [style.left.px]="grid.utilityStickyOffset('detail')"
     ></td>
     }
     @if (grid.stickyRowsEnabled) {
-    <td
+    <td role="gridcell"
       class="text-center"
       [style.width.px]="grid.utilityColumnWidth('sticky-toggle')"
       [class.column-pinned-start]="grid.shouldPinLeadingUtilityColumns()"
@@ -36,7 +36,7 @@ import type { Datagrid } from '../datagrid.component';
     }
 
     @for (col of grid.visibleColumns; track col.field) {
-    <td
+    <td role="gridcell"
       [attr.data-title]="col.header"
       [class.column-pinned-start]="grid.columnPinnedSide(col) === 'start'"
       [class.column-pinned-end]="grid.columnPinnedSide(col) === 'end'"
@@ -149,7 +149,7 @@ import type { Datagrid } from '../datagrid.component';
     }
 
     @if (grid.showActionsColumn()) {
-    <td class="text-center grid-actions-cell" [style.width.px]="grid.utilityColumnWidth('actions')">
+    <td role="gridcell" class="text-center grid-actions-cell" [style.width.px]="grid.utilityColumnWidth('actions')">
       <div class="grid-actions-cell__inner">
         <button type="button" ngbDatagridButton="success" (click)="grid.saveAdd()" [disabled]="grid.addForm.invalid">
           Save

@@ -29,6 +29,8 @@ export interface NgbDataGridState {
   group?: NgbDataGridGroupDescriptor[];
   filter?: NgbCompositeFilterDescriptor;
   globalFilter?: string;
+  /** Summary measures included in saved views and remote data-state notifications. */
+  aggregates?: NgbDataGridAggregateDescriptor[];
 }
 
 export type NgbDataGridAggregateFunction = 'count' | 'sum' | 'average' | 'avg' | 'min' | 'max';

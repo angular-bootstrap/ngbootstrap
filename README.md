@@ -116,3 +116,9 @@ pnpm security:audit
 Build output is written to `dist/`.
 
 For provider-independent assistant controls and request lifecycle guidance, see the [AI UI reference](src/ai/README.md).
+
+## Saved views and open-source scope
+
+[Saved DataGrid views](SAVED_VIEWS.md) add named invoice/workspace layouts, Date-safe snapshots and explicit memory, local-storage or custom persistence in 2.3.0.
+
+Advanced features, themes and examples are MIT-licensed: no paid component tier, license keys, watermarks or mandatory hosted service. Applications own backend and AI-provider costs. Later roadmap capabilities are marked as planned in the saved-views guide.

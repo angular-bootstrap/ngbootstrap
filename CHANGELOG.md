@@ -1,8 +1,28 @@
 # Changelog
 
-## Unreleased
+## 2.3.0 - 2026-09-16
 
-- Updated Angular development dependencies to 22.1.7, ng-packagr to 22.1.1, and Zone.js to 0.16 to address development-dependency security advisories. Published 2.2.0 artifacts and Angular peer ranges remain unchanged.
+### Added
+
+- Versioned DataGrid snapshots, Date-safe serialization, `captureView()`, `restoreView()` and `viewChange`.
+- Standalone Views control with save, update, rename, confirmed delete, initial reset and unsaved-change feedback.
+- In-memory and opt-in local-storage adapters plus an asynchronous custom-persistence contract.
+- Schema reconciliation, width/locking constraints, active-editor protection and one consolidated remote-data event per restoration.
+
+### Fixed
+
+- Browser layout measurements now wait until after rendering in Grid column sizing, Pager and Splitter.
+- Shared grid/header semantics and row/rowgroup roles when drag/drop directives are present.
+- Sort clearing emits the unified data state; view changes include visibility, order, resizing and auto-fit changes.
+
+### Compatibility and ownership
+
+- MIT throughout; no paid tier or new runtime dependency. Angular 21/22 peers and Bootstrap defaults remain supported.
+- Views do not store rows, selection, expansion, drafts, callbacks, templates or themes. Storage is explicitly application-owned.
+- See SAVED_VIEWS.md for APIs, accessibility limitations and planned future milestones.
+
+
+- Updated Angular development dependencies to 22.1.7, ng-packagr to 22.1.1, and Zone.js to 0.16 to address development-dependency security advisories. These tooling fixes are included in this release; Angular peer ranges remain unchanged.
 
 ## 2.2.0 - 2026-09-16
 

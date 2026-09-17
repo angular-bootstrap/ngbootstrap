@@ -1,4 +1,6 @@
 import {
+  afterNextRender,
+  signal,
   AfterContentInit,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -165,8 +167,10 @@ export class NgbSplitterComponent {
   private isDragging = false;
   private currentHandleIndex = -1;
 
-  constructor(private el: ElementRef){
+  private readonly layoutReady = signal(false);
 
+  constructor(private el: ElementRef){
+    afterNextRender(() => this.layoutReady.set(true));
   }
 
 // Listeners for global mouse movement
@@ -301,6 +305,7 @@ export class NgbSplitterComponent {
   }
 
   getHandleValueNow(index: number): number | null {
+    if (!this.layoutReady()) return null;
     const container = this.el.nativeElement.querySelector('.splitter-container');
     const rect = container.getBoundingClientRect();
     const paneWrappers = Array.from(this.el.nativeElement.querySelectorAll('.pane-wrapper')) as HTMLElement[];
@@ -317,6 +322,7 @@ export class NgbSplitterComponent {
   }
 
   getHandleValueMin(index: number): number | null {
+    if (!this.layoutReady()) return null;
     const pane = this.panes?.toArray?.()[index];
     const container = this.el.nativeElement.querySelector('.splitter-container');
     const rect = container.getBoundingClientRect();
@@ -328,6 +334,7 @@ export class NgbSplitterComponent {
   }
 
   getHandleValueMax(index: number): number | null {
+    if (!this.layoutReady()) return null;
     const pane = this.panes?.toArray?.()[index];
     const container = this.el.nativeElement.querySelector('.splitter-container');
     const rect = container.getBoundingClientRect();

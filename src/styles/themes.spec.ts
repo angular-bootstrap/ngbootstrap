@@ -61,3 +61,14 @@ describe('optional Tailwind preset packaging', () => {
     }
   });
 });
+
+describe('saved view control theme coverage', () => {
+  it('uses only public tokens supplied by every supported theme', () => {
+    const fs = require('fs');
+    const source = fs.readFileSync(path.join(__dirname, '../datagrid/src/views/datagrid-views.component.ts'), 'utf8');
+    const tokens = [...new Set<string>(source.match(/--ngb-[a-z-]+/g) ?? [])];
+    for (const value of [...NGB_DATAGRID_THEME_OPTIONS.map(p => p.value), 'material', 'tailwind']) {
+      for (const token of tokens) expect(theme(value)).toHaveProperty(token);
+    }
+  });
+});

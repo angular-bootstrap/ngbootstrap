@@ -36,7 +36,9 @@ export class NgbDndItemDirective<T = unknown> {
   @HostBinding('class.ngb-dnd-item') hostClass = true;
   @HostBinding('class.ngb-dnd-dragging') dragging = false;
   @HostBinding('attr.aria-grabbed') get ariaGrabbed() { return this.dragging ? 'true' : 'false'; }
-  @HostBinding('attr.role') role = 'listitem';
+  @Input() dndRole = 'listitem';
+  @HostBinding('attr.role') get role() { return this.dndRole; }
+  set role(value: string) { this.dndRole = value; }
   @HostBinding('attr.tabindex') tabIndex = 0;                 // keyboard focusable
 
   private sessionId: string | null = null;

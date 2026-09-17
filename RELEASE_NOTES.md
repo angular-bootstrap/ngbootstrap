@@ -1,44 +1,18 @@
-# @angular-bootstrap/ngbootstrap 2.2.0
+# @angular-bootstrap/ngbootstrap 2.3.0
 
-This minor release adds provider-independent AI UI components and a shared
-CSS-token theme layer for Angular applications using Bootstrap 5.
+Saved DataGrid views for data-heavy Angular applications, free and open source under MIT.
 
-## Added
+- Save and restore sorting, nested Date filters, search, groups/aggregates, page size and column layout.
+- Use the standalone Views control for named layouts, explicit saving, rename, confirmed deletion and reset.
+- Choose memory-only, opt-in local storage, or an application-owned async persistence adapter.
+- Restore on page one with one remote-data notification; reject active edits and invalid snapshots before applying state.
+- Reconcile removed/new columns while honoring current width, reordering and locking constraints.
+- Defer Grid, Pager and Splitter layout measurements until browser rendering; preserve row semantics with drag/drop.
+- Include development dependency security fixes from the post-2.2.0 maintenance work.
 
-- Prompt Box, AI Chat, Inline AI Prompt, AI Prompt workspace, and Smart Paste,
-  exported from the package root with typed messages and events.
-- Original task, conversation, contextual editing, draft-review, and field-review
-  workflows. Applications own model requests, streaming, cancellation, and storage.
-- Shared `--ngb-*` tokens, Bootstrap defaults, Material/Tailwind variable bridges,
-  palette presets, and optional Tailwind v4 utility integration.
+No new runtime dependencies. Angular 21/22 and Bootstrap default appearance remain supported.
+Advanced features, themes and examples stay MIT-licensed. No paid component tier, keys, watermarks or mandatory hosted service.
+Applications own backend/AI-provider costs, persistence authorization and retention.
 
-## Improved
-
-- DataGrid theme selection, token consumption, swatches, and portaled filter menus.
-- Shared theming across pager/pagination, stepper, splitter, tree, typeahead,
-  chips, drag/drop styling, and JSON preview.
-- AI keyboard instructions, stable Send/Stop controls, read-only busy inputs,
-  expanded-panel relationships, focus restoration, live announcements, and
-  keyboard-focusable draft review.
-- Package validation for AI exports and theme assets; patched transitive tooling
-  dependencies and synchronized optional-peer lockfile metadata.
-
-## Validation and limits
-
-- 414 library tests, including 42 AI tests; lint, package build, and package checks.
-- Tarball consumer template compilation on Angular 21 and Angular 22.
-- Browser keyboard checks and desktop/mobile theme checks.
-- Audit passes the high-severity threshold. Three moderate advisories remain in
-  the Angular 22.0.8 development dependencies; Angular is a consumer peer, not
-  bundled into the library runtime.
-- Manual VoiceOver/NVDA testing has not been performed. Accessibility support is
-  not a WCAG certification.
-
-## Compatibility
-
-Bootstrap remains the default. Angular peers remain `>=21.0.0 <23.0.0`.
-Angular Material and AI provider SDKs are not dependencies. Tailwind is optional.
-AI responses render plain text; Markdown, attachments, voice, AI Grid features,
-and WebMCP are not included.
-
-See `THEMING.md` and `src/ai/README.md` for setup and behavior details.
+See [SAVED_VIEWS.md](SAVED_VIEWS.md) for installation, APIs, persistence and accessibility limitations.
+Spreadsheet editing, virtualization, pivot, CSV import and the reusable Form Builder engine are later planned milestones, not part of 2.3.0.

@@ -1711,3 +1711,9 @@ body.ngb-datagrid-column-resizing {
 .ngb-grid .grid-footer--custom {
   width: 100%;
 }
+
+// Compact icon actions retain a usable minimum pointer target.
+.ngb-grid :is(.ngb-grid__group-chip-remove, .grid-filter-operator__button, .grid-filter-clear, .grid-group-row__toggle) {
+  min-width: 24px;
+  min-height: 24px;
+}

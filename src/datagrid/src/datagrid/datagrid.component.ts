@@ -1,4 +1,5 @@
-import { Component, Input, EventEmitter, Output, inject, AfterContentInit, ContentChildren, QueryList, OnChanges, SimpleChanges, TemplateRef, ElementRef, ViewChild, ChangeDetectorRef, HostListener, ViewEncapsulation, forwardRef } from '@angular/core';
+import { NgbDataGridColumnView, NgbDataGridViewSnapshot, NgbDataGridViewRestoreResult, ngbCloneGridView } from '../views/grid-view';
+import { afterNextRender, signal, Component, Input, EventEmitter, Output, inject, AfterContentInit, ContentChildren, QueryList, OnChanges, SimpleChanges, TemplateRef, ElementRef, ViewChild, ChangeDetectorRef, HostListener, ViewEncapsulation, forwardRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ColumnDef, ColumnType } from '../models/column-def';
 import {
@@ -245,6 +246,9 @@ const isReasonableEmail = (value: unknown): boolean => {
   standalone:true
 })
 export class Datagrid<T = any> implements AfterContentInit, OnChanges {
+  private readonly browserLayoutReady = signal(false);
+  private readonly layoutReadyRef = afterNextRender(() => { this.browserLayoutReady.set(true); this.scheduleStickyGroupSync(); });
+
   /** Column definitions to render */
   private _columns: ColumnDef<T>[] = [];
   renderTick = 0;
@@ -405,6 +409,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
    * Optional controlled data-operation state. When provided, the grid syncs page, pageSize,
    * sort, filter, and global filter from this object.
    */
+  private viewAggregates?: NgbDataGridAggregateDescriptor[];
   private _state: NgbDataGridState | null = null;
   @Input()
   get state(): NgbDataGridState | null {
@@ -658,6 +663,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   @Output() filterChange = new EventEmitter<NgbCompositeFilterDescriptor>();
   @Output() filtersChange = new EventEmitter<{ global: string; columns: Record<string, string> }>();
   @Output() pageChange = new EventEmitter<{ page: number; pageSize: number }>();
+  @Output() viewChange = new EventEmitter<NgbDataGridViewSnapshot>();
   @Output() dataStateChange = new EventEmitter<NgbDataGridState>();
   @Output() selectionChange = new EventEmitter<{ selected: T[]; lastAction: { row: T; index: number; selected: boolean } | null }>();
   @Output() rowReorder = new EventEmitter<{ row: T; fromIndex: number; toIndex: number; data: T[] }>();
@@ -771,6 +777,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   private readonly defaultEditService = new NgbDatagridDefaultEditService<T>();
   private cdr = inject(ChangeDetectorRef);
+  private readonly columnViewDefaults = new WeakMap<ColumnDef<T>, NgbDataGridColumnView>();
   private resolvedColumnsCache: ColumnDef<T>[] = [];
   private visibleColumnsCache: ColumnDef<T>[] = [];
   private filteredCache: T[] = [];
@@ -947,6 +954,9 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
         this.resolvedColumnsCache = declarative;
       } else {
         this.resolvedColumnsCache = this.columns ?? [];
+      }
+      for (const col of this.resolvedColumnsCache) {
+        if (!this.columnViewDefaults.has(col)) this.columnViewDefaults.set(col, { field: String(col.field), hidden: !!col.hidden, width: col.width ?? 0, sticky: col.sticky ?? false, locked: !!col.locked });
       }
       this.resolvedColumnsDirty = false;
     }
@@ -1425,6 +1435,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
     this.columnOrder = order;
     this.visibleColumnsDirty = true;
+    this.emitViewChange();
     const column = this.resolvedColumns.find((col) => col.field === movingField);
     const toIndexResolved = order.indexOf(movingField);
     if (emit && column) {
@@ -2173,7 +2184,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       this.setFilterFormField(
         field,
         descriptor?.operator ?? preservedOperator,
-        descriptor?.value ?? ''
+        descriptor?.value instanceof Date ? descriptor.value.toISOString().slice(0, 10) : descriptor?.value ?? ''
       );
     });
   }
@@ -2682,6 +2693,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     return ngbApplyDataGridOperations(this.data, {
       ...options,
       state: this.dataState(),
+      aggregates: this.viewAggregates ?? options.aggregates,
       groupedData: options.groupedData ?? this.groupedData,
       columns: options.columns ?? this.resolvedColumns,
       globalFilterFields: options.globalFilterFields ?? this.resolvedColumns.map((column) => column.field as string),
@@ -2916,15 +2928,96 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       group: [...this.group],
       filter: this.cloneComposite(this.effectiveFilterDescriptor()),
       globalFilter: this.currentGlobalFilterValue(),
+      ...(this.viewAggregates !== undefined ? { aggregates: this.cloneAggregateDescriptors(this.viewAggregates) } : typeof this.dataOperations === 'object' && this.dataOperations.aggregates ? { aggregates: this.cloneAggregateDescriptors(this.dataOperations.aggregates) } : {}),
     };
+  }
+
+  /** Capture configuration only: no records, callbacks, selection, or editor drafts. */
+  captureView(): NgbDataGridViewSnapshot {
+    const state = this.dataState();
+    const columns = this.resolvedColumns;
+    const order = [...this.columnOrder, ...columns.map(col => String(col.field))];
+    const byField = new Map(columns.map(col => [String(col.field), col]));
+    return ngbCloneGridView({
+      version: 1,
+      state: { pageSize: this.pageSize, sort: state.sort ?? [], filter: state.filter ?? { logic: 'and', filters: [] }, globalFilter: state.globalFilter ?? '', group: state.group ?? [], aggregates: state.aggregates ?? [] },
+      columns: [...new Set(order)].filter(field => byField.has(field)).map(field => {
+        const col = byField.get(field)!;
+        return { field, hidden: !!col.hidden, width: this.columnWidth(col), sticky: col.sticky ?? false, locked: !!col.locked };
+      }),
+    });
+  }
+
+  restoreView(snapshot: unknown): NgbDataGridViewRestoreResult {
+    if (this.addingNew || this.editingIndex !== null || this.editingCell || this.externalEditOpen) {
+      return { success: false, reason: 'editing', message: 'Save or cancel the active edit before changing views.' };
+    }
+    let view: NgbDataGridViewSnapshot;
+    try { view = ngbCloneGridView(snapshot as NgbDataGridViewSnapshot); }
+    catch { return { success: false, reason: 'invalid-snapshot', message: 'This saved view is invalid or uses an unsupported version.' }; }
+    const columns = this.resolvedColumns;
+    const fields = new Set(columns.map(col => String(col.field)));
+    const ignored = new Set<string>();
+    const exists = (field: string) => { if (!fields.has(field)) { ignored.add(field); return false; } return true; };
+    const filter = (root: NgbCompositeFilterDescriptor): NgbCompositeFilterDescriptor => ({
+      logic: root.logic,
+      filters: root.filters.reduce<NgbCompositeFilterDescriptor['filters']>((items, item) => {
+        if (ngbIsCompositeFilter(item)) { const child = filter(item); if (child.filters.length) items.push(child); }
+        else if (exists(item.field)) items.push(item);
+        return items;
+      }, []),
+    });
+    const state: NgbDataGridState = {
+      ...view.state, page: 1, pageIndex: 0, skip: 0,
+      sort: view.state.sort!.filter(item => exists(item.field)),
+      aggregates: (view.state.aggregates ?? []).filter(item => exists(item.field)),
+      filter: filter(view.state.filter!),
+      group: view.state.group!.filter(item => exists(item.field)).map(item => ({ ...item, ...(item.aggregates ? { aggregates: item.aggregates.filter(aggregate => exists(aggregate.field)) } : {}) })),
+    };
+    const saved = new Map(view.columns.filter(col => exists(col.field)).map(col => [col.field, col]));
+    const preferred = [...saved.keys(), ...columns.map(col => String(col.field)).filter(field => !saved.has(field))];
+    // Locked/non-reorderable columns retain their configured positions.
+    const movable = preferred.filter(field => { const col = columns.find(col => col.field === field)!; return !col.locked && col.reorderable !== false; });
+    let cursor = 0;
+    this.columnOrder = columns.map(col => col.locked || col.reorderable === false ? String(col.field) : movable[cursor++]);
+    for (const col of columns) {
+      const item = saved.get(String(col.field)) ?? this.columnViewDefaults.get(col);
+      if (!item || col.locked) continue;
+      col.hidden = item.hidden;
+      col.sticky = item.sticky;
+      if (col.resizable !== false) {
+        if (item.width > 0) this.columnWidthOverrides[String(col.field)] = this.clampColumnWidth(col, item.width);
+        else delete this.columnWidthOverrides[String(col.field)];
+      }
+    }
+    this.visibleColumnsDirty = true;
+    this.stackedColumnsCache.clear();
+    this.stackedCardGroupsCache = null;
+    // The restored descriptor becomes local state; a later bound input update still wins.
+    this._filter = null;
+    this.viewAggregates = state.aggregates;
+    this.syncFromDataState(state);
+    this.cdr.markForCheck();
+    this.emitDataStateChange();
+    return { success: true, ignoredFields: [...ignored] };
+  }
+
+  private emitViewChange(): void {
+    // Header and row components use OnPush and share this grid instance.
+    this.renderTick++;
+    if (!this.viewChange.observed) return;
+    try { this.viewChange.emit(this.captureView()); }
+    catch { /* Unsupported custom filter values are reported when explicitly saving. */ }
   }
 
   private emitDataStateChange(): void {
     this.dataStateChange.emit(this.dataState());
+    this.emitViewChange();
   }
 
   private syncFromDataState(state: NgbDataGridState | null | undefined): void {
     if (!state) return;
+    if (state.aggregates !== undefined) this.viewAggregates = this.cloneAggregateDescriptors(state.aggregates);
 
     const pageSize = Number(state.pageSize);
     if (Number.isFinite(pageSize) && pageSize > 0) {
@@ -2989,6 +3082,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   private scheduleStickyGroupSync(): void {
+    if (!this.browserLayoutReady()) return;
     if (!this.showStickyGroupHeaders() && !this.showStickyGroupFooters()) {
       if (
         this.stickyGroupHeaderRows.length ||
@@ -3195,7 +3289,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     if (!host) return false;
     const inheritedDir = host.closest('[dir]')?.getAttribute('dir') ?? host.getAttribute('dir');
     if (inheritedDir) return inheritedDir.toLowerCase() === 'rtl';
-    return getComputedStyle(host).direction === 'rtl';
+    return this.browserLayoutReady() && typeof getComputedStyle === 'function' && getComputedStyle(host).direction === 'rtl';
   }
 
   hasPinnedColumns(): boolean {
@@ -3573,6 +3667,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     if (!this.resizeSession) return;
     this.resizeSession = null;
     document.body.classList.remove('ngb-datagrid-column-resizing');
+    this.emitViewChange();
     this.syncResizableColgroups();
     this.cdr.markForCheck();
   }
@@ -3616,6 +3711,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       this.columnWidthOverrides[col.field as string] = next[index];
     });
     this.syncResizableColgroups();
+    this.emitViewChange();
     this.cdr.markForCheck();
   }
 
@@ -3775,6 +3871,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.page = 1;
     if (emit) {
       this.sortChange.emit({ active: null, direction: '' });
+      this.emitDataStateChange();
     }
     this.cdr.markForCheck();
   }
@@ -3784,8 +3881,12 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     if (!col) return;
     col.hidden = hidden;
     if (!this.declarativeColumns.length) {
-      this.columns = [...this.columns];
+      this._columns = [...this.columns];
     }
+    this.visibleColumnsDirty = true;
+    this.stackedColumnsCache.clear();
+    this.stackedCardGroupsCache = null;
+    this.emitViewChange();
     this.cdr.markForCheck();
   }
 
@@ -3797,8 +3898,12 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       }
     }
     if (!this.declarativeColumns.length) {
-      this.columns = [...this.columns];
+      this._columns = [...this.columns];
     }
+    this.visibleColumnsDirty = true;
+    this.stackedColumnsCache.clear();
+    this.stackedCardGroupsCache = null;
+    this.emitViewChange();
     this.cdr.markForCheck();
   }
 
@@ -3951,7 +4056,14 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   ariaRowCount(): number {
-    return this.recordTotal();
+    // Group/detail rows make the complete remote row count unknowable.
+    if (this.isGroupingActive() || this.rowDetailTpl || this.addingNew) return -1;
+    return Math.max(1, this.recordTotal()) + 1 + (this.anyFilterable ? 1 : 0);
+  }
+
+  ariaDataRowIndex(index: number): number | null {
+    if (this.isGroupingActive() || this.rowDetailTpl || this.addingNew) return null;
+    return (this.paginationActive ? (this.page - 1) * this.pageSize : 0) + index + 2 + (this.anyFilterable ? 1 : 0);
   }
 
   ariaColCount(): number {

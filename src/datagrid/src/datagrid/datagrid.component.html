@@ -77,6 +77,9 @@
   }
 
   <div class="table-wrapper" [ngClass]="responsiveWrapperClasses">
+    <div class="ngb-grid__data" role="grid" [attr.aria-rowcount]="ariaRowCount()" [attr.aria-colcount]="ariaColCount()"
+    [attr.aria-readonly]="enableEdit || enableAdd ? 'false' : 'true'"
+    [attr.aria-label]="tableOptions?.caption || 'Data grid'">
     @if (loading) {
     <div class="ngb-grid__loading-overlay" role="presentation">
       <div class="spinner-border spinner-border-sm text-primary" role="status">
@@ -85,7 +88,7 @@
     </div>
     }
     <div class="grid-header-shell" #headerScroller>
-    <table class="grid-table grid-header mb-0" [ngClass]="tableClassList" [style.width.px]="tablePixelWidth">
+    <table role="presentation" class="grid-table grid-header mb-0" [ngClass]="tableClassList" [style.width.px]="tablePixelWidth">
       @if (tableOptions?.caption) {
       <caption
         [class.caption-top]="(tableOptions?.captionSide ?? 'top') === 'top'"
@@ -102,7 +105,7 @@
         [syncMode]="resizable ? 'explicit' : 'auto'"
       ></colgroup>
 
-      <thead
+      <thead role="rowgroup"
         class="table-light"
         ngbDatagridHeader
         [grid]="gridHost"
@@ -130,15 +133,15 @@
             </colgroup>
             <tbody>
               @for (item of stickyGroupHeaderRows; track item.key) {
-                <tr class="grid-group-row grid-group-row--overlay">
+                <tr role="row" class="grid-group-row grid-group-row--overlay">
                   @if (showSelectionColumn()) {
-                    <td class="grid-group-row__utility-cell"></td>
+                    <td role="gridcell" class="grid-group-row__utility-cell"></td>
                   }
                   @if (rowDetailTpl) {
-                    <td class="grid-group-row__utility-cell"></td>
+                    <td role="gridcell" class="grid-group-row__utility-cell"></td>
                   }
                   @if (stickyRowsEnabled) {
-                    <td class="grid-group-row__utility-cell"></td>
+                    <td role="gridcell" class="grid-group-row__utility-cell"></td>
                   }
                   @for (col of visibleColumns; track col.field) {
                     @if (shouldRenderGroupCell(col, item.group)) {
@@ -191,7 +194,7 @@
                     }
                   }
                   @if (showActionsColumn()) {
-                    <td class="grid-group-row__utility-cell"></td>
+                    <td role="gridcell" class="grid-group-row__utility-cell"></td>
                   }
                 </tr>
               }
@@ -204,11 +207,7 @@
         class="grid-table grid-body grid-body--main mb-0"
         [ngClass]="tableClassList"
         [style.width.px]="tablePixelWidth"
-        role="grid"
-        [attr.aria-rowcount]="ariaRowCount()"
-        [attr.aria-colcount]="ariaColCount()"
-        [attr.aria-readonly]="enableEdit || enableAdd ? 'false' : 'true'"
-        [attr.aria-label]="tableOptions?.caption || null"
+        role="presentation"
       >
         <colgroup
           ngbDatagridColgroup
@@ -219,20 +218,21 @@
         ></colgroup>
 
         <tbody
+          dndRole="rowgroup"
           [ngbDndList]="paged"
           [dndDisabled]="!isRowReorderEnabled()"
           (dndDropped)="onRowDrop($event)"
         >
           @if (!hasRenderableRows()) {
-          <tr class="ngb-grid__empty-row">
-            <td [attr.colspan]="ariaColCount()" class="ngb-grid__empty text-center text-muted py-4">
+          <tr role="row" class="ngb-grid__empty-row">
+            <td role="gridcell" [attr.colspan]="ariaColCount()" class="ngb-grid__empty text-center text-muted py-4">
               {{ emptyStateLabel() }}
             </td>
           </tr>
           }
 
           @if (addingNew) {
-          <tr
+          <tr role="row"
             ngbDatagridAddRow
             [grid]="gridHost"
             [formGroup]="addForm"
@@ -241,19 +241,19 @@
 
           @for (item of renderRows; track item.key) {
             @if (item.kind === 'group') {
-              <tr
+              <tr role="row"
                 class="grid-group-row"
                 [attr.data-group-key]="item.key"
                 [attr.data-group-level]="item.level"
               >
                 @if (showSelectionColumn()) {
-                  <td class="grid-group-row__utility-cell"></td>
+                  <td role="gridcell" class="grid-group-row__utility-cell"></td>
                 }
                 @if (rowDetailTpl) {
-                  <td class="grid-group-row__utility-cell"></td>
+                  <td role="gridcell" class="grid-group-row__utility-cell"></td>
                 }
                 @if (stickyRowsEnabled) {
-                  <td class="grid-group-row__utility-cell"></td>
+                  <td role="gridcell" class="grid-group-row__utility-cell"></td>
                 }
                 @for (col of visibleColumns; track col.field) {
                   @if (shouldRenderGroupCell(col, item.group)) {
@@ -306,26 +306,26 @@
                   }
                 }
                 @if (showActionsColumn()) {
-                  <td class="grid-group-row__utility-cell"></td>
+                  <td role="gridcell" class="grid-group-row__utility-cell"></td>
                 }
               </tr>
             } @else if (item.kind === 'group-footer') {
-              <tr
+              <tr role="row"
                 class="grid-group-footer-row"
                 [attr.data-group-key]="item.key"
                 [attr.data-group-level]="item.level"
               >
                 @if (showSelectionColumn()) {
-                  <td class="grid-group-row__utility-cell"></td>
+                  <td role="gridcell" class="grid-group-row__utility-cell"></td>
                 }
                 @if (rowDetailTpl) {
-                  <td class="grid-group-row__utility-cell"></td>
+                  <td role="gridcell" class="grid-group-row__utility-cell"></td>
                 }
                 @if (stickyRowsEnabled) {
-                  <td class="grid-group-row__utility-cell"></td>
+                  <td role="gridcell" class="grid-group-row__utility-cell"></td>
                 }
                 @for (col of visibleColumns; track col.field) {
-                  <td class="grid-group-footer-row__cell">
+                  <td role="gridcell" class="grid-group-footer-row__cell">
                     @if (groupFooterTemplate(groupColumnField(col)); as tpl) {
                       <div class="grid-group-row__column-slot">
                         <ng-container
@@ -337,13 +337,15 @@
                   </td>
                 }
                 @if (showActionsColumn()) {
-                  <td class="grid-group-row__utility-cell"></td>
+                  <td role="gridcell" class="grid-group-row__utility-cell"></td>
                 }
               </tr>
             } @else {
-              <tr
+              <tr role="row"
                 class="grid-data-row"
                 ngbDatagridDataRow
+                dndRole="row"
+                [attr.aria-rowindex]="ariaDataRowIndex(item.pagedIndex)"
                 [grid]="gridHost"
                 [renderTick]="renderTick"
                 [row]="item.row"
@@ -366,7 +368,7 @@
               ></tr>
 
               @if (rowDetailTpl && isExpanded(item.pagedIndex)) {
-              <tr
+              <tr role="row"
                 ngbDatagridDetailRow
                 [grid]="gridHost"
                 [row]="item.row"
@@ -397,18 +399,18 @@
             </colgroup>
             <tbody>
               @for (item of stickyGroupFooterRows; track item.key) {
-                <tr class="grid-group-footer-row grid-group-footer-row--overlay">
+                <tr role="row" class="grid-group-footer-row grid-group-footer-row--overlay">
                   @if (showSelectionColumn()) {
-                    <td class="grid-group-row__utility-cell"></td>
+                    <td role="gridcell" class="grid-group-row__utility-cell"></td>
                   }
                   @if (rowDetailTpl) {
-                    <td class="grid-group-row__utility-cell"></td>
+                    <td role="gridcell" class="grid-group-row__utility-cell"></td>
                   }
                   @if (stickyRowsEnabled) {
-                    <td class="grid-group-row__utility-cell"></td>
+                    <td role="gridcell" class="grid-group-row__utility-cell"></td>
                   }
                   @for (col of visibleColumns; track col.field) {
-                    <td class="grid-group-footer-row__cell">
+                    <td role="gridcell" class="grid-group-footer-row__cell">
                       @if (groupFooterTemplate(groupColumnField(col)); as tpl) {
                         <div class="grid-group-row__column-slot">
                           <ng-container
@@ -420,7 +422,7 @@
                     </td>
                   }
                   @if (showActionsColumn()) {
-                    <td class="grid-group-row__utility-cell"></td>
+                    <td role="gridcell" class="grid-group-row__utility-cell"></td>
                   }
                 </tr>
               }
@@ -430,7 +432,8 @@
       }
     </div>
 
-    <table class="table grid-table grid-foot mb-0" [style.width.px]="tablePixelWidth">
+    </div>
+    <table role="presentation" class="table grid-table grid-foot mb-0" [style.width.px]="tablePixelWidth">
       <colgroup>
         @for (col of visibleColumns; track col.field) {
           <col [style.width.px]="col?.width" />

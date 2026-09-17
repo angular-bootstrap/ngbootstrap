@@ -59,10 +59,10 @@ const bundle = await import(pathToFileURL(join(distDir, distPkg.module)).href);
 assert(typeof bundle.Datagrid === 'function', 'Built package must export Datagrid.');
 assert(typeof bundle.NgbGridHighlightDirective === 'function', 'Built package must export NgbGridHighlightDirective.');
 
-for (const name of ['NgbPromptBoxComponent', 'NgbAiChatComponent', 'NgbAiPromptComponent', 'NgbInlineAiPromptComponent', 'NgbSmartPasteComponent']) {
+for (const name of ['NgbDataGridViewsComponent', 'NgbMemoryGridViewStore', 'NgbLocalStorageGridViewStore', 'ngbSerializeGridView', 'ngbDeserializeGridView', 'NgbPromptBoxComponent', 'NgbAiChatComponent', 'NgbAiPromptComponent', 'NgbInlineAiPromptComponent', 'NgbSmartPasteComponent']) {
   assert(typeof bundle[name] === 'function', `Built package must export ${name}.`);
 }
-for (const asset of ['THEMING.md', 'src/ai/README.md', 'src/styles/themes.scss', 'src/styles/_tokens.scss', 'src/styles/integrations/tailwind.css']) {
+for (const asset of ['SAVED_VIEWS.md', 'THEMING.md', 'src/ai/README.md', 'src/styles/themes.scss', 'src/styles/_tokens.scss', 'src/styles/integrations/tailwind.css']) {
   assert(existsSync(join(distDir, asset)), `Missing packaged asset: ${asset}`);
 }
 assert(distPkg.exports?.['./styles/tailwind.css'] === './src/styles/integrations/tailwind.css', 'Tailwind utility export must resolve to the shipped stylesheet.');

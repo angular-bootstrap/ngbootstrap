@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import {
-  AfterViewInit,
+  afterNextRender,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
@@ -69,11 +69,9 @@ import {
           [class.ngb-pager__part--hidden]="!showPageSizes"
           [attr.aria-hidden]="showPageSizes ? null : true"
         >
-          <label class="ngb-pager__page-size-label" [attr.for]="pageSizeSelectId">
+          <label class="ngb-pager__page-size-label" >
             {{ rowsPerPageLabel }}
-          </label>
           <select
-            [id]="pageSizeSelectId"
             class="form-select form-select-sm ngb-pager__page-size-select"
             [ngModel]="pageSize"
             (ngModelChange)="onPageSizeChange($event)"
@@ -84,6 +82,7 @@ import {
               <option [ngValue]="s">{{ s }}</option>
             }
           </select>
+          </label>
         </div>
       } @else {
         <div class="ngb-pager__page-size ngb-pager__part--sizes ngb-pager__part--spacer" aria-hidden="true"></div>
@@ -178,7 +177,7 @@ import {
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class NgbPagerComponent implements AfterViewInit, OnDestroy {
+export class NgbPagerComponent implements OnDestroy {
   private static nextId = 0;
 
   private readonly uid = NgbPagerComponent.nextId++;
@@ -205,7 +204,7 @@ export class NgbPagerComponent implements AfterViewInit, OnDestroy {
   @Output() pageChange = new EventEmitter<number>();
   @Output() pageSizeChange = new EventEmitter<number>();
 
-  constructor(private readonly cdr: ChangeDetectorRef) {}
+  constructor(private readonly cdr: ChangeDetectorRef) { afterNextRender(() => this.observeWidth()); }
 
   get resolved(): NgbPagerSettings {
     return ngbResolvePagerSettings(this.settings) ?? ngbResolvePagerSettings(true)!;
@@ -257,10 +256,6 @@ export class NgbPagerComponent implements AfterViewInit, OnDestroy {
     const start = total ? (this.page - 1) * this.pageSize + 1 : 0;
     const end = Math.min(this.page * this.pageSize, total);
     return ngbFormatPagerRangeLabel(start, end, total, this.rangeLabelTemplate);
-  }
-
-  ngAfterViewInit(): void {
-    this.observeWidth();
   }
 
   ngOnDestroy(): void {

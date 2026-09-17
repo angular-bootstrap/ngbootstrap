@@ -19,9 +19,9 @@ import type { Datagrid } from '../datagrid.component';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <tr>
+    <tr role="row" aria-rowindex="1">
       @if (grid.showSelectionColumn()) {
-      <th
+      <th role="columnheader"
         class="text-center"
         scope="col"
         [style.width.px]="grid.utilityColumnWidth('selection')"
@@ -40,7 +40,7 @@ import type { Datagrid } from '../datagrid.component';
       </th>
       }
       @if (grid.rowDetailTpl) {
-      <th
+      <th role="columnheader"
         [style.width.px]="grid.utilityColumnWidth('detail')"
         scope="col"
         aria-hidden="true"
@@ -49,7 +49,7 @@ import type { Datagrid } from '../datagrid.component';
       ></th>
       }
       @if (grid.stickyRowsEnabled) {
-      <th
+      <th role="columnheader"
         [style.width.px]="grid.utilityColumnWidth('sticky-toggle')"
         scope="col"
         class="text-center"
@@ -59,7 +59,7 @@ import type { Datagrid } from '../datagrid.component';
       ></th>
       }
       @for (col of grid.visibleColumns; track col.field; let ci = $index) {
-      <th
+      <th role="columnheader"
         [attr.data-title]="col.header"
         [class.sortable]="grid.enableSorting && col.sortable"
         [class.filter-menu-active]="grid.hasActiveColumnFilter(col.field)"
@@ -171,7 +171,7 @@ import type { Datagrid } from '../datagrid.component';
       </th>
       }
       @if (grid.showActionsColumn()) {
-      <th
+      <th role="columnheader"
         class="text-center"
         scope="col"
         [style.width.px]="grid.utilityColumnWidth('actions')"
@@ -182,12 +182,12 @@ import type { Datagrid } from '../datagrid.component';
     </tr>
 
     @if (grid.anyFilterable) {
-    <tr class="filter-row" [formGroup]="grid.filterForm">
-      @if (grid.showSelectionColumn()) { <th></th> }
-      @if (grid.rowDetailTpl) { <th></th> }
-      @if (grid.stickyRowsEnabled) { <th></th> }
+    <tr role="row" aria-rowindex="2" class="filter-row" [formGroup]="grid.filterForm">
+      @if (grid.showSelectionColumn()) { <th role="columnheader"></th> }
+      @if (grid.rowDetailTpl) { <th role="columnheader"></th> }
+      @if (grid.stickyRowsEnabled) { <th role="columnheader"></th> }
       @for (col of grid.visibleColumns; track col.field) {
-      <th
+      <th role="columnheader"
         [attr.data-title]="col.header"
         [class.column-pinned-start]="grid.columnPinnedSide(col) === 'start'"
         [class.column-pinned-end]="grid.columnPinnedSide(col) === 'end'"
@@ -292,7 +292,7 @@ import type { Datagrid } from '../datagrid.component';
         }
       </th>
       }
-      @if (grid.showActionsColumn()) { <th></th> }
+      @if (grid.showActionsColumn()) { <th role="columnheader"></th> }
     </tr>
     }
   `

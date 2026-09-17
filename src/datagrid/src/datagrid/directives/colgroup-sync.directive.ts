@@ -1,4 +1,4 @@
-import { AfterViewInit, Directive, ElementRef, HostListener, Input, OnDestroy, inject } from '@angular/core';
+import { afterNextRender, Directive, ElementRef, HostListener, Input, OnDestroy, inject } from '@angular/core';
 import { NgbDndState } from '../../../../drag-drop/src/service/drag-state.service';
 
 const MIN_WIDTH = 40;
@@ -20,7 +20,7 @@ interface SyncEntry {
   selector: '[ngbSyncColgroup]',
   standalone: true
 })
-export class NgbSyncColgroupDirective implements AfterViewInit, OnDestroy {
+export class NgbSyncColgroupDirective implements OnDestroy {
   @Input('ngbSyncColgroup') syncId!: string;
   @Input() syncRole: SyncRole = 'header';
   /** `explicit` copies header <col> widths without remeasuring cell content (use with column resizing). */
@@ -32,14 +32,14 @@ export class NgbSyncColgroupDirective implements AfterViewInit, OnDestroy {
   private rafId: number | null = null;
   private dndState = inject(NgbDndState, { optional: true });
 
-  constructor(private el: ElementRef<HTMLElement>) {}
+  constructor(private el: ElementRef<HTMLElement>) { afterNextRender(() => this.initialize()); }
 
   static syncExplicitWidths(syncId: string): void {
     const entry = NgbSyncColgroupDirective.registry.get(syncId);
     entry?.header?.syncExplicitWidths();
   }
 
-  ngAfterViewInit(): void {
+  private initialize(): void {
     if (!this.syncId) return;
     const entry = this.ensureEntry();
     if (this.syncMode === 'explicit') {

@@ -61,7 +61,9 @@ export class NgbDndListDirective<T = unknown> {
     /** Fires after item is inserted */
     @Output() dndDropped = new EventEmitter<NgbDndDropEvent<T>>();
 
-    @HostBinding('attr.role') role = 'list';
+    @Input() dndRole = 'list';
+  @HostBinding('attr.role') get role() { return this.dndRole; }
+  set role(value: string) { this.dndRole = value; }
 
     @HostBinding('class.ngb-dnd-list') hostClass = true;
 

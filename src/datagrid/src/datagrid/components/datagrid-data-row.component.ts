@@ -14,7 +14,7 @@ import type { Datagrid } from '../datagrid.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (grid.showSelectionColumn()) {
-    <td
+    <td role="gridcell"
       class="text-center align-middle"
       [style.width.px]="grid.isStackedLayout() ? null : grid.utilityColumnWidth('selection')"
       [class.column-pinned-start]="grid.shouldPinLeadingUtilityColumns() && !grid.isStackedLayout()"
@@ -36,7 +36,7 @@ import type { Datagrid } from '../datagrid.component';
     }
 
     @if (grid.rowDetailTpl) {
-    <td
+    <td role="gridcell"
       class="text-center align-middle"
       [style.width.px]="grid.isStackedLayout() ? null : grid.utilityColumnWidth('detail')"
       [class.column-pinned-start]="grid.shouldPinLeadingUtilityColumns() && !grid.isStackedLayout()"
@@ -60,7 +60,7 @@ import type { Datagrid } from '../datagrid.component';
     }
 
     @if (grid.stickyRowsEnabled) {
-    <td
+    <td role="gridcell"
       class="text-center align-middle"
       data-title="Sticky"
       [style.width.px]="grid.isStackedLayout() ? null : grid.utilityColumnWidth('sticky-toggle')"
@@ -82,7 +82,7 @@ import type { Datagrid } from '../datagrid.component';
     }
 
     @if (grid.isStackedCardsLayout()) {
-      <td [attr.colspan]="grid.stackedCardColspan()" class="ngb-stacked-card-cell">
+      <td role="gridcell" [attr.colspan]="grid.stackedCardColspan()" class="ngb-stacked-card-cell">
         <div class="ngb-stacked-card">
           <div class="ngb-stacked-card__layout">
             @for (group of grid.stackedCardGroups(); track group) {
@@ -119,8 +119,7 @@ import type { Datagrid } from '../datagrid.component';
       </td>
     } @else {
       @for (col of grid.visibleColumns; track col.field; let ci = $index) {
-      <td
-        role="gridcell"
+      <td role="gridcell"
         [attr.data-col-index]="ci"
         [attr.aria-colindex]="grid.ariaColIndexForDataColumn(ci)"
         [attr.tabindex]="grid.cellTabIndex(index, ci)"
@@ -151,7 +150,7 @@ import type { Datagrid } from '../datagrid.component';
     }
 
     @if (grid.showActionsColumn()) {
-    <td
+    <td role="gridcell"
       class="text-center grid-actions-cell"
       [style.width.px]="grid.isStackedLayout() ? null : grid.utilityColumnWidth('actions')"
     >
