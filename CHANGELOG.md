@@ -4,6 +4,10 @@
 
 ### Added
 
+- Align grid header and body gutters when classic scrollbars reserve layout space.
+- Add grid-scoped Undo/Redo keyboard shortcuts with opt-out, native text-editor protection and result announcements.
+- Include committed existing-row edits in Undo/Redo, with rowSave historyAction events, validation and conflict protection.
+- Add opt-in DataGrid configuration Undo/Redo with bounded history, duplicate suppression, active-editor protection and reactive availability signals.
 - Versioned DataGrid snapshots, Date-safe serialization, `captureView()`, `restoreView()` and `viewChange`.
 - Standalone Views control with save, update, rename, confirmed delete, initial reset and unsaved-change feedback.
 - In-memory and opt-in local-storage adapters plus an asynchronous custom-persistence contract.

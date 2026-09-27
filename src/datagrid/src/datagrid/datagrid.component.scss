@@ -9,6 +9,10 @@ ngb-datagrid {
   color: var(--dg-text);
   font-family: var(--ngb-font-family, inherit);
   --dg-group-sticky-row-height: 3rem;
+  border: var(--dg-table-border-width) solid var(--dg-border);
+  border-radius: var(--dg-radius-lg);
+  background: var(--dg-surface);
+  box-shadow: var(--dg-shadow-sm);
 }
 
 .ngb-grid.ngb-grid--compact {
@@ -24,7 +28,9 @@ ngb-datagrid {
   align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
+  padding: .75rem 1rem;
+  border-bottom: 1px solid var(--dg-border);
   flex-wrap: wrap;
 }
 
@@ -251,10 +257,7 @@ ngb-datagrid {
   position: relative;
   overflow-x: hidden;
   overflow-y: clip;
-  border: var(--dg-table-border-width) solid var(--dg-border);
-  border-radius: var(--dg-radius-lg);
-  background: var(--dg-surface);
-  box-shadow: var(--dg-shadow-sm);
+  background: transparent;
   isolation: isolate;
 }
 
@@ -291,7 +294,7 @@ ngb-datagrid {
 }
 
 .ngb-grid .grid-table {
-  width: max-content;
+  width: 100%;
   min-width: 100%;
   table-layout: fixed;
   margin: 0;
@@ -299,10 +302,10 @@ ngb-datagrid {
   border-spacing: 0;
 }
 
-/* Keep explicit column widths during resize; whitespace stays in the scroll container. */
+/* Fill spare viewport space; explicit pixel widths still allow horizontal overflow. */
 .ngb-grid.ngb-grid--resizable .grid-table {
-  min-width: 0;
-  width: max-content;
+  min-width: 100%;
+  width: 100%;
 }
 
 .ngb-grid.ngb-grid--resizable .grid-table th,
@@ -1543,9 +1546,7 @@ body.ngb-datagrid-column-resizing {
   gap: 1rem;
   flex-wrap: wrap;
   padding: 0.75rem 1rem;
-  border: 1px solid var(--dg-border);
-  border-bottom: 0;
-  border-radius: var(--dg-radius-lg) var(--dg-radius-lg) 0 0;
+  border-bottom: 1px solid var(--dg-border);
   background: var(--dg-surface);
 }
 
@@ -1716,4 +1717,9 @@ body.ngb-datagrid-column-resizing {
 .ngb-grid :is(.ngb-grid__group-chip-remove, .grid-filter-operator__button, .grid-filter-clear, .grid-group-row__toggle) {
   min-width: 24px;
   min-height: 24px;
+}
+
+.ngb-grid .datagrid-toolbar__button:disabled {
+  opacity: var(--ngb-disabled-opacity, .65);
+  cursor: default;
 }

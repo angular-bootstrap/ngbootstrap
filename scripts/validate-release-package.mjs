@@ -59,7 +59,7 @@ const bundle = await import(pathToFileURL(join(distDir, distPkg.module)).href);
 assert(typeof bundle.Datagrid === 'function', 'Built package must export Datagrid.');
 assert(typeof bundle.NgbGridHighlightDirective === 'function', 'Built package must export NgbGridHighlightDirective.');
 
-for (const name of ['NgbDataGridViewsComponent', 'NgbMemoryGridViewStore', 'NgbLocalStorageGridViewStore', 'ngbSerializeGridView', 'ngbDeserializeGridView', 'NgbPromptBoxComponent', 'NgbAiChatComponent', 'NgbAiPromptComponent', 'NgbInlineAiPromptComponent', 'NgbSmartPasteComponent']) {
+for (const name of ['NgbDatagridToolbarComponent', 'NgbGridUndoToolDirective', 'NgbGridRedoToolDirective', 'NgbDataGridHistoryDirective', 'NgbDataGridViewsComponent', 'NgbMemoryGridViewStore', 'NgbLocalStorageGridViewStore', 'ngbSerializeGridView', 'ngbDeserializeGridView', 'NgbPromptBoxComponent', 'NgbAiChatComponent', 'NgbAiPromptComponent', 'NgbInlineAiPromptComponent', 'NgbSmartPasteComponent']) {
   assert(typeof bundle[name] === 'function', `Built package must export ${name}.`);
 }
 for (const asset of ['SAVED_VIEWS.md', 'THEMING.md', 'src/ai/README.md', 'src/styles/themes.scss', 'src/styles/_tokens.scss', 'src/styles/integrations/tailwind.css']) {

@@ -55,3 +55,39 @@ Grid headers and body share a grid role; drag/drop rows retain row/rowgroup role
 ## Planned, not currently included
 
 Spreadsheet-style editing (ranges, clipboard, batch validation and undo), large-data virtualization/datasource caching, pivot analysis, CSV import and a reusable Form Builder engine are later roadmap priorities. Scheduler/resource planning remains an evaluation item. These are not release dates or available APIs.
+
+## Undo/Redo configuration history (2.3.0)
+
+Import `Datagrid`, `NgbDataGridHistoryDirective`, `NgbDatagridToolbarComponent`, `NgbGridUndoToolDirective` and `NgbGridRedoToolDirective`. Project the toolbar inside the grid:
+
+```html
+<ngb-datagrid #grid ngbGridHistory [historyLimit]="20"
+  [columns]="columns" [data]="rows" [dataOperations]="true">
+  <ngb-datagrid-toolbar [grid]="grid">
+    <button ngbGridUndoTool (historyResult)="onHistoryResult($event)">Undo</button>
+    <button ngbGridRedoTool (historyResult)="onHistoryResult($event)">Redo</button>
+  </ngb-datagrid-toolbar>
+</ngb-datagrid>
+```
+
+The tools inherit history from their ancestor grid. Customize native button text, icons, CSS classes, `aria-label` and `title`. `[disabled]` adds an application restriction; it cannot enable an unavailable history action. Icon-only buttons need an accessible label. `historyResult` emits once per attempted action; do not also replay the action in a click handler. Buttons are `type="button"`, so they do not submit an enclosing form. Default toolbar appearance uses the library theme tokens.
+
+`onHistoryResult` is your application handler: inspect `success`, announce successful actions in a live status region, and show `message` on failure. The exported `NgbDataGridHistoryResult` includes restoration results plus `empty-history`, `not-ready`, and `invalid-state` failures.
+
+- History starts after browser rendering and records `viewChange` snapshots. `ready()`, `canUndo()`, `canRedo()`, `undoCount()` and `redoCount()` are read-only signals. `error()` exposes the last capture/restore error.
+- `historyLimit` defaults to 20 undo steps, accepts integers from 1 to 1000, and trims oldest entries when reduced. Duplicate configurations do not consume steps. A new change after Undo clears Redo.
+- `undo()` and `redo()` restore one configuration, emit one `dataStateChange`, and return a result. Saved-edit replay instead emits one `rowSave` with `historyAction: undo | redo`, without a data-state event. Replayed changes are not recorded again. Failed restoration preserves both stacks; save or cancel an active editor first.
+- `record()` captures programmatic changes after Angular applies the inputs. Interactive changes and saved-view restoration are tracked automatically.
+- `clear()` discards both stacks and captures the current configuration as a baseline without changing the grid or reloading data. Use it when switching datasets or after replacing a column schema if old settings should no longer be offered.
+- History uses the saved-view snapshot scope: sorting, filters including Dates, search, grouping/aggregates, page size, and columns. Restoring starts on page one and honors current schema/locking constraints. Saved existing-row edits are also undoable in the same chronological stack. Selection, expansion, drafts and page navigation are not undoable.
+- History is local to the directive instance, is not persisted, and does not undo named-view save/rename/delete operations. The Views control's Reset is a configuration change and can itself be undone when history is enabled.
+- Native buttons support Tab, Enter and Space. With `ngbGridHistory`, Ctrl/Cmd+Z undoes and Ctrl/Cmd+Shift+Z or Ctrl+Y redoes while focus is inside the grid. Inputs, textareas, selects and editable content retain native text undo. Set `[historyKeyboard]="false"` to opt out. Handle `(historyKeyboardResult)` in a live status region to announce results. Button-level `disabled` does not disable shortcuts; set `historyKeyboard` false when restricting keyboard actions. Save/cancel active editors first. Held keys, composition and empty stacks do not trigger replay. History does not access browser storage or require extra dependencies.
+
+
+### Saved row edits
+
+Successful inline, in-cell, external and toolbar saves are recorded automatically. Undo/Redo replays through the edit service, keeps the current page and settings, validates against current rules, and emits one `rowSave` containing `original`, `updated`, `index`, and `historyAction` (`undo` or `redo`). Applications should persist that event through their usual backend handler. This is local history, not a backend transaction rollback.
+
+Only the affected row is restored. History follows row object identity, or a unique stable `trackBy` key after immutable reloads. Changed/missing rows return `row-conflict` without consuming the history entry. Failed validation returns `validation`; active editors remain protected. Clear history after failed persistence, switching datasets, or choosing to accept external changes.
+
+Rows must use plain objects/arrays, primitives and valid Dates. Unsupported values clear history with an error but do not block the save. Custom edit services must preserve original row values when assigning updates. Inserts and deletes clear the stacks and are not undoable. Named saved-view snapshots still exclude row data; edit history exists only in memory.

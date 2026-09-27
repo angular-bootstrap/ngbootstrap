@@ -43,3 +43,7 @@ export * from './src/services/editing.service'
 export * from './src/views/grid-view';
 
 export * from './src/views/datagrid-views.component';
+export * from './src/views/datagrid-history.directive';
+export * from './src/views/datagrid-history-tool.directive';
+
+export * from './src/datagrid/components/datagrid-toolbar.component';

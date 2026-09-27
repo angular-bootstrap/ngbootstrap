@@ -10,10 +10,13 @@ import type { Datagrid } from '../datagrid.component';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, NgbDatagridButtonDirective, NgbDatagridFieldShellComponent],
   template: `
-    @if (grid.exportOptions?.enabled || (grid.enableAdd && !grid.isToolbarEditMode()) || grid.enableGlobalFilter) {
+    @if (customContent || grid.exportOptions?.enabled || (grid.enableAdd && !grid.isToolbarEditMode()) || grid.enableGlobalFilter) {
     <div
-      class="datagrid-toolbar"
+      class="datagrid-toolbar" role="group" [attr.aria-label]="ariaLabel"
     >
+      @if (customContent) {
+        <div class="datagrid-toolbar__actions"><ng-content></ng-content></div>
+      }
       @if (grid.enableGlobalFilter) {
       <div class="datagrid-toolbar__search">
         @if (grid.globalTpl) {
@@ -97,5 +100,8 @@ import type { Datagrid } from '../datagrid.component';
   `
 })
 export class NgbDatagridToolbarComponent {
+  /** False only for the automatically rendered toolbar with no projected controls. */
+  @Input() customContent = true;
+  @Input() ariaLabel = 'Grid toolbar';
   @Input({ required: true }) grid!: Datagrid<any>;
 }

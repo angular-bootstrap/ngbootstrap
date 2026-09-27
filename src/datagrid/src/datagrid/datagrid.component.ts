@@ -1,5 +1,6 @@
+import type { NgbDataGridHistoryResult } from '../views/datagrid-history.directive';
 import { NgbDataGridColumnView, NgbDataGridViewSnapshot, NgbDataGridViewRestoreResult, ngbCloneGridView } from '../views/grid-view';
-import { afterNextRender, signal, Component, Input, EventEmitter, Output, inject, AfterContentInit, ContentChildren, QueryList, OnChanges, SimpleChanges, TemplateRef, ElementRef, ViewChild, ChangeDetectorRef, HostListener, ViewEncapsulation, forwardRef } from '@angular/core';
+import { afterNextRender, DestroyRef, signal, Component, Input, EventEmitter, Output, inject, AfterContentInit, ContentChildren, QueryList, OnChanges, SimpleChanges, TemplateRef, ElementRef, ViewChild, ChangeDetectorRef, HostListener, ViewEncapsulation, forwardRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ColumnDef, ColumnType } from '../models/column-def';
 import {
@@ -91,6 +92,7 @@ import {
   ngbSetFieldFilter,
   NgbMenuFilterConditionDraft
 } from '../models/filtering';
+import { NgbDatagridLayoutToolbarComponent } from '../layout-toolbar/datagrid-layout-toolbar.component';
 import { NGB_DATAGRID_HOST } from '../layout-toolbar/datagrid-host.token';
 import {
   NGB_DATAGRID_DEFAULT_LABELS,
@@ -247,7 +249,31 @@ const isReasonableEmail = (value: unknown): boolean => {
 })
 export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   private readonly browserLayoutReady = signal(false);
-  private readonly layoutReadyRef = afterNextRender(() => { this.browserLayoutReady.set(true); this.scheduleStickyGroupSync(); });
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly layoutReadyRef = afterNextRender(() => {
+    this.browserLayoutReady.set(true);
+    this.observeScrollbarGutter();
+    this.scheduleStickyGroupSync();
+  });
+
+  private observeScrollbarGutter(): void {
+    const body = this.bodyScroller?.nativeElement;
+    const header = this.headerScroller?.nativeElement;
+    if (!body || !header) return;
+    const sync = () => {
+      // The body reserves stable gutters on both sides for classic scrollbars.
+      // Mirror their actual width, including when header menus overflow visibly.
+      const style = getComputedStyle(body);
+      const borders = (parseFloat(style.borderLeftWidth) || 0) + (parseFloat(style.borderRightWidth) || 0);
+      const gutter = Math.max(0, body.offsetWidth - body.clientWidth - borders) / 2;
+      header.style.paddingInline = `${gutter}px`;
+    };
+    sync();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(sync);
+    observer.observe(body);
+    this.destroyRef.onDestroy(() => observer.disconnect());
+  }
 
   /** Column definitions to render */
   private _columns: ColumnDef<T>[] = [];
@@ -637,6 +663,8 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   @Input() dataProviderSelection?: () => T[]; // used when pages='selection'
   
   // Grab the directive and its TemplateRef
+  @ContentChild(NgbDatagridLayoutToolbarComponent) layoutToolbar?: NgbDatagridLayoutToolbarComponent;
+  @ContentChild(NgbDatagridToolbarComponent) customToolbar?: NgbDatagridToolbarComponent;
   @ContentChild(ExportButtonDirective) exportButtonDir?: ExportButtonDirective;
   @ViewChild('bodyScroller') bodyScroller?: ElementRef<HTMLElement>;
   @ViewChild('headerScroller') headerScroller?: ElementRef<HTMLElement>;
@@ -654,7 +682,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   //  events
   @Output() rowEdit = new EventEmitter<{ row: T; index: number }>();
-  @Output() rowSave = new EventEmitter<{ original: T; updated: T; index: number }>();
+  @Output() rowSave = new EventEmitter<{ original: T; updated: T; index: number; historyAction?: 'undo' | 'redo' }>();
   @Output() rowCancel = new EventEmitter<{ row: T; index: number }>();
   @Output() rowDelete = new EventEmitter<{ row: T; index: number }>();
 
@@ -2948,6 +2976,25 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     });
   }
 
+  /** Used by history to replay a committed edit through the normal edit service and rowSave event. */
+  restoreHistoryRow(index: number, updated: T, historyAction: 'undo' | 'redo'): NgbDataGridHistoryResult {
+    if (this.addingNew || this.editingIndex !== null || this.editingCell || this.externalEditOpen) {
+      return { success: false, reason: 'editing', message: 'Save or cancel the active edit before undoing or redoing.' };
+    }
+    if (index < 0 || index >= this.data.length) return { success: false, reason: 'row-conflict', message: 'This row is no longer available.' };
+    const form = this.buildFormFromRow(this.toDraftValues(updated));
+    form.updateValueAndValidity();
+    if (form.invalid || form.pending) return { success: false, reason: 'validation', message: 'These saved row values do not pass the current validation rules.' };
+    const original = this.data[index];
+    const rowId = this.getRowId(index, original);
+    const service = this.getEditService();
+    this.data = service.saveChanges(service.update(this.data, updated, index, rowId), index, rowId, updated);
+    this.renderTick++;
+    this.cdr.markForCheck();
+    this.rowSave.emit({ original, updated: this.data[index], index, historyAction });
+    return { success: true, ignoredFields: [] };
+  }
+
   restoreView(snapshot: unknown): NgbDataGridViewRestoreResult {
     if (this.addingNew || this.editingIndex !== null || this.editingCell || this.externalEditOpen) {
       return { success: false, reason: 'editing', message: 'Save or cancel the active edit before changing views.' };
@@ -3479,10 +3526,9 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     if (close) {
       this.editingCell = null;
       this.editingIndex = null;
-      this.editForm = this.fb.group({});
       this.saveAttemptedEdit = false;
     }
-    this.scheduleViewRefresh();
+    this.releaseEditFormAfterRender();
     return true;
   }
 
@@ -3494,9 +3540,8 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.rowCancel.emit({ row: this.data[di], index: di });
     this.editingCell = null;
     this.editingIndex = null;
-    this.editForm = this.fb.group({});
     this.saveAttemptedEdit = false;
-    this.scheduleViewRefresh();
+    this.releaseEditFormAfterRender();
   }
 
   getSingleSelectedPagedIndex(): number | null {
@@ -4437,6 +4482,18 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.scheduleStickyGroupSync();
   }
 
+  // Retain controls until projected row editors have been removed. A focused input may
+  // emit blur during teardown; replacing its FormGroup first leaves a detached control.
+  private releaseEditFormAfterRender(): void {
+    const form = this.editForm;
+    this.scheduleViewRefresh(() => {
+      if (this.editingIndex === null && this.editForm === form) {
+        this.editForm = this.fb.group({});
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   private resetEditingState(): void {
     this.editingCell = null;
     this.editingIndex = null;
@@ -4592,9 +4649,8 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.rowSave.emit({ original, updated, index: di });
 
     this.editingIndex = null;
-    this.editForm = this.fb.group({});
     this.saveAttemptedEdit = false;
-    this.cdr.markForCheck();
+    this.releaseEditFormAfterRender();
   }
 
   cancelEdit(i: number) {
@@ -4603,9 +4659,8 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.getEditService().cancelChanges(this.data ?? [], di, rowId);
     this.rowCancel.emit({ row: this.data[di], index: di });
     this.editingIndex = null;
-    this.editForm = this.fb.group({});   // empty group
     this.saveAttemptedEdit = false;
-    this.cdr.markForCheck();
+    this.releaseEditFormAfterRender();
   }
 
   // For the "Add row" draft

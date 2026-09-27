@@ -2,6 +2,10 @@
 
 Saved DataGrid views for data-heavy Angular applications, free and open source under MIT.
 
+- Include committed existing-row edits in Undo/Redo, with rowSave historyAction events, validation and conflict protection.
+- Support grid-scoped Undo/Redo keyboard shortcuts with native editor protection and an application opt-out.
+- Keep header/body columns aligned with both overlay and classic scrollbars.
+- Add opt-in DataGrid configuration Undo/Redo with bounded history, duplicate suppression, active-editor protection and reactive availability signals.
 - Save and restore sorting, nested Date filters, search, groups/aggregates, page size and column layout.
 - Use the standalone Views control for named layouts, explicit saving, rename, confirmed deletion and reset.
 - Choose memory-only, opt-in local storage, or an application-owned async persistence adapter.

@@ -16,16 +16,24 @@
   [attr.aria-busy]="loading ? 'true' : null"
   [style.--ngb-render-tick]="renderTick"
 >
+  @if (layoutToolbar) {
   <div class="ngb-grid__layout-toolbar-host">
     <ng-content select="ngb-datagrid-layout-toolbar"></ng-content>
   </div>
-  <ngb-datagrid-toolbar [grid]="gridHost"></ngb-datagrid-toolbar>
+  }
+  @if (customToolbar) {
+    <ng-content select="ngb-datagrid-toolbar"></ng-content>
+  } @else {
+    <ngb-datagrid-toolbar [grid]="gridHost" [customContent]="false"></ngb-datagrid-toolbar>
+  }
+  @if (showEditingToolbar()) {
   <ngb-datagrid-editing-toolbar
     [grid]="gridHost"
     [selectedCount]="getSelectedCount()"
     [editActive]="isToolbarEditActive()"
     [saveDisabled]="isToolbarSaveDisabled()"
   ></ngb-datagrid-editing-toolbar>
+  }
 
   @if (paginationActive && pagerShowsAt('top')) {
     <ngb-datagrid-footer [grid]="gridHost" placement="top"></ngb-datagrid-footer>
