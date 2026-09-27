@@ -54,7 +54,7 @@ Grid headers and body share a grid role; drag/drop rows retain row/rowgroup role
 
 ## Planned, not currently included
 
-Spreadsheet-style editing (ranges, clipboard, batch validation and undo), large-data virtualization/datasource caching, pivot analysis, CSV import and a reusable Form Builder engine are later roadmap priorities. Scheduler/resource planning remains an evaluation item. These are not release dates or available APIs.
+Ranges, clipboard batches and atomic batch history are available in 2.4.0; see BATCH_EDITING.md. Large-data virtualization/datasource caching, pivot analysis, CSV import and a reusable Form Builder engine remain roadmap priorities. Scheduler/resource planning remains an evaluation item. These are not release dates or available APIs.
 
 ## Undo/Redo configuration history (2.3.0)
 

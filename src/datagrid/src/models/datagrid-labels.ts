@@ -35,6 +35,8 @@ export interface NgbDatagridLabels {
   multiCheckboxCancel?: string;
   combineConditions?: string;
   searchFilterValues?: string;
+  cellRangeSelected?: string;
+  cellRangeCleared?: string;
 }
 
 export const NGB_DATAGRID_DEFAULT_LABELS: Required<NgbDatagridLabels> = {
@@ -64,7 +66,7 @@ export const NGB_DATAGRID_DEFAULT_LABELS: Required<NgbDatagridLabels> = {
   sortBy: 'Sort by {header}. Current sort {state}.',
   stickyBadge: 'STICKY',
   addRow: 'Add row',
-  addRowButton: '+ Add',
+  addRowButton: 'Add',
   save: 'Save',
   cancel: 'Cancel',
   edit: 'Edit',
@@ -73,6 +75,8 @@ export const NGB_DATAGRID_DEFAULT_LABELS: Required<NgbDatagridLabels> = {
   multiCheckboxCancel: 'Cancel',
   combineConditions: 'Combine conditions with',
   searchFilterValues: 'Search values for {header}',
+  cellRangeSelected: '{rows} rows by {columns} columns selected.',
+  cellRangeCleared: 'Cell selection cleared.',
 };
 
 /** Documented keyboard shortcuts when [keyboardNavigation] is enabled. */

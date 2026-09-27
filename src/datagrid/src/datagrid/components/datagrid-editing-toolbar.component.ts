@@ -15,11 +15,11 @@ import type { Datagrid } from '../datagrid.component';
         @if (grid.enableAdd) {
         <button
           type="button"
-          ngbDatagridButton="success"
+          ngbDatagridButton="primary"
           (click)="grid.startAdd()"
           [disabled]="editActive"
           [attr.aria-disabled]="editActive ? 'true' : null"
-          [attr.aria-label]="grid.addButtonAriaLabel"
+          [attr.aria-label]="grid.addButtonAriaLabel || grid.addButtonText"
         >
           <span class="bi bi-plus-lg" aria-hidden="true"></span>
           <span>{{ grid.addButtonText }}</span>

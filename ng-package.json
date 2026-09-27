@@ -12,6 +12,8 @@
     "src/styles/**/*.scss",
     "src/styles/**/*.css",
     "src/ai/README.md",
-    "SAVED_VIEWS.md"
+    "SAVED_VIEWS.md",
+    "CELL_RANGES.md",
+    "BATCH_EDITING.md"
   ]
 }

@@ -80,7 +80,7 @@ import type { Datagrid } from '../datagrid.component';
           }
         }
 
-        @if (grid.enableAdd) {
+        @if (grid.enableAdd && !grid.isToolbarEditMode()) {
         <button
           type="button"
           ngbDatagridButton="primary"

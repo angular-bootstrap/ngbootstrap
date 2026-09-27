@@ -25,6 +25,8 @@ export class NgbGridColumnDirective<T = any> implements ColumnDef<T> {
   @Input() width?: number;
   @Input() stackedGroup?: 'start' | 'center' | 'end';
   @Input() required?: boolean;
+  @Input() clipboardFormat?: ColumnDef<T>['clipboardFormat'];
+  @Input() clipboardParse?: ColumnDef<T>['clipboardParse'];
   @Input() hidden?: boolean;
   @Input() sticky?: boolean | 'start' | 'end';
   @Input() locked?: boolean;
@@ -53,6 +55,8 @@ export class NgbGridColumnDirective<T = any> implements ColumnDef<T> {
       width: this.width,
       stackedGroup: this.stackedGroup,
       required: this.required,
+      clipboardFormat: this.clipboardFormat,
+      clipboardParse: this.clipboardParse,
       hidden: this.hidden,
       sticky: this.sticky,
       locked: this.locked,

@@ -85,7 +85,7 @@
   }
 
   <div class="table-wrapper" [ngClass]="responsiveWrapperClasses">
-    <div class="ngb-grid__data" role="grid" [attr.aria-rowcount]="ariaRowCount()" [attr.aria-colcount]="ariaColCount()"
+    <div class="ngb-grid__data" role="grid" [attr.aria-multiselectable]="cellRangeEnabled() ? true : null" [attr.aria-rowcount]="ariaRowCount()" [attr.aria-colcount]="ariaColCount()"
     [attr.aria-readonly]="enableEdit || enableAdd ? 'false' : 'true'"
     [attr.aria-label]="tableOptions?.caption || 'Data grid'">
     @if (loading) {

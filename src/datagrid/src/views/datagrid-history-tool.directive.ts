@@ -18,8 +18,11 @@ abstract class NgbGridHistoryTool {
   @HostBinding('disabled') get unavailable(): boolean {
     return this.disabled || !(this.action === 'undo' ? this.history.canUndo() : this.history.canRedo());
   }
-  @HostListener('click') activate(): void {
-    if (!this.unavailable) this.historyResult.emit(this.history[this.action]());
+  @HostBinding('attr.aria-busy') get busy(): boolean { return this.history.busy(); }
+  @HostListener('click') async activate(): Promise<void> {
+    if (this.unavailable) return;
+    const result = this.history[this.action]();
+    this.historyResult.emit(!result.success && result.reason === 'async-required' ? await this.history[this.action === 'undo' ? 'undoAsync' : 'redoAsync']() : result);
   }
 }
 

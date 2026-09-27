@@ -1,22 +1,22 @@
-# @angular-bootstrap/ngbootstrap 2.3.0
+# @angular-bootstrap/ngbootstrap 2.4.0
 
-Saved DataGrid views for data-heavy Angular applications, free and open source under MIT.
+Update multiple existing records through opt-in DataGrid range selection and batch editing.
 
-- Include committed existing-row edits in Undo/Redo, with rowSave historyAction events, validation and conflict protection.
-- Support grid-scoped Undo/Redo keyboard shortcuts with native editor protection and an application opt-out.
-- Keep header/body columns aligned with both overlay and classic scrollbars.
-- Add opt-in DataGrid configuration Undo/Redo with bounded history, duplicate suppression, active-editor protection and reactive availability signals.
-- Save and restore sorting, nested Date filters, search, groups/aggregates, page size and column layout.
-- Use the standalone Views control for named layouts, explicit saving, rename, confirmed deletion and reset.
-- Choose memory-only, opt-in local storage, or an application-owned async persistence adapter.
-- Restore on page one with one remote-data notification; reject active edits and invalid snapshots before applying state.
-- Reconcile removed/new columns while honoring current width, reordering and locking constraints.
-- Defer Grid, Pager and Splitter layout measurements until browser rendering; preserve row semantics with drag/drop.
-- Include development dependency security fixes from the post-2.2.0 maintenance work.
+- Select a current-page rectangle with the mouse or keyboard and copy/paste tab-separated values.
+- Keep clipboard drafts separate from committed rows, with typed conversion and column hooks.
+- Validate the whole batch, including cancellable async validation; Apply commits once and Discard leaves rows unchanged.
+- Treat each successful Apply as one Undo/Redo command, with conflict protection and validation during replay.
+- Customize Apply, Discard, Undo and Redo buttons in the existing grid toolbar.
+- Use consistent Add buttons in External and Toolbar editing, with one decorative plus icon.
 
-No new runtime dependencies. Angular 21/22 and Bootstrap default appearance remain supported.
-Advanced features, themes and examples stay MIT-licensed. No paid component tier, keys, watermarks or mandatory hosted service.
-Applications own backend/AI-provider costs, persistence authorization and retention.
+One `batchSave` event reports each local commit or replay. Applications own server persistence,
+authorization, transactions and recovery; the grid does not wait for a server response.
+Requires stable unique trackBy IDs, the default edit service and a regular ungrouped table.
+No cross-page paste, new-row insertion, formulas or virtualization. Paste is limited to
+10,000 cells / 1 MiB; history has step and payload limits. See [BATCH_EDITING.md](BATCH_EDITING.md)
+and [CELL_RANGES.md](CELL_RANGES.md) for setup, keyboard behavior and limitations.
 
-See [SAVED_VIEWS.md](SAVED_VIEWS.md) for installation, APIs, persistence and accessibility limitations.
-Spreadsheet editing, virtualization, pivot, CSV import and the reusable Form Builder engine are later planned milestones, not part of 2.3.0.
+Existing editing modes and synchronous history APIs remain compatible. Use async history
+methods for batch commands; the supplied toolbar tools and shortcuts do this automatically.
+Angular 21/22, Bootstrap defaults and shared themes remain supported. No new runtime dependency.
+All features, themes and examples remain MIT-licensed, without license keys or a paid tier.

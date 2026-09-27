@@ -126,6 +126,10 @@ import type { Datagrid } from '../datagrid.component';
         [attr.data-title]="grid.isStackedLayout() ? col.header : null"
         [attr.title]="grid.cellTitle(row, col)"
         [class.cell-highlight]="grid.isCellHighlighted(row, index, col, ci)"
+        [attr.aria-selected]="grid.cellRangeEnabled() ? grid.isCellInRange(index, ci) : null"
+        [attr.aria-invalid]="grid.batchCellError(row, col.field) ? true : null"
+        [class.grid-cell--draft]="grid.batchCellDirty(row, col.field)"
+        [class.grid-cell--range]="grid.isCellInRange(index, ci)"
         [class.grid-cell--focused]="grid.isCellFocused(index, ci)"
         [class.grid-cell--editing]="grid.isCellInEditMode(index, col)"
         [class.grid-cell--incell]="grid.isIncellEditMode()"
@@ -142,6 +146,7 @@ import type { Datagrid } from '../datagrid.component';
         (focus)="grid.onDataCellFocus(index, ci)"
         (keydown)="grid.onDataCellKeydown($event, index, ci, col)"
         (mousedown)="grid.onCellMouseDown($event, index, col)"
+        (mouseenter)="grid.onCellRangeEnter($event, index, ci)"
         (click)="grid.onCellClick($event, index, col)"
       >
         <ng-container *ngTemplateOutlet="dataCell; context: { col: col, ci: ci }"></ng-container>
@@ -253,6 +258,7 @@ import type { Datagrid } from '../datagrid.component';
           }
         }
       } @else {
+        @if (grid.batchCellError(row, col.field); as error) { <div class="invalid-feedback d-block">{{ error }}</div> }
         @if (grid.cellTpls[col.field]; as ct) {
           <ng-container
             [ngTemplateOutlet]="ct.template"
@@ -365,6 +371,6 @@ export class NgbDatagridDataRowComponent<T = unknown> {
   @Input() selected = false;
 
   valueFor(row: T, col: ColumnDef): unknown {
-    return (row as Record<string, unknown>)[col.field];
+    return this.grid.batchCellValue(row, col.field);
   }
 }

@@ -1723,3 +1723,12 @@ body.ngb-datagrid-column-resizing {
   opacity: var(--ngb-disabled-opacity, .65);
   cursor: default;
 }
+
+.ngb-grid .grid-table td.grid-cell--range {
+  background-color: var(--ngb-selected-bg, #cfe2ff);
+  box-shadow: inset 0 0 0 1px var(--ngb-primary, #0d6efd);
+}
+
+.ngb-grid .grid-table td.grid-cell--draft {
+  border-bottom: 2px dashed var(--ngb-primary, #0d6efd);
+}

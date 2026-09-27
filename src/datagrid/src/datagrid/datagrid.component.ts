@@ -1,3 +1,5 @@
+import { NgbGridBatchController, NgbGridBatchCellError, NgbGridBatchSaveEvent } from '../batch/batch-types';
+import { NgbGridCellRange } from '../models/cell-range';
 import type { NgbDataGridHistoryResult } from '../views/datagrid-history.directive';
 import { NgbDataGridColumnView, NgbDataGridViewSnapshot, NgbDataGridViewRestoreResult, ngbCloneGridView } from '../views/grid-view';
 import { afterNextRender, DestroyRef, signal, Component, Input, EventEmitter, Output, inject, AfterContentInit, ContentChildren, QueryList, OnChanges, SimpleChanges, TemplateRef, ElementRef, ViewChild, ChangeDetectorRef, HostListener, ViewEncapsulation, forwardRef } from '@angular/core';
@@ -486,7 +488,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   /** Accessible label (aria-label) applied to the add-row button. */
   @Input() addButtonAriaLabel: string | null = 'Add row';
   /** Visible text rendered inside the add-row button. */
-  @Input() addButtonText = '+ Add';
+  @Input() addButtonText = 'Add';
   /** Shows sticky toggle column and keeps pinned rows at the top of the list. */
   @Input() stickyRows = false;
   /** Enables sticky column header when scrolling. */
@@ -656,6 +658,102 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   @Input() dir: NgbDatagridTextDirection = 'auto';
   /** Enables arrow-key cell focus, Space selection, Alt+Page paging, and F3 filter shortcuts. */
   @Input() keyboardNavigation = true;
+  /** Internal bridge registered by ngbGridBatchEditing. */
+  batchEditor?: NgbGridBatchController;
+  @Output() batchSave = new EventEmitter<NgbGridBatchSaveEvent<T>>();
+
+  batchCellValue(row: T, field: string): unknown {
+    const value = this.readFieldValue(row, field);
+    return this.batchEditor ? this.batchEditor.value(this.resolveRowMeta(row).id, field, value) : value;
+  }
+  batchCellDirty(row: T, field: string): boolean { return this.batchEditor?.dirty(this.resolveRowMeta(row).id, field) ?? false; }
+  batchCellError(row: T, field: string): string { return this.batchEditor?.error(this.resolveRowMeta(row).id, field) ?? ''; }
+  refreshBatchState(): void { this.renderTick++; this.cdr.markForCheck(); }
+  validateBatchRow(row: T, rowId: string | number): NgbGridBatchCellError[] {
+    const form = this.buildFormFromRow(this.toDraftValues(row));
+    return Object.entries(form.controls).filter(([, control]) => control.invalid).map(([field, control]) => ({
+      rowId, field, message: `${field}: ${Object.keys(control.errors ?? {}).join(', ')}`,
+    }));
+  }
+  private blockPendingBatch(): boolean {
+    if (!this.batchEditor?.hasPending()) return false;
+    this.announceStatus('Apply or discard pending batch changes first.');
+    return true;
+  }
+  private _cellSelection: 'none' | 'range' = 'none';
+  /** Opt-in rectangular selection on the current ungrouped page. */
+  @Input()
+  get cellSelection(): 'none' | 'range' { return this._cellSelection; }
+  set cellSelection(value: 'none' | 'range') {
+    this._cellSelection = value;
+    if (value !== 'range') this.clearCellRange();
+  }
+  @Output() cellRangeChange = new EventEmitter<NgbGridCellRange | null>();
+  private rangeIndexes: { anchorRow: number; anchorCol: number; focusRow: number; focusCol: number } | null = null;
+  private draggingCellRange = false;
+
+  get cellRange(): NgbGridCellRange | null {
+    const range = this.rangeIndexes;
+    if (!range || !this.cellRangeEnabled()) return null;
+    const address = (rowIndex: number, colIndex: number) => {
+      const row = this.paged[rowIndex];
+      const col = this.visibleColumns[colIndex];
+      if (!row || !col) return null;
+      return { rowId: this.resolveRowMeta(row, this.dataIndexOf(row)).id, field: String(col.field) };
+    };
+    const anchor = address(range.anchorRow, range.anchorCol), focus = address(range.focusRow, range.focusCol);
+    return anchor && focus ? { anchor, focus } : null;
+  }
+
+  cellRangeEnabled(): boolean {
+    return this.cellSelection === 'range' && !this.isStackedLayout() && !this.isGroupingActive() && !this.usingProvidedGroupedData() && !this.stickyRowsEnabled && !this.rowReorderable;
+  }
+
+  clearCellRange(): void {
+    this.draggingCellRange = false;
+    if (!this.rangeIndexes) return;
+    this.rangeIndexes = null;
+    this.renderTick++;
+    this.markGridForCheck();
+    this.cellRangeChange.emit(null);
+  }
+
+  isCellInRange(row: number, col: number): boolean {
+    const r = this.rangeIndexes;
+    return !!r && this.cellRangeEnabled() && row >= Math.min(r.anchorRow, r.focusRow) && row <= Math.max(r.anchorRow, r.focusRow) &&
+      col >= Math.min(r.anchorCol, r.focusCol) && col <= Math.max(r.anchorCol, r.focusCol);
+  }
+
+  private selectCellRange(row: number, col: number, extend: boolean): void {
+    if (!this.cellRangeEnabled() || !this.paged[row] || !this.visibleColumns[col]) return;
+    const old = this.rangeIndexes;
+    const next = { anchorRow: extend && old ? old.anchorRow : row, anchorCol: extend && old ? old.anchorCol : col, focusRow: row, focusCol: col };
+    if (old && Object.keys(next).every(key => old[key as keyof typeof old] === next[key as keyof typeof next])) return;
+    this.rangeIndexes = next;
+    this.renderTick++;
+    this.markGridForCheck();
+    this.cellRangeChange.emit(this.cellRange);
+  }
+
+  private announceCellRange(): void {
+    const r = this.rangeIndexes;
+    if (r) this.announceStatus(ngbFormatDatagridLabel(this.labelTemplate('cellRangeSelected'), { rows: Math.abs(r.focusRow - r.anchorRow) + 1, columns: Math.abs(r.focusCol - r.anchorCol) + 1 }));
+  }
+
+  onCellRangeEnter(event: MouseEvent, row: number, col: number): void {
+    if (!this.draggingCellRange) return;
+    if (!(event.buttons & 1)) { this.endCellRangeDrag(); return; }
+    this.selectCellRange(row, col, true);
+    this.focusCell(row, col);
+  }
+
+  @HostListener('document:mouseup')
+  @HostListener('window:blur')
+  endCellRangeDrag(): void {
+    if (this.draggingCellRange) this.announceCellRange();
+    this.draggingCellRange = false;
+  }
+
   @Input() editService?: NgbDatagridEditService<T>;
 
   // Data hooks for export
@@ -1035,6 +1133,9 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   private invalidatePagedCache(): void {
+    this.batchEditor?.onGridChange();
+    if (this.rangeIndexes) this.focusedCell = null;
+    this.clearCellRange();
     this.pagedDirty = true;
     this.renderRowsDirty = true;
     this.scheduleStickyGroupSync();
@@ -2978,6 +3079,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   /** Used by history to replay a committed edit through the normal edit service and rowSave event. */
   restoreHistoryRow(index: number, updated: T, historyAction: 'undo' | 'redo'): NgbDataGridHistoryResult {
+    if (this.batchEditor?.hasPending()) return { success: false, reason: 'editing', message: 'Apply or discard pending batch changes first.' };
     if (this.addingNew || this.editingIndex !== null || this.editingCell || this.externalEditOpen) {
       return { success: false, reason: 'editing', message: 'Save or cancel the active edit before undoing or redoing.' };
     }
@@ -2996,6 +3098,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   restoreView(snapshot: unknown): NgbDataGridViewRestoreResult {
+    if (this.batchEditor?.hasPending()) return { success: false, reason: 'editing', message: 'Apply or discard pending batch changes first.' };
     if (this.addingNew || this.editingIndex !== null || this.editingCell || this.externalEditOpen) {
       return { success: false, reason: 'editing', message: 'Save or cancel the active edit before changing views.' };
     }
@@ -3409,11 +3512,24 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   onCellClick(ev: MouseEvent, pagedIndex: number, col: ColumnDef<T>): void {
+    if (this.cellRangeEnabled() && !(ev.target as HTMLElement)?.closest('input, textarea, select, button, a, [contenteditable]')) {
+      ev.stopPropagation();
+      return;
+    }
     this.tryStartIncellEdit(ev, pagedIndex, col);
   }
 
   onCellMouseDown(ev: MouseEvent, pagedIndex: number, col: ColumnDef<T>): void {
     if (ev.button !== 0) return;
+    if (this.cellRangeEnabled()) {
+      if ((ev.target as HTMLElement)?.closest('input, textarea, select, button, a, label, [contenteditable]') || this.editingIndex !== null || this.addingNew || this.externalEditOpen) return;
+      const ci = this.visibleColumns.indexOf(col);
+      ev.preventDefault();
+      this.selectCellRange(pagedIndex, ci, ev.shiftKey);
+      this.draggingCellRange = true;
+      this.focusCell(pagedIndex, ci);
+      return;
+    }
     this.tryStartIncellEdit(ev, pagedIndex, col);
   }
 
@@ -3477,6 +3593,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   startIncellEdit(pagedIndex: number, field: string): void {
+    if (this.blockPendingBatch()) return;
     this.addingNew = false;
     this.editingIndex = pagedIndex;
     this.editingCell = { rowIndex: pagedIndex, field };
@@ -3570,6 +3687,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   openExternalEdit(pagedIndex: number): void {
+    if (this.blockPendingBatch()) return;
     this.externalDialogOpener = (document.activeElement as HTMLElement) ?? null;
     this.externalDialogFocusedOnce = false;
     this.externalEditIsNew = false;
@@ -3581,6 +3699,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   openExternalAdd(): void {
+    if (this.blockPendingBatch()) return;
     this.externalDialogOpener = (document.activeElement as HTMLElement) ?? null;
     this.externalDialogFocusedOnce = false;
     this.externalEditIsNew = true;
@@ -4122,14 +4241,14 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   isCellFocused(rowIndex: number, colIndex: number): boolean {
     return (
-      this.keyboardNavigation &&
+      (this.keyboardNavigation || this.cellRangeEnabled()) &&
       this.focusedCell?.rowIndex === rowIndex &&
       this.focusedCell?.colIndex === colIndex
     );
   }
 
   cellTabIndex(rowIndex: number, colIndex: number): number | null {
-    if (!this.keyboardNavigation || this.isStackedLayout()) return null;
+    if (!(this.keyboardNavigation || this.cellRangeEnabled()) || this.isStackedLayout()) return null;
     if (!this.focusedCell) {
       return rowIndex === 0 && colIndex === 0 ? 0 : -1;
     }
@@ -4137,7 +4256,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   focusCell(rowIndex: number, colIndex: number): void {
-    if (!this.keyboardNavigation) return;
+    if (!(this.keyboardNavigation || this.cellRangeEnabled())) return;
     const maxRow = Math.max(0, this.paged.length - 1);
     const maxCol = Math.max(0, this.visibleColumns.length - 1);
     this.focusedCell = {
@@ -4149,8 +4268,10 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   onDataCellFocus(rowIndex: number, colIndex: number): void {
-    if (!this.keyboardNavigation) return;
+    if (!(this.keyboardNavigation || this.cellRangeEnabled())) return;
     this.focusedCell = { rowIndex, colIndex };
+    const range = this.rangeIndexes;
+    if (!range || range.focusRow !== rowIndex || range.focusCol !== colIndex) this.selectCellRange(rowIndex, colIndex, false);
   }
 
   onDataCellKeydown(
@@ -4159,12 +4280,16 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     colIndex: number,
     col: ColumnDef<T>
   ): void {
-    if (!this.keyboardNavigation) return;
+    if (!(this.keyboardNavigation || this.cellRangeEnabled())) return;
     if (this.isCellInEditMode(rowIndex, col)) {
       return;
     }
 
+    if (ev.defaultPrevented || ev.isComposing || (ev.target as HTMLElement)?.closest('input, textarea, select, button, a, [contenteditable]')) return;
     const key = ev.key;
+    if (key === 'Escape' && this.rangeIndexes) {
+      ev.preventDefault(); this.clearCellRange(); this.announceStatus(this.labelTemplate('cellRangeCleared')); return;
+    }
     if (key === ' ' && this.isSelectionEnabled() && !this.isCheckboxOnly()) {
       ev.preventDefault();
       this.toggleSelection(rowIndex, ev);
@@ -4233,6 +4358,11 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     }
 
     ev.preventDefault();
+    if (this.cellRangeEnabled()) {
+      if (!this.rangeIndexes) this.selectCellRange(rowIndex, colIndex, false);
+      this.selectCellRange(nextRow, nextCol, ev.shiftKey);
+      this.announceCellRange();
+    }
     this.focusCell(nextRow, nextCol);
   }
 
@@ -4471,6 +4601,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     }
     if (ch['highlightedIndex']) this.updateHighlightCache();
     if (ch['editMode']) this.resetEditingState();
+    if (ch['tableOptions'] || ch['stickyRows'] || ch['rowReorderable'] || ch['trackBy']) this.clearCellRange();
     if (ch['pageSize'] || ch['pageSizeOptions'] || ch['enablePagination'] || ch['pageable'] || ch['state'] || ch['dataOperations']) {
       const size = Math.max(1, Math.trunc(Number(this.pageSize) || 10));
       this.pageSize = size;
@@ -4554,6 +4685,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   startAdd() {
+    if (this.blockPendingBatch()) return;
     if (!this.enableAdd || this.addingNew) return;
     if (this.isExternalEditMode()) {
       this.openExternalAdd();
@@ -4610,6 +4742,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   startEdit(i: number) {
+    if (this.blockPendingBatch()) return;
     if (!this.enableEdit) return;
     if (this.isExternalEditMode()) {
       this.openExternalEdit(i);

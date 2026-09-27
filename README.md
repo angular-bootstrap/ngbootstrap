@@ -122,3 +122,7 @@ For provider-independent assistant controls and request lifecycle guidance, see 
 [Saved DataGrid views](SAVED_VIEWS.md) add named invoice/workspace layouts, Date-safe snapshots and explicit memory, local-storage or custom persistence in 2.3.0.
 
 Advanced features, themes and examples are MIT-licensed: no paid component tier, license keys, watermarks or mandatory hosted service. Applications own backend and AI-provider costs. Later roadmap capabilities are marked as planned in the saved-views guide.
+
+## Batch editing (2.4.0)
+
+[Batch editing](BATCH_EDITING.md) adds opt-in clipboard drafts, validation, Apply/Discard and atomic Undo/Redo for existing rows. [Cell ranges](CELL_RANGES.md) support current-page selection with mouse and keyboard. Applications own persistence; use pagination for large datasets.

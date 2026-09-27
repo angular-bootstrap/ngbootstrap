@@ -45,5 +45,9 @@ export interface ColumnDef<T = any> {
   headerStyle?: Record<string, string | number>;
   cellClass?: string | string[] | Record<string, boolean> | ((row: T, rowIndex: number) => string | string[] | Record<string, boolean>);
   cellStyle?: Record<string, string | number> | ((row: T, rowIndex: number) => Record<string, string | number> | null | undefined);
+  /** Optional clipboard text formatter. Receives a detached row. */
+  clipboardFormat?: (value: unknown, row: T) => string;
+  /** Optional clipboard conversion. Throw to reject a value; receives a detached row. */
+  clipboardParse?: (text: string, row: T) => unknown;
   required?: boolean;            // block save if empty/invalid
 }

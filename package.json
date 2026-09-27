@@ -1,6 +1,6 @@
 {
   "name": "@angular-bootstrap/ngbootstrap",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Angular UI for data-heavy apps with DataGrid grouping, Angular-native Form Builder, drag-and-drop workflows, pagination, typeahead, tree, splitter, stepper, and chips.",
   "author": {
     "name": "Harmeet Singh"

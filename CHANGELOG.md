@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.4.0 - 2026-09-27
+
+- Remove the duplicate plus from the default Add label; both toolbar variants retain one decorative plus icon.
+
+- Unify Add button styling across External and Toolbar editing and prevent duplicate Add controls when toolbar editing includes export actions.
+
+- Atomic batch Undo/Redo with async validation, one directional batch event, conflict protection and bounded snapshots. Existing synchronous history APIs remain compatible.
+
+- Add clipboard draft batches, typed conversion, atomic Apply/Discard, asynchronous
+  validation and native toolbar tools.
+
+- Add opt-in current-page cell ranges with keyboard extension, mouse dragging,
+  selected-cell ARIA, theme tokens and localizable announcements.
+
 ## 2.3.0 - 2026-09-16
 
 ### Added

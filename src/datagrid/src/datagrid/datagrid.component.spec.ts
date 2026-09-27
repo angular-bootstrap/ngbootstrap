@@ -987,6 +987,8 @@ describe('Datagrid', () => {
     const addRowFixture = TestBed.createComponent(AddRowSelectHostComponent);
     addRowFixture.detectChanges();
     const addButton = addRowFixture.nativeElement.querySelector('ngb-datagrid-toolbar button') as HTMLButtonElement | null;
+    expect(addButton?.textContent?.trim()).toBe('Add');
+    expect(addButton?.querySelectorAll('.bi-plus-lg')).toHaveLength(1);
     addButton?.click();
     addRowFixture.detectChanges();
 
@@ -3323,6 +3325,41 @@ describe('Datagrid', () => {
       expect(component.isToolbarEditActive()).toBe(true);
       component.cancelToolbarEdit();
       expect(component.addingNew).toBe(false);
+    });
+
+    it('uses one consistent Add toolbar button across external and toolbar editing, including exports', () => {
+      for (const mode of ['external', 'toolbar'] as const) {
+        const fixture = TestBed.createComponent(Datagrid<Person>);
+        const component = fixture.componentInstance;
+        fixture.componentRef.setInput('columns', baseColumns);
+        fixture.componentRef.setInput('data', createRows());
+        fixture.componentRef.setInput('enableAdd', true);
+        fixture.componentRef.setInput('enableEdit', true);
+        fixture.componentRef.setInput('exportOptions', { enabled: true, type: 'both' });
+        expect(component.addButtonText).toBe('Add');
+        fixture.componentRef.setInput('addButtonText', 'Create record');
+        fixture.componentRef.setInput('addButtonAriaLabel', null);
+        fixture.componentRef.setInput('editMode', mode);
+        fixture.detectChanges();
+        const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+        const adds = buttons.filter(button => button.textContent?.includes('Create record'));
+        expect(adds).toHaveLength(1);
+        const add = adds[0];
+        expect(add.classList.contains('datagrid-toolbar__button--primary')).toBe(true);
+        expect(add.classList.contains('grid-row-action')).toBe(false);
+        expect(add.getAttribute('aria-label')).toBe('Create record');
+        expect(add.querySelector('.bi-plus-lg')?.getAttribute('aria-hidden')).toBe('true');
+        add.click(); fixture.detectChanges();
+        if (mode === 'external') {
+          expect(component.externalEditOpen).toBe(true);
+          component.cancelExternalEdit();
+        } else {
+          expect(component.addingNew).toBe(true);
+          expect(add.disabled).toBe(true);
+          component.cancelToolbarEdit();
+        }
+        fixture.detectChanges();
+      }
     });
 
     it('external: opens dialog for edit and add with save/cancel', () => {
