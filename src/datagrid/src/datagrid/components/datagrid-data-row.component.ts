@@ -149,7 +149,7 @@ import type { Datagrid } from '../datagrid.component';
         (mouseenter)="grid.onCellRangeEnter($event, index, ci)"
         (click)="grid.onCellClick($event, index, col)"
       >
-        <ng-container *ngTemplateOutlet="dataCell; context: { col: col, ci: ci }"></ng-container>
+        <div class="grid-cell-viewport"><ng-container *ngTemplateOutlet="dataCell; context: { col: col, ci: ci }"></ng-container></div>
       </td>
       }
     }

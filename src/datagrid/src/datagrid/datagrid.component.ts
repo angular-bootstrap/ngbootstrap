@@ -161,6 +161,14 @@ interface NgbDatagridDataRenderRow<T> {
 
 type NgbDatagridRenderRow<T> = NgbDatagridGroupRenderRow<T> | NgbDatagridGroupFooterRenderRow<T> | NgbDatagridDataRenderRow<T>;
 
+/** Requested remote range; the application owns fetching, cancellation and caching. */
+export interface NgbDataGridVirtualRange { skip: number; take: number; state: NgbDataGridState; }
+export interface NgbDataGridScrollRequest { row?: number; column?: number; }
+export interface NgbDataGridScrollItemRequest { idField: string; id: unknown; }
+interface NgbDatagridLoadingRow { kind: 'loading'; key: string; absoluteIndex: number; }
+
+export type NgbDataGridScrollMode = boolean | 'scrollable' | 'none' | 'virtual';
+
 export type NgbTableResponsive = true | false | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 export interface NgbTableOptions {
   stripedRows?: boolean;
@@ -255,10 +263,14 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   private readonly layoutReadyRef = afterNextRender(() => {
     this.browserLayoutReady.set(true);
     this.observeScrollbarGutter();
+    this.requestVirtualRange();
+    this.destroyRef.onDestroy(() => { if (this.virtualTimer) clearTimeout(this.virtualTimer); });
     this.scheduleStickyGroupSync();
   });
 
+  private scrollbarObserver?: ResizeObserver;
   private observeScrollbarGutter(): void {
+    this.scrollbarObserver?.disconnect();
     const body = this.bodyScroller?.nativeElement;
     const header = this.headerScroller?.nativeElement;
     if (!body || !header) return;
@@ -273,6 +285,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     sync();
     if (typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(sync);
+    this.scrollbarObserver = observer;
     observer.observe(body);
     this.destroyRef.onDestroy(() => observer.disconnect());
   }
@@ -496,7 +509,193 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   /** Enables sticky footer when scrolling. */
   @Input() stickyFooter = false;
   /** Enables scroll table body container */
-  @Input() scrollable = true;
+  @Input() scrollable: NgbDataGridScrollMode = true;
+  /** Body viewport height in pixels; null preserves the existing 24rem maximum. */
+  @Input() height: number | null = null;
+  /** Fixed data-row height for virtual mode. Cell content must fit this height. */
+  @Input() virtualRowHeight = 48;
+  /** Extra rows rendered above and below the viewport. */
+  @Input() virtualOverscan = 5;
+  /** Maximum body height for content-sized, conditional scrolling. */
+  @Input() maxHeight: number | null = null;
+  /** Fixed expanded detail height, required when virtualizing detail templates. */
+  @Input() detailRowHeight = 160;
+  /** Opt in to remote windows. Bind data, total and virtualSkip together. */
+  @Input() virtualRemote = false;
+  @Input() virtualSkip = 0;
+  /** Remote request buffer (minimum three viewports). */
+  @Input() virtualPageSize = 60;
+  @Input() virtualDebounce = 80;
+  @Input() loadingCellTemplate: TemplateRef<{ $implicit: ColumnDef<T>; index: number }> | null = null;
+  @Output() virtualRangeChange = new EventEmitter<NgbDataGridVirtualRange>();
+  @Output() scrollBottom = new EventEmitter<void>();
+  private virtualTimer: ReturnType<typeof setTimeout> | undefined;
+  private lastVirtualRequest = '';
+  private forcedRangePending = false;
+  private globalFilterConnected = false;
+  private bottomNotifiedLength = -1;
+  private offsetSource: NgbDatagridRenderRow<T>[] | null = null;
+  private offsets: number[] = [];
+  private pendingVirtualFocus: { row: number; column: number } | null = null;
+  private virtualScrollTop = 0;
+  private virtualSliceSource: NgbDatagridRenderRow<T>[] | null = null;
+  private virtualSliceStart = -1;
+  private virtualSliceEnd = -1;
+  private virtualSlice: NgbDatagridRenderRow<T>[] = [];
+
+  /** Why requested virtualization is using regular rendering instead. */
+  get virtualScrollFallbackReason(): string | null {
+    if (this.scrollable !== 'virtual') return null;
+    if (this.virtualRemote && (this.isGroupingActive() || this.rowDetailTpl)) return 'Remote windows require flat rows. Bind the complete grouped tree or detail data with virtualRemote disabled.';
+    if (this.stickyRowsEnabled || this.rowReorderable || this.isStackedLayout() || this.isResponsiveEnabled()) return 'Virtual scrolling requires fixed-height tabular rows without sticky rows, responsive cards or row reordering.';
+    if (this.enableAdd || this.addingNew || this.batchEditor || (this.enableEdit && !this.isExternalEditMode())) return 'Use external editing or disable editing and adding for virtual scrolling.';
+    return null;
+  }
+
+  get virtualScrollActive(): boolean {
+    return this.scrollable === 'virtual' && !this.virtualScrollFallbackReason;
+  }
+
+  get resolvedVirtualRowHeight(): number {
+    return Number.isFinite(this.virtualRowHeight) ? Math.max(32, Math.floor(this.virtualRowHeight)) : 48;
+  }
+
+  get bodyViewportHeight(): number | null {
+    return this.height != null && Number.isFinite(this.height) && this.height > 0
+      ? Math.max(32, this.height) : this.virtualScrollActive ? 384 : null;
+  }
+
+  get resolvedDetailRowHeight(): number {
+    return Number.isFinite(this.detailRowHeight) ? Math.max(32, Math.floor(this.detailRowHeight)) : 160;
+  }
+
+  get bodyMaxHeight(): number | null {
+    return this.bodyViewportHeight ?? (this.maxHeight != null && Number.isFinite(this.maxHeight) && this.maxHeight > 0 ? this.maxHeight : null);
+  }
+
+  private get virtualOffsets(): number[] {
+    const rows = this.renderRows;
+    if (this.offsetSource !== rows) {
+      this.offsetSource = rows;
+      this.offsets = [0];
+      for (const row of rows) this.offsets.push(this.offsets[this.offsets.length - 1] + this.resolvedVirtualRowHeight +
+        (row.kind === 'data' && this.rowDetailTpl && this.isExpanded(row.pagedIndex) ? this.resolvedDetailRowHeight : 0));
+    }
+    return this.offsets;
+  }
+
+  get virtualContentHeight(): number {
+    return this.virtualRemote ? this.recordTotal() * this.resolvedVirtualRowHeight : this.virtualOffsets[this.renderRows.length];
+  }
+
+  private offsetIndex(top: number): number {
+    if (this.virtualRemote) return Math.floor(top / this.resolvedVirtualRowHeight);
+    const offsets = this.virtualOffsets;
+    let lo = 0, hi = this.renderRows.length;
+    while (lo < hi) { const mid = Math.floor((lo + hi + 1) / 2); if (offsets[mid] <= top) lo = mid; else hi = mid - 1; }
+    return Math.min(lo, Math.max(0, this.renderRows.length - 1));
+  }
+
+  get virtualStartIndex(): number {
+    const top = Math.min(this.virtualScrollTop, Math.max(0, this.virtualContentHeight - (this.bodyViewportHeight ?? 384)));
+    return Math.max(0, this.offsetIndex(top) - this.resolvedVirtualOverscan);
+  }
+
+  private get resolvedVirtualOverscan(): number {
+    return Number.isFinite(this.virtualOverscan) ? Math.min(100, Math.max(0, Math.floor(this.virtualOverscan))) : 5;
+  }
+
+  get viewportRows(): (NgbDatagridRenderRow<T> | NgbDatagridLoadingRow)[] {
+    const rows = this.renderRows;
+    if (!this.virtualScrollActive) return rows;
+    const start = this.virtualStartIndex;
+    const end = Math.min(this.virtualRemote ? this.recordTotal() : rows.length, start + Math.ceil((this.bodyViewportHeight ?? 384) / this.resolvedVirtualRowHeight) + this.resolvedVirtualOverscan * 2 + 1);
+    if (this.virtualRemote) {
+      return Array.from({length: Math.max(0, end - start)}, (_, offset) => {
+        const absoluteIndex = start + offset;
+        return rows[absoluteIndex - this.virtualSkip] ?? {kind: 'loading', key: `loading:${absoluteIndex}`, absoluteIndex};
+      });
+    }
+    if (rows !== this.virtualSliceSource || start !== this.virtualSliceStart || end !== this.virtualSliceEnd) {
+      this.virtualSliceSource = rows; this.virtualSliceStart = start; this.virtualSliceEnd = end;
+      this.virtualSlice = rows.slice(start, end);
+    }
+    return this.virtualSlice;
+  }
+
+  get virtualTopPadding(): number {
+    return !this.virtualScrollActive ? 0 : this.virtualRemote ? this.virtualStartIndex * this.resolvedVirtualRowHeight : this.virtualOffsets[this.virtualStartIndex] ?? 0;
+  }
+  get virtualBottomPadding(): number {
+    if (!this.virtualScrollActive) return 0;
+    const end = this.virtualStartIndex + this.viewportRows.length;
+    return Math.max(0, this.virtualContentHeight - (this.virtualRemote ? end * this.resolvedVirtualRowHeight : this.virtualOffsets[end] ?? 0));
+  }
+
+  /** Request another remote window. Repeated scroll events within a buffer are coalesced. */
+  requestVirtualRange(force = false): void {
+    if (!this.virtualRemote || !this.virtualScrollActive || !this.browserLayoutReady()) return;
+    const visible = Math.ceil((this.bodyViewportHeight ?? 384) / this.resolvedVirtualRowHeight);
+    const take = Math.max(visible * 3 + this.resolvedVirtualOverscan * 2 + 1, Number.isFinite(this.virtualPageSize) ? Math.floor(this.virtualPageSize) : 60);
+    const skip = Math.max(0, Math.min(this.virtualStartIndex, Math.max(0, this.recordTotal() - take)));
+    if (force) this.forcedRangePending = true;
+    if (!force && !this.forcedRangePending && this.data.length && this.virtualStartIndex >= this.virtualSkip && this.virtualStartIndex + this.viewportRows.length <= this.virtualSkip + this.data.length) {
+      if (this.virtualTimer) clearTimeout(this.virtualTimer);
+      this.lastVirtualRequest = '';
+      return;
+    }
+    const key = `${skip}:${take}`;
+    if (!force && key === this.lastVirtualRequest) return;
+    this.lastVirtualRequest = key;
+    if (this.virtualTimer) clearTimeout(this.virtualTimer);
+    this.virtualTimer = setTimeout(() => {
+      this.forcedRangePending = false;
+      if (!this.destroyRef.destroyed) this.virtualRangeChange.emit({skip, take, state: this.dataState()});
+    }, Number.isFinite(this.virtualDebounce) ? Math.max(0, this.virtualDebounce) : 80);
+  }
+
+  /** Scroll a row in the processed page, or an absolute record in remote-window mode. */
+  scrollToRow(index: number): boolean {
+    const count = this.virtualRemote ? this.recordTotal() : this.paged.length;
+    if (!Number.isInteger(index) || index < 0 || index >= count || !this.shouldEnableScroll) return false;
+    const body = this.bodyScroller?.nativeElement;
+    if (!body || !this.browserLayoutReady()) return false;
+    if (this.virtualScrollActive) {
+      const renderedIndex = this.virtualRemote ? index : this.renderRows.findIndex(row => row.kind === 'data' && row.pagedIndex === index);
+      if (renderedIndex < 0) return false;
+      const offset = this.virtualRemote ? index * this.resolvedVirtualRowHeight : this.virtualOffsets[renderedIndex];
+      const top = Math.min(offset, Math.max(0, this.virtualContentHeight - (this.bodyViewportHeight ?? 384)));
+      body.scrollTop = top; this.virtualScrollTop = top;
+      this.requestVirtualRange(); this.cdr.markForCheck();
+    } else {
+      const row = body.querySelector<HTMLElement>(`tr[data-row-index="${index}"]`);
+      if (!row) return false;
+      row.scrollIntoView({ block: 'nearest' });
+    }
+    return true;
+  }
+
+  scrollTo(request: NgbDataGridScrollRequest): boolean {
+    const column = request.column;
+    if (column !== undefined && (!Number.isInteger(column) || column < 0 || column >= this.visibleColumns.length)) return false;
+    if (request.row !== undefined && !this.scrollToRow(request.row)) return false;
+    if (!this.shouldEnableScroll || !this.browserLayoutReady()) return false;
+    if (column !== undefined) {
+      if (this.columnPinnedSide(this.visibleColumns[column])) return true;
+      const header = this.headerScroller?.nativeElement.querySelectorAll<HTMLElement>('th[data-field]')[column];
+      const body = this.bodyScroller?.nativeElement;
+      if (!header || !body) return false;
+      body.scrollLeft = header.offsetLeft;
+      this.onBodyHorizontalScroll();
+    }
+    return request.row !== undefined || column !== undefined;
+  }
+
+  /** Finds an item in the loaded processed page. Remote IDs must be resolved by the application. */
+  scrollToItem(request: NgbDataGridScrollItemRequest): boolean {
+    const index = this.paged.findIndex(row => this.readFieldValue(row, request.idField) === request.id);
+    return index >= 0 && this.scrollToRow(index + (this.virtualRemote ? this.virtualSkip : 0));
+  }
   /** Row height used to stack multiple sticky rows without overlap (px). */
   @Input() stickyRowHeight = 40;
   /** Header height (px) used to offset sticky rows below the header. */
@@ -1133,6 +1332,10 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   private invalidatePagedCache(): void {
+    this.offsetSource = null;
+    if (!this.virtualRemote) this.virtualScrollTop = 0;
+    if (this.scrollable === 'virtual') this.focusedCell = null;
+    if (!this.virtualRemote && this.scrollable === 'virtual' && this.bodyScroller?.nativeElement) this.bodyScroller.nativeElement.scrollTop = 0;
     this.batchEditor?.onGridChange();
     if (this.rangeIndexes) this.focusedCell = null;
     this.clearCellRange();
@@ -1651,6 +1854,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   get filtered(): T[] {
+    if (this.virtualRemote) return this.data;
     if (this.filteredDirty) {
       const src = this.data ?? [];
       const global = this.currentGlobalFilter();
@@ -2019,6 +2223,38 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     }
     this.invalidatePagedCache();
     this.cdr.markForCheck();
+  }
+
+  /** Group path uses zero-based sibling indexes, for example [0, 1]. */
+  setGroupExpanded(path: readonly number[], expanded: boolean): boolean {
+    let groups = this.groupingResults(this.groupingSourceRows());
+    let start = 0;
+    for (let level = 0; level < path.length; level++) {
+      const index = path[level];
+      if (!Number.isInteger(index) || index < 0 || index >= groups.length) return false;
+      for (let i = 0; i < index; i++) start += groups[i].count;
+      const group = groups[index];
+      if (level === path.length - 1) {
+        const key = this.groupKeyFor(group, level, start);
+        if (expanded) this.collapsedGroupKeys.delete(key); else this.collapsedGroupKeys.add(key);
+        this.invalidatePagedCache(); this.cdr.markForCheck(); return true;
+      }
+      groups = group.items.filter((item): item is NgbDataGridGroupResult<T> => this.isGroupResult(item));
+    }
+    return false;
+  }
+
+  expandGroup(path: number | readonly number[]): boolean { return this.setGroupExpanded(typeof path === 'number' ? [path] : path, true); }
+  collapseGroup(path: number | readonly number[]): boolean { return this.setGroupExpanded(typeof path === 'number' ? [path] : path, false); }
+  setAllGroupsExpanded(expanded: boolean): void {
+    this.collapsedGroupKeys.clear();
+    if (!expanded) {
+      let start = 0;
+      for (const group of this.groupingResults(this.groupingSourceRows())) {
+        this.collapsedGroupKeys.add(this.groupKeyFor(group, 0, start)); start += group.count;
+      }
+    }
+    this.invalidatePagedCache(); this.cdr.markForCheck();
   }
 
   private isGroupResult(item: NgbDataGridGroupResult<T> | T): item is NgbDataGridGroupResult<T> {
@@ -2736,7 +2972,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       if (this.sort.active && !this.visibleColumns.some((col) => col.field === this.sort.active)) {
         this.sort = { active: null, direction: '' };
       }
-      const base = (!this.enableSorting || !this.sort.active || !this.sort.direction)
+      const base = (this.virtualRemote || !this.enableSorting || !this.sort.active || !this.sort.direction)
         ? [...this.filtered]
         : (() => {
           const copy = [...this.filtered];
@@ -2759,7 +2995,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   /** True when `[data]` is a server page and `[total]` is the full result count. */
   isServerBound(): boolean {
     const total = this.total;
-    return total != null && Number.isFinite(total) && total >= 0 && total > this.sorted.length;
+    return this.virtualRemote || (total != null && Number.isFinite(total) && total >= 0 && total > this.sorted.length);
   }
 
   /** Row count for pager, range labels, and `aria-rowcount`. */
@@ -2808,11 +3044,11 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   hasRenderableRows(): boolean {
-    return this.renderRows.length > 0;
+    return (this.virtualRemote && this.recordTotal() > 0) || this.renderRows.length > 0;
   }
 
   private shouldUseLocalDataOperations(): boolean {
-    if (!this.dataOperations) return false;
+    if (this.virtualRemote || !this.dataOperations) return false;
     const total = this.total;
     return !(total != null && Number.isFinite(total) && total >= 0 && total > (this.data?.length ?? 0));
   }
@@ -3161,6 +3397,11 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   private emitDataStateChange(): void {
+    if (this.virtualRemote) {
+      this.virtualScrollTop = 0;
+      if (this.bodyScroller) this.bodyScroller.nativeElement.scrollTop = 0;
+      this.requestVirtualRange(true);
+    }
     this.dataStateChange.emit(this.dataState());
     this.emitViewChange();
   }
@@ -3215,10 +3456,24 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   get shouldEnableScroll(): boolean {
-    return this.scrollable;
+    return this.scrollable !== false && this.scrollable !== 'none';
   }
 
   onBodyHorizontalScroll(): void {
+    if (this.virtualScrollActive) {
+      this.virtualScrollTop = Math.max(0, this.bodyScroller?.nativeElement.scrollTop ?? 0);
+      const visibleData = this.viewportRows.filter((row): row is NgbDatagridDataRenderRow<T> => row.kind === 'data');
+      const first = visibleData[0]?.pagedIndex ?? 0;
+      const last = (visibleData[visibleData.length - 1]?.pagedIndex ?? first) + 1;
+      if (!this.focusedCell || this.focusedCell.rowIndex < first || this.focusedCell.rowIndex >= last) {
+        this.focusedCell = { rowIndex: first, colIndex: this.focusedCell?.colIndex ?? 0 };
+      }
+    }
+    this.requestVirtualRange();
+    const body = this.bodyScroller?.nativeElement;
+    if (body && !this.loading && body.scrollHeight > body.clientHeight && body.scrollTop + body.clientHeight >= body.scrollHeight - 2) {
+      if (this.bottomNotifiedLength !== this.data.length) { this.bottomNotifiedLength = this.data.length; this.scrollBottom.emit(); }
+    } else if (body && body.scrollTop + body.clientHeight < body.scrollHeight - 2) this.bottomNotifiedLength = -1;
     const left = this.bodyScroller?.nativeElement.scrollLeft ?? 0;
     if (this.headerScroller?.nativeElement) {
       this.headerScroller.nativeElement.scrollLeft = left;
@@ -3228,6 +3483,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   @HostListener('window:resize')
   onWindowResize(): void {
+    this.requestVirtualRange();
     this.scheduleStickyGroupSync();
   }
 
@@ -4227,7 +4483,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   ariaDataRowIndex(index: number): number | null {
     if (this.isGroupingActive() || this.rowDetailTpl || this.addingNew) return null;
-    return (this.paginationActive ? (this.page - 1) * this.pageSize : 0) + index + 2 + (this.anyFilterable ? 1 : 0);
+    return (this.virtualRemote ? this.virtualSkip : this.paginationActive ? (this.page - 1) * this.pageSize : 0) + index + 2 + (this.anyFilterable ? 1 : 0);
   }
 
   ariaColCount(): number {
@@ -4249,8 +4505,8 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   cellTabIndex(rowIndex: number, colIndex: number): number | null {
     if (!(this.keyboardNavigation || this.cellRangeEnabled()) || this.isStackedLayout()) return null;
-    if (!this.focusedCell) {
-      return rowIndex === 0 && colIndex === 0 ? 0 : -1;
+    if (!this.focusedCell || (this.virtualScrollActive && !this.viewportRows.some(row => row.kind === 'data' && row.pagedIndex === this.focusedCell!.rowIndex))) {
+      return rowIndex === (this.virtualScrollActive ? this.viewportRows.find(row => row.kind === 'data')?.pagedIndex ?? 0 : 0) && colIndex === 0 ? 0 : -1;
     }
     return this.isCellFocused(rowIndex, colIndex) ? 0 : -1;
   }
@@ -4263,6 +4519,13 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       rowIndex: Math.min(Math.max(0, rowIndex), maxRow),
       colIndex: Math.min(Math.max(0, colIndex), maxCol),
     };
+    if (this.virtualScrollActive) {
+      const renderedIndex = this.renderRows.findIndex(row => row.kind === 'data' && row.pagedIndex === this.focusedCell!.rowIndex);
+      const top = this.virtualRemote ? (this.virtualSkip + this.focusedCell.rowIndex) * this.resolvedVirtualRowHeight : this.virtualOffsets[Math.max(0, renderedIndex)];
+      const height = this.bodyViewportHeight ?? 384;
+      if (top < this.virtualScrollTop || top + this.resolvedVirtualRowHeight > this.virtualScrollTop + height) this.scrollToRow(this.focusedCell.rowIndex + (this.virtualRemote ? this.virtualSkip : 0));
+      this.cdr.detectChanges();
+    }
     this.cdr.markForCheck();
     queueMicrotask(() => this.focusFocusedCellElement());
   }
@@ -4332,6 +4595,15 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       return;
     }
 
+    if (this.virtualRemote && ((ev.ctrlKey && (key === 'Home' || key === 'End')) || (key === 'ArrowDown' && rowIndex === this.paged.length - 1) || (key === 'ArrowUp' && rowIndex === 0))) {
+      ev.preventDefault();
+      const absolute = ev.ctrlKey ? (key === 'Home' ? 0 : this.recordTotal() - 1) : this.virtualSkip + rowIndex + (key === 'ArrowDown' ? 1 : -1);
+      if (absolute >= 0 && absolute < this.recordTotal()) {
+        if (absolute >= this.virtualSkip && absolute < this.virtualSkip + this.data.length) this.focusCell(absolute - this.virtualSkip, colIndex);
+        else { this.pendingVirtualFocus = {row: absolute, column: colIndex}; this.scrollToRow(absolute); }
+      }
+      return;
+    }
     let nextRow = rowIndex;
     let nextCol = colIndex;
     const colCount = this.visibleColumns.length;
@@ -4379,8 +4651,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     const cell = this.focusedCell;
     if (!cell) return;
     const root = this.hostEl?.nativeElement;
-    const rows = root?.querySelectorAll('tbody tr.grid-data-row');
-    const row = rows?.[cell.rowIndex] as HTMLElement | undefined;
+    const row = root?.querySelector(`tbody tr.grid-data-row[data-row-index="${cell.rowIndex}"]`) as HTMLElement | undefined;
     const el = row?.querySelector(`td[data-col-index="${cell.colIndex}"]`) as HTMLElement | null;
     el?.focus?.();
   }
@@ -4466,11 +4737,16 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.filterForm.valueChanges.subscribe(() => {
       if (this.syncingFilterForm) return;
     });
-    this.globalFilterCtrl.valueChanges.subscribe((value) => {
-      this.globalFilter = value;
-      this.page = 1;
-      this.filtersChange.emit({ global: value, columns: { ...this.filters } });
-    });
+    if (!this.globalFilterConnected) {
+      this.globalFilterConnected = true;
+      const subscription = this.globalFilterCtrl.valueChanges.subscribe((value) => {
+        this.globalFilter = value;
+        this.page = 1;
+        this.filtersChange.emit({ global: value, columns: { ...this.filters } });
+        this.emitDataStateChange();
+      });
+      this.destroyRef.onDestroy(() => subscription.unsubscribe());
+    }
   }
 
   @ContentChildren(NgbCellTemplate)   private cellTplQ!:   QueryList<NgbCellTemplate<T>>;
@@ -4599,6 +4875,8 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       this.rebuildFilterForm();
       this.syncFilterFormFromState();
     }
+    if (ch['scrollable'] || ch['virtualRemote'] || ch['height'] || ch['virtualRowHeight'] || ch['virtualOverscan'] || ch['detailRowHeight']) this.invalidatePagedCache();
+    if (ch['scrollable'] && this.browserLayoutReady()) this.scheduleViewRefresh(() => this.observeScrollbarGutter());
     if (ch['highlightedIndex']) this.updateHighlightCache();
     if (ch['editMode']) this.resetEditingState();
     if (ch['tableOptions'] || ch['stickyRows'] || ch['rowReorderable'] || ch['trackBy']) this.clearCellRange();
@@ -4610,6 +4888,19 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     if (ch['data'] || ch['columns'] || ch['labels'] || ch['locale'] || ch['dir']) {
       this.cdr.markForCheck();
     }
+    if (ch['data'] || ch['virtualSkip'] || ch['total']) {
+      this.virtualSliceSource = null;
+      const pending = this.pendingVirtualFocus;
+      if (pending && pending.row >= this.virtualSkip && pending.row < this.virtualSkip + this.data.length) {
+        this.pendingVirtualFocus = null;
+        queueMicrotask(() => { if (!this.destroyRef.destroyed) this.focusCell(pending.row - this.virtualSkip, pending.column); });
+      }
+    }
+    if (this.virtualRemote && (ch['state'] || ch['filter'])) {
+      this.virtualScrollTop = 0;
+      if (this.bodyScroller) this.bodyScroller.nativeElement.scrollTop = 0;
+      this.requestVirtualRange(true);
+    } else if (ch['virtualRemote'] || ch['total'] || ch['height'] || ch['virtualRowHeight'] || ch['virtualPageSize']) this.requestVirtualRange();
     this.scheduleStickyGroupSync();
   }
 
@@ -5042,6 +5333,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   toggleExpand(i: number): void {
+    this.offsetSource = null;
     const isOpen = this.expanded.has(i);
 
     if (this.singleExpand) {

@@ -1,5 +1,9 @@
 # @angular-bootstrap/ngbootstrap
 
+> New in v2.5.0: [DataGrid scroll modes and row virtualization](./SCROLLING.md).
+> This working-tree version is not yet published.
+
+
 Angular UI for data-heavy apps, with a focus on DataGrid depth, Angular-native Form Builder workflows, and practical standalone components that fit naturally into Bootstrap-based Angular projects.
 
 ## What Is Included

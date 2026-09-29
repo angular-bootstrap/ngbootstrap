@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.5.0 - 2026-09-29
+
+- Extend scrolling with remote range requests, debounce/retry, custom loading cells,
+  grouped rows, fixed-height details, expansion APIs, conditional height, endless
+  notifications and row/column/item navigation. Non-scrollable mode uses one table.
+
+- Add fixed-height DataGrid row virtualization for loaded data, named scroll modes, viewport height, overscan, and scrollToRow.
+- Fix remote search notifications and prevent duplicate search subscriptions after column changes.
+- Patch fast-uri in development dependencies.
+- Preserve logical row indexes and keyboard focus across virtual windows.
+- Keep boolean scroll inputs compatible; display a compatibility notice for variable-height workflows.
+
 ## 2.4.0 - 2026-09-27
 
 - Remove the duplicate plus from the default Add label; both toolbar variants retain one decorative plus icon.

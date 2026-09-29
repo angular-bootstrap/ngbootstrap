@@ -1,6 +1,6 @@
 {
   "name": "@angular-bootstrap/ngbootstrap",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "Angular UI for data-heavy apps with DataGrid grouping, Angular-native Form Builder, drag-and-drop workflows, pagination, typeahead, tree, splitter, stepper, and chips.",
   "author": {
     "name": "Harmeet Singh"
@@ -116,7 +116,7 @@
       "babel-plugin-istanbul>test-exclude": "^8.0.0",
       "jest-config>glob": "^13.0.6",
       "jest-runtime>glob": "^13.0.6",
-      "fast-uri@>=3.0.0 <3.1.6": "^3.1.6",
+      "fast-uri@>=3.0.0 <3.1.7": "3.1.7",
       "brace-expansion@>=4.0.0 <5.0.9": "^5.0.9",
       "js-yaml@>=3.0.0 <3.15.2": "^3.15.2",
       "nanoid@<3.3.18": "^3.3.18"

@@ -61,6 +61,7 @@ import type { Datagrid } from '../datagrid.component';
       @for (col of grid.visibleColumns; track col.field; let ci = $index) {
       <th role="columnheader"
         [attr.data-title]="col.header"
+        [attr.data-field]="col.field"
         [class.sortable]="grid.enableSorting && col.sortable"
         [class.filter-menu-active]="grid.hasActiveColumnFilter(col.field)"
         [class.filter-menu-open]="grid.openFilterMenuField === col.field"
@@ -189,6 +190,7 @@ import type { Datagrid } from '../datagrid.component';
       @for (col of grid.visibleColumns; track col.field) {
       <th role="columnheader"
         [attr.data-title]="col.header"
+        [attr.data-field]="col.field"
         [class.column-pinned-start]="grid.columnPinnedSide(col) === 'start'"
         [class.column-pinned-end]="grid.columnPinnedSide(col) === 'end'"
         [style.width.px]="grid.columnWidth(col) || null"

@@ -1732,3 +1732,45 @@ body.ngb-datagrid-column-resizing {
 .ngb-grid .grid-table td.grid-cell--draft {
   border-bottom: 2px dashed var(--ngb-primary, #0d6efd);
 }
+
+// Fixed row geometry keeps virtual offsets independent of theme and cell content.
+.ngb-grid.ngb-grid--virtual .grid-body--main { border-collapse: separate; border-spacing: 0; }
+.ngb-grid.ngb-grid--virtual .grid-data-row { height: var(--ngb-virtual-row-height); }
+.ngb-grid.ngb-grid--virtual .grid-data-row > td {
+  height: var(--ngb-virtual-row-height);
+  max-height: var(--ngb-virtual-row-height);
+  padding-block: 0;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+.ngb-grid.ngb-grid--virtual .grid-cell-viewport {
+  height: calc(var(--ngb-virtual-row-height) - 2px);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+.ngb-grid .ngb-grid__virtual-spacer > td {
+  padding: 0 !important;
+  border: 0 !important;
+  line-height: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+// Group rows participate in the same fixed-height virtual coordinate system.
+.ngb-grid.ngb-grid--virtual {
+  .grid-group-row, .grid-group-footer-row { height: var(--ngb-virtual-row-height); }
+  .grid-group-row > td, .grid-group-footer-row > td { height: var(--ngb-virtual-row-height); padding-block: 0; }
+  .grid-group-row__toggle, .grid-group-row__column-slot {
+    max-height: calc(var(--ngb-virtual-row-height) - 2px); overflow: hidden; flex-wrap: nowrap;
+  }
+  .grid-group-row__content { white-space: nowrap; overflow: hidden; }
+  tr[ngbDatagridDetailRow], .grid-detail-row__cell { height: var(--ngb-virtual-detail-height); padding-block: 0; }
+  .grid-detail-row__content { height: calc(var(--ngb-virtual-detail-height) - 2px); overflow: auto; box-sizing: border-box; }
+}
+.ngb-grid__skeleton { display: block; width: 70%; height: .8rem; border-radius: var(--ngb-radius-sm); background: var(--ngb-border-color); opacity: .55; }
+
+.ngb-grid.ngb-grid--virtual .grid-virtual-group-content {
+  height: calc(var(--ngb-virtual-row-height) - 2px); overflow: hidden;
+  display: flex; align-items: center; gap: .5rem;
+}
