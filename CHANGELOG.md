@@ -4,6 +4,7 @@
 
 - Remove the stale unpublished-version note from the npm README. No component or API changes.
 - Reject that development note during release package validation.
+- Update build-tool dependencies piscina, probe-image-size, and fast-uri to patched versions.
 
 ## 2.5.0 - 2026-09-29
 
