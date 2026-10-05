@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.5.1 - 2026-10-04
+
+- Remove the stale unpublished-version note from the npm README. No component or API changes.
+- Reject that development note during release package validation.
+
 ## 2.5.0 - 2026-09-29
 
 - Extend scrolling with remote range requests, debounce/retry, custom loading cells,

@@ -40,6 +40,7 @@ for (const peerName of forbiddenPeerNames) {
   assert(!sourcePkg.peerDependencies?.[peerName], `${peerName} must not be published as a supported optional peer.`);
 }
 assert(existsSync(join(distDir, 'README.md')), 'Dist package README.md is missing.');
+assert(!readFileSync(join(distDir, 'README.md'), 'utf8').includes('This working-tree version is not yet published.'), 'Remove the unpublished-version note from the README before releasing.');
 assert(existsSync(join(distDir, 'fesm2022')), 'Dist package fesm2022 output is missing.');
 assert(existsSync(join(distDir, 'types')), 'Dist package type declarations are missing.');
 
