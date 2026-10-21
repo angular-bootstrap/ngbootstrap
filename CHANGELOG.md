@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.5.2 - 2026-10-21
+
+- Correct Typeahead suggestion semantics with option roles and listbox multi-selection state. Suggestions stay out of the tab order while the combobox retains active-descendant navigation.
+- Add regression tests for option roles, tab stops and active-descendant relationships.
+- Patch development-tool dependencies and remove the vulnerable legacy sprintf-js dependency from the coverage configuration loader.
+- This patch does not claim complete WAI-ARIA or WCAG conformance; broader keyboard and focus improvements remain planned.
+
 ## 2.5.1 - 2026-10-04
 
 - Remove the stale unpublished-version note from the npm README. No component or API changes.

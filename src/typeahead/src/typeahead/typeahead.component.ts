@@ -189,6 +189,7 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
         [class.show]="overlayVisible"
         [id]="overlayId"
         role="listbox"
+        [attr.aria-multiselectable]="multiSelect ? true : null"
         (scroll)="onScroll($event)"
       >
         @if (vScroll) {
@@ -199,6 +200,8 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
         <button
           type="button"
           class="dropdown-item"
+          role="option"
+          tabindex="-1"
           [class.active]="idx === activeIndex"
           [class.fw-semibold]="isSelected(item)"
           [attr.aria-selected]="isSelected(item)"

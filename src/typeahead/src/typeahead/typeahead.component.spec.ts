@@ -108,6 +108,23 @@ describe('NgbTypeaheadComponent', () => {
     fixture.detectChanges();
   });
 
+  it('exposes listbox options without adding suggestion tab stops', () => {
+    host.multi = true;
+    fixture.detectChanges();
+    const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    input.value = 'a';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    const list = fixture.nativeElement.querySelector('[role="listbox"]') as HTMLElement;
+    expect(list.getAttribute('aria-multiselectable')).toBe('true');
+    const options = Array.from(list.querySelectorAll<HTMLElement>('[role="option"]'));
+    expect(options.length).toBeGreaterThan(0);
+    expect(options.every(option => option.tabIndex === -1)).toBe(true);
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    fixture.detectChanges();
+    expect(options.some(option => option.id === input.getAttribute('aria-activedescendant'))).toBe(true);
+  });
+
   it('filters on input and selects single item', () => {
     const input = fixture.debugElement.query(By.css('input')).nativeElement as HTMLInputElement;
     input.value = 'Ind';
