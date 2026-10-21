@@ -8,13 +8,9 @@
   "assets": [
     "CHANGELOG.md",
     "RELEASE_NOTES.md",
-    "THEMING.md",
     "src/styles/**/*.scss",
     "src/styles/**/*.css",
     "src/ai/README.md",
-    "SAVED_VIEWS.md",
-    "CELL_RANGES.md",
-    "BATCH_EDITING.md",
-    "SCROLLING.md"
+    "docs/guides/*.md"
   ]
 }

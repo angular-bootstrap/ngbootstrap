@@ -106,7 +106,7 @@ toolbar editing fall back to regular rendering with a visible message. External
 editing, selection, pinned columns, themes and pagination remain supported.
 Variable row heights and column virtualization are not supported. Browsers impose
 maximum scroll heights; filter or page exceptionally large results. Scroll settings
-and offsets are not included in [saved views or Undo/Redo](SAVED_VIEWS.md).
+and offsets are not included in [saved views or Undo/Redo](saved-views.md).
 
 When integrating, test fast scrolling, stale/cancelled responses, empty/error results,
 keyboard boundary navigation and zoom with your templates. Measure DOM rendering

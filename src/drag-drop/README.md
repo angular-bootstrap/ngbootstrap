@@ -18,4 +18,4 @@ Import from `@angular-bootstrap/ngbootstrap/drag-drop` or the root `@angular-boo
 
 Give draggable items meaningful `dndAriaLabel` values and preserve visible focus. Keyboard reorder is limited to the same list; cross-list keyboard movement is not implemented. Provide an application action when users need an accessible alternative to pointer-only movement. The legacy `aria-grabbed` attribute is not proof of current APG conformance.
 
-Applications own item persistence and builder schemas. Simple list movement and advanced Form Builder workflows use the same primitives; a separate reusable form engine is not supplied. See [shared themes](../../THEMING.md) for styling and [contributor checks](../../CONTRIBUTING.md) before changing behavior.
+Applications own item persistence and builder schemas. Simple list movement and advanced Form Builder workflows use the same primitives; a separate reusable form engine is not supplied. See [shared themes](../../docs/guides/theming.md) for styling and [contributor checks](../../CONTRIBUTING.md) before changing behavior.

@@ -27,7 +27,7 @@ Those projects focus mainly on Bootstrap components for Angular. `@angular-boots
 ## Requirements
 
 For shared Bootstrap, Material, and Tailwind themes, palette swatches,
-installation, the optional Tailwind v4 utility preset, and CSS overrides, see the [theme reference and audit](THEMING.md).
+installation, the optional Tailwind v4 utility preset, and CSS overrides, see the [theme reference and audit](docs/guides/theming.md).
 
 - Angular `>=21.0.0 <23.0.0`
 - RxJS `^7.8.0`
@@ -97,6 +97,10 @@ export class UsersGridComponent {
 }
 ```
 
+## Feature guides
+
+Browse the [feature guides](docs/guides/README.md) for setup, keyboard behavior, persistence ownership and compatibility limits.
+
 ## DataGrid Highlights
 
 - Sorting, filtering, pagination, editing, export, sticky rows and columns, and row detail workflows
@@ -121,10 +125,10 @@ For provider-independent assistant controls and request lifecycle guidance, see 
 
 ## Saved views and open-source scope
 
-[Saved DataGrid views](SAVED_VIEWS.md) add named invoice/workspace layouts, Date-safe snapshots and explicit memory, local-storage or custom persistence in 2.3.0.
+[Saved DataGrid views](docs/guides/saved-views.md) add named invoice/workspace layouts, Date-safe snapshots and explicit memory, local-storage or custom persistence in 2.3.0.
 
 Advanced features, themes and examples are MIT-licensed: no paid component tier, license keys, watermarks or mandatory hosted service. Applications own backend and AI-provider costs. Later roadmap capabilities are marked as planned in the saved-views guide.
 
 ## Batch editing (2.4.0)
 
-[Batch editing](BATCH_EDITING.md) adds opt-in clipboard drafts, validation, Apply/Discard and atomic Undo/Redo for existing rows. [Cell ranges](CELL_RANGES.md) support current-page selection with mouse and keyboard. Applications own persistence; use pagination for batch editing on large datasets. [Virtual scrolling](SCROLLING.md) is a separate rendering mode and does not support batch editing.
+[Batch editing](docs/guides/batch-editing.md) adds opt-in clipboard drafts, validation, Apply/Discard and atomic Undo/Redo for existing rows. [Cell ranges](docs/guides/cell-ranges.md) support current-page selection with mouse and keyboard. Applications own persistence; use pagination for batch editing on large datasets. [Virtual scrolling](docs/guides/scrolling.md) is a separate rendering mode and does not support batch editing.

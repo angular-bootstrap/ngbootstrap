@@ -91,10 +91,10 @@ Detail row templates are not supported together with sticky or locked columns.
 
 ## Feature guides and accessibility
 
-- [Saved views and Undo/Redo](../../SAVED_VIEWS.md)
-- [Cell ranges](../../CELL_RANGES.md) and [batch editing](../../BATCH_EDITING.md)
-- [Scroll modes, remote windows and virtualization](../../SCROLLING.md)
-- [Shared themes](../../THEMING.md)
+- [Saved views and Undo/Redo](../../docs/guides/saved-views.md)
+- [Cell ranges](../../docs/guides/cell-ranges.md) and [batch editing](../../docs/guides/batch-editing.md)
+- [Scroll modes, remote windows and virtualization](../../docs/guides/scrolling.md)
+- [Shared themes](../../docs/guides/theming.md)
 
 Set an appropriate `tableOptions.caption` for the grid name. Headers/cells expose grid semantics and state, but the default grid is not a full APG spreadsheet keyboard implementation. Range selection is opt-in; virtual rows expose logical indexes while only mounted content is available to browser Find and assistive-technology browse mode. Preserve native input/clipboard behavior in custom editors and test focus across sorting, grouping, details and remote updates.
 

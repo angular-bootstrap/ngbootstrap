@@ -1,7 +1,7 @@
 # DataGrid cell ranges
 
 Available in v2.4.0. Select a rectangular range on the current page.
-For clipboard drafts, validation and batch history, see [batch editing](BATCH_EDITING.md).
+For clipboard drafts, validation and batch history, see [batch editing](batch-editing.md).
 
 ```html
 <ngb-datagrid
@@ -33,7 +33,7 @@ Only one range on the current loaded, ungrouped page is supported. Hidden column
 are excluded. Paging, sorting, filtering, data replacement and schema changes clear
 selection. Stacked cards, sticky rows and row-reordering mode disable range selection.
 Mouse dragging is supported; touch-drag range selection is not yet implemented.
-Ranges are not saved in views or recorded as history commands. For fixed-height virtual rendering and its compatibility limits, see [scrolling](SCROLLING.md); do not assume clipboard batch support in virtual mode.
+Ranges are not saved in views or recorded as history commands. For fixed-height virtual rendering and its compatibility limits, see [scrolling](scrolling.md); do not assume clipboard batch support in virtual mode.
 
 Selected cells expose aria-selected; the grid exposes aria-multiselectable. The
 active cell keeps the existing roving tabindex. Customize `labels.cellRangeSelected`

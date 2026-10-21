@@ -102,4 +102,4 @@ Apply/Discard are native labeled buttons with disabled/busy states. Cell errors
 are visible and marked aria-invalid; messages use the grid's existing live region.
 Test keyboard and assistive-technology workflows in your application, especially
 when supplying custom cells or controls. Touch-drag selection is not supported.
-Use pagination for large datasets; batch editing does not virtualize rows. See [scrolling compatibility](SCROLLING.md) before combining modes and [cell ranges](CELL_RANGES.md) for selection shortcuts. Saving or replaying a batch is a local commit, not confirmation of server persistence.
+Use pagination for large datasets; batch editing does not virtualize rows. See [scrolling compatibility](scrolling.md) before combining modes and [cell ranges](cell-ranges.md) for selection shortcuts. Saving or replaying a batch is a local commit, not confirmation of server persistence.

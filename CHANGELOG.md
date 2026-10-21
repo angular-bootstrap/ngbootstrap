@@ -64,7 +64,7 @@ Published history is preserved below. See [release notes](RELEASE_NOTES.md) for 
 
 - MIT throughout; no paid tier or new runtime dependency. Angular 21/22 peers and Bootstrap defaults remain supported.
 - Views do not store rows, selection, expansion, drafts, callbacks, templates or themes. Storage is explicitly application-owned.
-- See SAVED_VIEWS.md for APIs, accessibility limitations and planned future milestones.
+- See docs/guides/saved-views.md for APIs, accessibility limitations and planned future milestones.
 
 
 - Updated Angular development dependencies to 22.1.7, ng-packagr to 22.1.1, and Zone.js to 0.16 to address development-dependency security advisories. These tooling fixes are included in this release; Angular peer ranges remain unchanged.

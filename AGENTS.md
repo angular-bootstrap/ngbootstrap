@@ -37,6 +37,8 @@ Public exports, implementations and tests in `src/**` define behavior. The separ
 
 ## Testing and documentation
 
+Feature guides live in `docs/guides/` with lowercase, hyphenated names and an index. Keep contributor/release instructions at the root and component-specific introductions beside their source. When moving guides, update links, `ng-package.json`, package validation and downstream source-index consumers.
+
 - Add regression tests for behavioral fixes and meaningful tests for public contracts: success, invalid input, boundaries, cancellation/failure, cleanup and event counts. Avoid tests that only mirror implementation.
 - Cover changed Grid interactions with editing, grouping, filtering, paging, saved views/history and supported scroll modes. Check applicable themes and keyboard interactions; include all affected AI controls for shared changes.
 - SSR-sensitive changes require server rendering and browser hydration checks. DOM mocks alone do not establish hydration correctness. State any missing browser verification explicitly.

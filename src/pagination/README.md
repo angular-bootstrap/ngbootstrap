@@ -32,4 +32,4 @@ The datagrid uses `ngb-pager` internally. Configure via `[pageable]` (`NgbDatagr
 
 The pager emits navigation choices; your application slices local data or fetches remote results. Keep the total count accurate, reset to page one when changing query/page size, and handle loading/errors without trapping focus. Native controls provide keyboard activation; verify labels and current-page state with your application content. Responsive measurements run after browser rendering, so test SSR/hydration when changing layout behavior.
 
-Use [shared themes](../../THEMING.md) for styling. See [DataGrid scrolling](../../SCROLLING.md) when choosing between pagination and remote virtual windows.
+Use [shared themes](../../docs/guides/theming.md) for styling. See [DataGrid scrolling](../../docs/guides/scrolling.md) when choosing between pagination and remote virtual windows.

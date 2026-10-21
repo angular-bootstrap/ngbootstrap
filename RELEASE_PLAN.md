@@ -27,7 +27,7 @@ git diff --check
 - Verify changed Grid/AI workflows, all affected theme mappings, keyboard/focus, SSR and hydration. Record the actual browser and commands used. Manual screen-reader checks are optional and must not be reported as completed unless performed.
 - Review moderate/high dependency findings, apply compatible fixes and rerun affected checks. The existing CI audit has a high threshold; its success alone does not mean zero advisories. Report unresolved release risks.
 - Coordinate the separate docs app: installation/API/examples, accessibility limits, navigation, package version, production build, route tests and SEO audit. Keep future functionality marked planned.
-- For Ask ngbootstrap, align the dependency, docs version and source index with the released library. Use committed public sources and immutable citations; run `ask:version:check` and the repository's retrieval tests there. Preserve existing secrets, budget and persistence configuration.
+- For Ask ngbootstrap, align the dependency, docs version and source index with the released library. When advancing beyond the 2.5.2 source snapshot, migrate the Ask allowlist, Markdown selectors and retrieval tests from root guide paths to `docs/guides/` paths. Keep older immutable citations intact. Use committed public sources and immutable citations; run `ask:version:check` and the repository's retrieval tests there. Preserve existing secrets, budget and persistence configuration.
 
 ## Publish through the existing workflow
 

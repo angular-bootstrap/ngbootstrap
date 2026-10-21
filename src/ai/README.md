@@ -110,7 +110,7 @@ model transports, persistence, AI Grid features, and WebMCP are not included.
 Inputs with labels support basic copy customization; this first version does
 not yet expose a full translation dictionary for every built-in action label.
 
-For [theme configuration](../../THEMING.md), use the shared library styles rather than component-specific demo overrides. Never put provider keys in a browser bundle or trust model output as authorization to perform an action.
+For [theme configuration](../../docs/guides/theming.md), use the shared library styles rather than component-specific demo overrides. Never put provider keys in a browser bundle or trust model output as authorization to perform an action.
 
 Tests cover submission guards, composition/keyboard input, cancellation,
 streaming updates, error/retry, feedback, explicit draft/edit application,
