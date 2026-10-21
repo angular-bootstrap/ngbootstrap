@@ -1,72 +1,43 @@
-# 2.2.0 release checklist
+# Release checklist
 
-Status: versioned for 2.2.0; authorized for publication through the existing
-GitHub tag workflow. npm availability was checked before versioning.
+This is the reusable maintainer checklist, not an authorization to publish. Current release notes are in [RELEASE_NOTES.md](RELEASE_NOTES.md); historical changes are in [CHANGELOG.md](CHANGELOG.md).
 
-## Library changes to include
+## Prepare
 
-- Five standalone AI controls exported from `@angular-bootstrap/ngbootstrap`:
-  Prompt Box, AI Chat, Inline AI Prompt, AI Prompt workspace, and Smart Paste.
-- Typed request, message, response, feedback, and field-mapping contracts.
-  Loading, errors, cancellation, streaming updates, and explicit review/apply
-  remain application-controlled. No AI transport, provider SDK, or credentials.
-- Distinct composer, conversation, inline editing, split draft-review, and
-  field-review layouts using the shared theme layer.
-- Keyboard and accessibility improvements: associated labels and instructions,
-  stable Send/Stop button focus, read-only busy inputs, IME-safe Enter handling,
-  Escape and focus restoration, expanded-panel relationships, named scroll
-  regions, live logs/status, feedback pressed state, and native field controls.
-- Shared CSS tokens with Bootstrap defaults, Material and Tailwind variable
-  bridges, named palette presets, and safe framework-free fallbacks.
-- DataGrid shared-token mappings, theme-picker synchronization, and inherited
-  theme values for filter menus rendered outside the grid.
-- Theme consumption by stepper, splitter, tree, typeahead, chips, pager,
-  pagination, drag/drop styling, and JSON preview.
-- Optional Tailwind v4 utility preset, optional peer metadata, stylesheet exports,
-  published theme/AI guidance, and stronger package verification.
+- Confirm release scope and authorization, target branch and semantic version. Do not merge unrelated branches or release unfinished APIs to meet a calendar date.
+- Read [AGENTS.md](AGENTS.md), inspect the diff and verify all documented capabilities against source and tests.
+- Align `package.json`, changelog and release notes. Keep historical entries intact. Confirm the proposed version is not already on npm; an existing npm version cannot be overwritten.
+- Use Node 22 and pinned pnpm with a clean frozen-lockfile installation. Check Angular peers, optional integrations and absence of unnecessary runtime dependencies.
 
-The docs workspace is a separate repository. Its examples, design kit, theme
-reference, Angular resolution changes, and demo routes are not npm library code.
-
-## Verified locally on Angular 22
-
-- Full Jest suite: 29 suites / 414 tests pass, including 42 AI tests.
-- Library lint and ng-packagr build pass.
-- Package validator loads the built bundle, checks all five AI exports, theme
-  assets, stylesheet export, optional peers, and existing DataGrid exports.
-- npm pack dry run passes (temporary npm cache used; no upload).
-- Docs production build passes.
-- Chrome: Tab navigation, Shift+Enter newline, Enter activation, Space activation
-  of the inline trigger, Escape closure and focus restoration; no console errors.
-- Previous visual checks covered desktop, 390px mobile, and theme switching.
-
-## Release execution
-
-- Version availability: verified; package and release notes set to 2.2.0.
-- Clean frozen-lockfile installation: passed after synchronizing the optional
-  Tailwind peer and patching vulnerable transitive tooling dependencies.
-- Security audit: high-severity threshold passed; three moderate Angular 22.0.8
-  development-dependency advisories remain and are disclosed in release notes.
-- Angular 21 and 22: isolated tarball consumer strict-template compilation passed.
-- Manual VoiceOver/NVDA testing: not available in this execution environment;
-  remains a follow-up. Do not claim WCAG certification.
-- Publishing follows a successful main-branch CI run, then the version tag.
-- Verify registry metadata and install the published package after workflow success.
-
-## Existing publishing workflow
-
-`.github/workflows/release.yml` triggers on `v*.*.*` tags and uses the
-`npm-production` environment with npm trusted publishing and provenance. It
-checks tag/version agreement and that the version is unpublished, then runs:
+## Validate before pushing a release
 
 ```sh
-npm publish ./dist/ngbootstrap --access public --provenance
+corepack pnpm install --frozen-lockfile
+corepack pnpm lint
+corepack pnpm test:ci
+corepack pnpm build
+corepack pnpm release:verify
+corepack pnpm pack:dry-run
+corepack pnpm security:audit
+corepack pnpm --ignore-workspace audit --audit-level=moderate
+git diff --check
 ```
 
-Use that workflow after the gates above. Confirm its npm trusted-publisher
-configuration and environment approvals are in place. Do not publish the private
-docs workspace or run a second manual publish in parallel.
+- Inspect tarball contents and install the candidate tarball in an isolated consumer; verify standalone imports and strict templates across supported Angular majors when compatibility is affected. Never publish the private docs workspace.
+- Verify changed Grid/AI workflows, all affected theme mappings, keyboard/focus, SSR and hydration. Record the actual browser and commands used. Manual screen-reader checks are optional and must not be reported as completed unless performed.
+- Review moderate/high dependency findings, apply compatible fixes and rerun affected checks. The existing CI audit has a high threshold; its success alone does not mean zero advisories. Report unresolved release risks.
+- Coordinate the separate docs app: installation/API/examples, accessibility limits, navigation, package version, production build, route tests and SEO audit. Keep future functionality marked planned.
+- For Ask ngbootstrap, align the dependency, docs version and source index with the released library. Use committed public sources and immutable citations; run `ask:version:check` and the repository's retrieval tests there. Preserve existing secrets, budget and persistence configuration.
 
-After publication, verify npm metadata, install the published version in a clean
-consumer, then update docs dependency/version references and remove preview labels
-only for features actually included in the published package.
+## Publish through the existing workflow
+
+1. Review and commit only intended changes. Push the authorized branch and verify CI before creating the matching `vMAJOR.MINOR.PATCH` release tag.
+2. `.github/workflows/release.yml` handles tag/version checks, unpublished-version checks, validation and npm publication through the `npm-production` environment using OIDC trusted publishing and provenance.
+3. Respect existing environment approvals. Do not create credentials, bypass protection rules or run a competing manual `npm publish`.
+4. Inspect the workflow result and npm registry metadata. Registry availability can lag workflow completion; verify installation from npm before declaring publication complete.
+5. Create/update the GitHub release with a plain version title, such as `v2.5.2`, and accurate notes. Update the private docs dependency/version and deploy through its existing process.
+6. Verify deployed HTTPS pages, navigation, examples, SEO and Ask version/grounding as applicable. Do not incur AI-provider charges without a defined authorized test budget.
+
+## If verification fails
+
+Stop the release/deployment step, preserve the failure evidence and fix the cause. Do not move an already published tag or pretend a failed check passed. A published package correction requires a new version. Report the published/deployed state, remaining risks and follow-up work clearly.

@@ -1,6 +1,6 @@
-# ngbootstrap/datagrid
+# @angular-bootstrap/ngbootstrap/datagrid
 
-Secondary entry point of `ngbootstrap`. It can be used by importing from `ngbootstrap/datagrid`.
+Import from `@angular-bootstrap/ngbootstrap/datagrid` or the root `@angular-bootstrap/ngbootstrap` package.
 
 ## Data binding
 
@@ -88,3 +88,14 @@ Column capabilities:
 Sticky and locked columns require explicit `width` values on all visible columns.
 Locked columns also require at least one visible unlocked column.
 Detail row templates are not supported together with sticky or locked columns.
+
+## Feature guides and accessibility
+
+- [Saved views and Undo/Redo](../../SAVED_VIEWS.md)
+- [Cell ranges](../../CELL_RANGES.md) and [batch editing](../../BATCH_EDITING.md)
+- [Scroll modes, remote windows and virtualization](../../SCROLLING.md)
+- [Shared themes](../../THEMING.md)
+
+Set an appropriate `tableOptions.caption` for the grid name. Headers/cells expose grid semantics and state, but the default grid is not a full APG spreadsheet keyboard implementation. Range selection is opt-in; virtual rows expose logical indexes while only mounted content is available to browser Find and assistive-technology browse mode. Preserve native input/clipboard behavior in custom editors and test focus across sorting, grouping, details and remote updates.
+
+The remote-binding snippet above illustrates application responsibilities, not a complete standalone component: provide `Order`, `PageResult`, columns, HttpClient setup and an initial load. Cancel stale requests, handle errors and release subscriptions in production. Use `dataStateChange` for consolidated remote query state, and only `virtualRangeChange` for virtual remote fetching, to avoid duplicate requests.

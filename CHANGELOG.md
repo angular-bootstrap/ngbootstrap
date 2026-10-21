@@ -1,5 +1,7 @@
 # Changelog
 
+Published history is preserved below. See [release notes](RELEASE_NOTES.md) for the current summary and [release checklist](https://github.com/angular-bootstrap/ngbootstrap/blob/main/RELEASE_PLAN.md) for maintainer verification.
+
 ## 2.5.2 - 2026-10-21
 
 - Correct Typeahead suggestion semantics with option roles and listbox multi-selection state. Suggestions stay out of the tab order while the combobox retains active-descendant navigation.

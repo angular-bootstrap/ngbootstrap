@@ -1,4 +1,4 @@
-# AI UI components
+# AI controls
 
 Provider-independent Angular controls for operational assistant workflows.
 These components render supplied data and emit typed events. They do not call
@@ -17,7 +17,7 @@ import {
 
 Add the standalone components to your application's component imports.
 Bootstrap 5 CSS is required. For scoped themes, load the library global
-`src/styles/themes.scss` entry and use any supported `data-ngb-theme` wrapper.
+`@angular-bootstrap/ngbootstrap/src/styles/themes` Sass entry and use any supported `data-ngb-theme` wrapper.
 No model SDK or AI provider dependency is installed.
 
 | Component | Use case | Application event |
@@ -109,6 +109,8 @@ Content is interpolated as text. HTML, Markdown rendering, attachments, voice,
 model transports, persistence, AI Grid features, and WebMCP are not included.
 Inputs with labels support basic copy customization; this first version does
 not yet expose a full translation dictionary for every built-in action label.
+
+For [theme configuration](../../THEMING.md), use the shared library styles rather than component-specific demo overrides. Never put provider keys in a browser bundle or trust model output as authorization to perform an action.
 
 Tests cover submission guards, composition/keyboard input, cancellation,
 streaming updates, error/retry, feedback, explicit draft/edit application,

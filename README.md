@@ -1,6 +1,6 @@
 # @angular-bootstrap/ngbootstrap
 
-> New in v2.5.0: [DataGrid scroll modes and row virtualization](./SCROLLING.md).
+> Latest patch: v2.5.2 improves Typeahead accessibility semantics and updates development dependencies. See [release notes](./RELEASE_NOTES.md).
 
 Angular UI for data-heavy apps, with a focus on DataGrid depth, Angular-native Form Builder workflows, and practical standalone components that fit naturally into Bootstrap-based Angular projects.
 
@@ -64,12 +64,12 @@ Import standalone components directly in your Angular component.
 
 ```ts
 import { Component } from '@angular/core';
-import { NgbDatagridComponent, type ColumnDef } from '@angular-bootstrap/ngbootstrap';
+import { Datagrid, type ColumnDef } from '@angular-bootstrap/ngbootstrap';
 
 @Component({
   selector: 'app-users-grid',
   standalone: true,
-  imports: [NgbDatagridComponent],
+  imports: [Datagrid],
   template: `
     <ngb-datagrid
       [data]="users"
@@ -107,15 +107,15 @@ export class UsersGridComponent {
 ## Development
 
 ```bash
-pnpm install
-pnpm lint
-pnpm test
-pnpm build
-pnpm release:verify
-pnpm security:audit
+corepack pnpm install --frozen-lockfile
+corepack pnpm lint
+corepack pnpm test:ci
+corepack pnpm build
+corepack pnpm release:verify
+corepack pnpm security:audit
 ```
 
-Build output is written to `dist/`.
+Use Node 22 and the pinned pnpm version. Build output is `dist/ngbootstrap`. Read [CONTRIBUTING.md](https://github.com/angular-bootstrap/ngbootstrap/blob/main/CONTRIBUTING.md) and [AGENTS.md](https://github.com/angular-bootstrap/ngbootstrap/blob/main/AGENTS.md) before editing; maintainers follow [RELEASE_PLAN.md](https://github.com/angular-bootstrap/ngbootstrap/blob/main/RELEASE_PLAN.md) before publishing.
 
 For provider-independent assistant controls and request lifecycle guidance, see the [AI UI reference](src/ai/README.md).
 
@@ -127,4 +127,4 @@ Advanced features, themes and examples are MIT-licensed: no paid component tier,
 
 ## Batch editing (2.4.0)
 
-[Batch editing](BATCH_EDITING.md) adds opt-in clipboard drafts, validation, Apply/Discard and atomic Undo/Redo for existing rows. [Cell ranges](CELL_RANGES.md) support current-page selection with mouse and keyboard. Applications own persistence; use pagination for large datasets.
+[Batch editing](BATCH_EDITING.md) adds opt-in clipboard drafts, validation, Apply/Discard and atomic Undo/Redo for existing rows. [Cell ranges](CELL_RANGES.md) support current-page selection with mouse and keyboard. Applications own persistence; use pagination for batch editing on large datasets. [Virtual scrolling](SCROLLING.md) is a separate rendering mode and does not support batch editing.

@@ -1,6 +1,6 @@
 # Saved DataGrid views
 
-Available in 2.3.0. ngbootstrap is MIT-licensed Angular UI for data-heavy apps. Advanced features, themes and examples remain free and open source: no component tier, license keys, watermarks or mandatory hosted service. Applications pay for their own backend and AI providers. This project is not affiliated with ng-bootstrap or ngx-bootstrap.
+Available since 2.3.0. ngbootstrap is MIT-licensed Angular UI for data-heavy apps. Advanced features, themes and examples remain free and open source: no component tier, license keys, watermarks or mandatory hosted service. Applications pay for their own backend and AI providers. This project is not affiliated with ng-bootstrap or ngx-bootstrap.
 
 ## Install and connect
 
@@ -50,11 +50,11 @@ Denied storage, malformed collections, quota failures and rejected adapter opera
 
 The Views control uses native labeled select/input/button controls, a keyboard-submittable form, Escape to cancel naming, focus restoration and live status/error messages. It consumes existing `--ngb-*` tokens, including Bootstrap defaults and optional palettes. Persisted settings load after browser rendering. Server markup contains the initial configuration, never browser storage. Grid column measurements, Pager density measurements and Splitter size announcements start after browser rendering.
 
-Grid headers and body share a grid role; drag/drop rows retain row/rowgroup roles. Keyboard sort/filter/edit controls remain available. This release does not claim complete spreadsheet keyboard navigation: cell-range navigation and selection are future work. Pointer column resizing and sticky overlays still require application-specific accessibility evaluation. Test custom templates, theme overrides, dense layouts and actual screen-reader workflows in your application.
+Grid headers and body share a grid role; drag/drop rows retain row/rowgroup roles. Keyboard sort/filter/edit controls remain available. Opt-in [cell-range navigation and selection](CELL_RANGES.md) are available since 2.4.0; the default grid does not implement a complete spreadsheet keyboard model. Pointer column resizing and sticky overlays still require application-specific accessibility evaluation. Test custom templates, theme overrides, dense layouts and actual screen-reader workflows in your application.
 
 ## Planned, not currently included
 
-Ranges, clipboard batches and atomic batch history are available in 2.4.0; see BATCH_EDITING.md. Large-data virtualization/datasource caching, pivot analysis, CSV import and a reusable Form Builder engine remain roadmap priorities. Scheduler/resource planning remains an evaluation item. These are not release dates or available APIs.
+[Ranges](CELL_RANGES.md), [clipboard batches and atomic batch history](BATCH_EDITING.md) are available since 2.4.0. [Virtual scrolling and remote windows](SCROLLING.md) are available since 2.5.0; request caching remains application-owned. Pivot analysis, CSV import and a reusable Form Builder engine remain roadmap priorities. Scheduler/resource planning remains an evaluation item. These are not release dates or available APIs.
 
 ## Undo/Redo configuration history (2.3.0)
 

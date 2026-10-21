@@ -1,6 +1,6 @@
 # Shared component themes
 
-## Audit and compatibility
+## Historical audit and current compatibility
 
 DataGrid already had a real token layer before scoped themes were added:
 82 distinct `--dg-*` names across its styles, covering surfaces, text, borders,
@@ -261,6 +261,14 @@ Verify the optional integration with an independently installed Tailwind v4:
 ```sh
 node scripts/verify-tailwind-preset.mjs /path/to/tailwind-project
 ```
+
+## Validate custom themes
+
+Check normal, hover, focus, selected, disabled, loading and error states in each
+component you use. Verify contrast, visible focus, zoom/reflow and reduced motion;
+palette support alone does not certify accessibility. Keep virtual row content
+within its configured height. Application templates and third-party controls need
+their own styling and keyboard checks.
 
 ## Naming and scope
 

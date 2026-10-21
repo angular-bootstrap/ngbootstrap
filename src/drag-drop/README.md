@@ -1,6 +1,6 @@
-# ngbootstrap/drag-drop
+# @angular-bootstrap/ngbootstrap/drag-drop
 
-Secondary entry point of `ngbootstrap`. It can be used by importing from `ngbootstrap/drag-drop`.
+Import from `@angular-bootstrap/ngbootstrap/drag-drop` or the root `@angular-bootstrap/ngbootstrap` package.
 
 ## Capabilities
 
@@ -13,3 +13,9 @@ Secondary entry point of `ngbootstrap`. It can be used by importing from `ngboot
   - `Escape` to cancel and restore the original order
 
 `(dndDropped)` fires after pointer drops and after keyboard-confirmed same-list reorders.
+
+## Accessibility and ownership
+
+Give draggable items meaningful `dndAriaLabel` values and preserve visible focus. Keyboard reorder is limited to the same list; cross-list keyboard movement is not implemented. Provide an application action when users need an accessible alternative to pointer-only movement. The legacy `aria-grabbed` attribute is not proof of current APG conformance.
+
+Applications own item persistence and builder schemas. Simple list movement and advanced Form Builder workflows use the same primitives; a separate reusable form engine is not supplied. See [shared themes](../../THEMING.md) for styling and [contributor checks](../../CONTRIBUTING.md) before changing behavior.

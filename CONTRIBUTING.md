@@ -1,104 +1,42 @@
-# Contributing to `ngbootstrap`
+# Contributing
 
-Thanks for your interest in contributing! This document explains how to work with the repo and what we expect for changes, tests, and releases.
+Help build MIT-licensed Angular UI for data-heavy apps. Read [AGENTS.md](AGENTS.md) for the repository's coding, testing, accessibility and pre-push checklist.
 
-## Getting started
+## Set up
 
-1. Fork the repository and clone your fork.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Run tests and build once to ensure everything is working:
-   ```bash
-   npm test
-   npm run build
-   ```
+Fork/clone the repository, use Node 22 and the pnpm version pinned in `package.json` through Corepack:
 
-## Branching and pull requests
+```sh
+corepack pnpm install --frozen-lockfile
+corepack pnpm test:ci
+corepack pnpm build
+```
 
-- Work on feature branches off `main`, for example:
-  - `feat/stepper-labels`
-  - `fix/datagrid-sorting`
-  - `chore/infra-ci`
-- Keep PRs focused and as small as practical.
-- Include a clear description:
-  - What you changed.
-  - Why it’s needed.
-  - Any breaking changes or migration notes.
-- All PRs must:
-  - Pass CI (lint, tests, build).
-  - Get at least one approval from a maintainer.
+Build output is `dist/ngbootstrap`. Keep the existing pnpm lockfile; do not install with npm or regenerate it with a different pnpm major version.
 
-## Code style & quality
+## Make a focused change
 
-- Follow the existing patterns and naming in the repository.
-- TypeScript:
-  - Strict mode is enabled – avoid `any` unless necessary.
-  - Prefer explicit types for public APIs.
-- Linting:
-  ```bash
-  npm run lint
-  ```
-- Tests:
-  - Add or update Jest tests for any non‑trivial behavior.
-  - Make sure tests pass locally:
-    ```bash
-    npm test
-    ```
+1. Check the working tree and read the affected component and feature guides.
+2. Reproduce the issue or describe the intended behavior and supported combinations.
+3. Implement against real public exports, preserving Angular 21/22 and existing event contracts.
+4. Add focused regression coverage, including relevant keyboard, error and async paths. For example: `corepack pnpm test -- src/ai --runInBand`.
+5. Update examples, limitations and API guidance. Library functionality comes before updates to the separate docs app.
+6. Run the applicable pre-push checks in [AGENTS.md](AGENTS.md), inspect the diff and submit a focused contribution using the repository's review process.
 
-## Components & API design
+Describe the problem, resulting behavior, tests run, compatibility impact and remaining limitations. Avoid unrelated formatting changes. Do not change package versions for ordinary contributions unless the maintainer requests a release.
 
-When adding or extending components (datagrid, stepper, drag‑drop, pagination):
+## Documentation and accessibility
 
-- Keep components **standalone** and tree‑shakable.
-- Prefer:
-  - Inputs/outputs over services where possible.
-  - Clear, typed event payloads.
-  - Accessibility (ARIA attributes, keyboard support).
-- Avoid adding new runtime dependencies if you can solve it with plain Angular + browser APIs.
+Use original, copy-paste-friendly examples with scoped imports. Explain application-owned persistence, validation and provider calls. Test documented keys and focus transitions; distinguish automated semantics checks from optional manual screen-reader testing. Do not claim full WCAG/APG compliance without evidence.
 
-## Versioning & releases
+SEO belongs to the separate ngbootstrap.com workspace. Coordinate relevant navigation, API links, metadata and sitemap updates there; no SEO command runs in this package. See [RELEASE_PLAN.md](RELEASE_PLAN.md) for release coordination.
 
-We use **semantic versioning** (`MAJOR.MINOR.PATCH`).
+## Security and dependencies
 
-- Version bumps are made by maintainers only.
-- Contributors:
-  - Do **not** run `npm version` in PRs unless explicitly asked.
-  - Do not change `package.json` version for regular feature or bugfix PRs.
-- Release process (maintainers):
-  1. Decide the next version (e.g. `1.1.0` or `1.0.1`).
-  2. On `main`, run:
-     ```bash
-     npm version minor   # or patch/major as appropriate
-     git push origin main --tags
-     ```
-  3. GitHub Actions (`release.yml`) will:
-     - Install deps
-     - Run tests
-     - Build the library
-     - Publish the new version to npm using the configured `NPM_TOKEN`.
+Do not commit secrets, authentication configuration or real customer data. Avoid new runtime dependencies without a demonstrated need. Review moderate and high advisories, apply compatible patches and rerun affected checks. Report exploitable security issues privately to the maintainer using an available verified contact rather than posting exploit details in a public issue.
 
-## Security & secrets
+Publishing uses GitHub's existing `npm-production` environment and npm trusted publishing with provenance. It does not require a contributor npm token. Maintainers follow [RELEASE_PLAN.md](RELEASE_PLAN.md).
 
-- Never commit secrets (npm tokens, API keys, `.npmrc` with auth, etc.).
-- npm publishing uses:
-  - `NPM_TOKEN` stored in GitHub Actions secrets.
-- If you discover a security issue:
-  - Do not open a public issue with details.
-  - Instead, contact the maintainer privately (e.g. via GitHub profile email or security contact).
+## Issues
 
-## Reporting bugs & requesting features
-
-- For bugs:
-  - Include steps to reproduce.
-  - Mention Angular version, browser, and any relevant environment details.
-  - Include a minimal repro (StackBlitz, repo, or clear code snippet) when possible.
-- For feature requests:
-  - Explain the use case and why it belongs in this library.
-  - If you’re willing to implement it, mention that in the issue.
-
-## Thank you
-
-Every contribution—issues, docs, tests, or code—is appreciated.  
-If you’re unsure about anything, feel free to open an issue and ask before starting work.***
+For bugs, include the package/Angular versions, browser, minimal reproduction, expected behavior and actual behavior. For features, describe the developer workflow and constraints. Keep feature requests distinct from promises of delivery.

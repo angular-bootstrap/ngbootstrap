@@ -1,22 +1,16 @@
-# @angular-bootstrap/ngbootstrap 2.4.0
+# @angular-bootstrap/ngbootstrap 2.5.2
 
-Update multiple existing records through opt-in DataGrid range selection and batch editing.
+Typeahead suggestions now expose option roles and listbox multi-selection state. Suggestions remain outside the tab order while the combobox uses active-descendant navigation. Regression coverage checks these relationships and focus behavior.
 
-- Select a current-page rectangle with the mouse or keyboard and copy/paste tab-separated values.
-- Keep clipboard drafts separate from committed rows, with typed conversion and column hooks.
-- Validate the whole batch, including cancellable async validation; Apply commits once and Discard leaves rows unchanged.
-- Treat each successful Apply as one Undo/Redo command, with conflict protection and validation during replay.
-- Customize Apply, Discard, Undo and Redo buttons in the existing grid toolbar.
-- Use consistent Add buttons in External and Toolbar editing, with one decorative plus icon.
+Development-tool dependencies were patched, including removal of the vulnerable legacy sprintf-js dependency from the coverage configuration loader. No new runtime dependency or breaking public API is introduced.
 
-One `batchSave` event reports each local commit or replay. Applications own server persistence,
-authorization, transactions and recovery; the grid does not wait for a server response.
-Requires stable unique trackBy IDs, the default edit service and a regular ungrouped table.
-No cross-page paste, new-row insertion, formulas or virtualization. Paste is limited to
-10,000 cells / 1 MiB; history has step and payload limits. See [BATCH_EDITING.md](BATCH_EDITING.md)
-and [CELL_RANGES.md](CELL_RANGES.md) for setup, keyboard behavior and limitations.
+This patch does not claim complete WAI-ARIA or WCAG conformance. Applications still need to verify accessible naming, custom templates, themes and end-to-end keyboard/focus flows.
 
-Existing editing modes and synchronous history APIs remain compatible. Use async history
-methods for batch commands; the supplied toolbar tools and shortcuts do this automatically.
-Angular 21/22, Bootstrap defaults and shared themes remain supported. No new runtime dependency.
-All features, themes and examples remain MIT-licensed, without license keys or a paid tier.
+## Available feature guides
+
+- [Scrolling and virtualization](SCROLLING.md): local rows, remote windows, complete grouped trees and fixed-height details, with explicit compatibility limits.
+- [Saved views and Undo/Redo](SAVED_VIEWS.md): configuration snapshots, optional persistence and committed-edit history.
+- [Cell ranges](CELL_RANGES.md) and [batch editing](BATCH_EDITING.md): clipboard drafts, validation and atomic history for supported regular-table layouts.
+- [Shared themes](THEMING.md) and [AI controls](src/ai/README.md): Bootstrap defaults, optional palettes and provider-independent UI.
+
+See [CHANGELOG.md](CHANGELOG.md) for earlier releases. Angular 21/22 are supported peers. All features, themes and examples remain MIT-licensed, with no paid tier or mandatory hosted service. Applications own backend and AI-provider costs.
