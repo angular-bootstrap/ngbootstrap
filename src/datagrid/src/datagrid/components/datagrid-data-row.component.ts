@@ -42,12 +42,13 @@ import type { Datagrid } from '../datagrid.component';
       [class.column-pinned-start]="grid.shouldPinLeadingUtilityColumns() && !grid.isStackedLayout()"
       [style.left.px]="grid.isStackedLayout() ? null : grid.utilityStickyOffset('detail')"
     >
+      @if (grid.canExpandRow(index)) {
       <button
         type="button"
         class="grid-detail-toggle"
         (click)="$event.stopPropagation(); grid.toggleExpand(index)"
         [attr.aria-expanded]="grid.isExpanded(index)"
-        [attr.aria-controls]="'dg-row-detail-' + index"
+        [attr.aria-controls]="grid.isExpanded(index) ? grid.detailRowId(index) : null"
         [attr.aria-label]="grid.isExpanded(index) ? grid.collapseRowAriaLabel : grid.expandRowAriaLabel"
       >
         <span
@@ -56,6 +57,7 @@ import type { Datagrid } from '../datagrid.component';
           aria-hidden="true"
         ></span>
       </button>
+      }
     </td>
     }
 

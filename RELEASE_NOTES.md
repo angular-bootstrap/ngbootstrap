@@ -1,13 +1,18 @@
-# @angular-bootstrap/ngbootstrap 2.5.2
+# @angular-bootstrap/ngbootstrap 2.6.0
 
-Typeahead suggestions now expose option roles and listbox multi-selection state. Suggestions remain outside the tab order while the combobox uses active-descendant navigation. Regression coverage checks these relationships and focus behavior.
+Build master-detail grids with conditional disclosure, controlled expansion and nested keyboard navigation.
 
-Development-tool dependencies were patched, including removal of the vulnerable legacy sprintf-js dependency from the coverage configuration loader. No new runtime dependency or breaking public API is introduced.
+- Use `detailRowPredicate` to show details only for eligible records.
+- Use `detailRowKey`, `expandedDetailKeys` and `expandedDetailKeysChange` to retain expansion through sorting, paging and immutable data refreshes.
+- Call `expandRow(index)` or `collapseRow(index)` and observe typed `detailChange` events for explicit current-page transitions.
+- Enable keyboard navigation on parent and child grids: Enter on the detail cell enters the child; Escape from a plain child cell returns to the parent. Editors keep their own shortcuts.
+- Disclosure IDs are scoped to each grid. Collapsing focused detail content restores disclosure focus, and parent cell navigation no longer targets nested-grid cells.
 
-This patch does not claim complete WAI-ARIA or WCAG conformance. Applications still need to verify accessible naming, custom templates, themes and end-to-end keyboard/focus flows.
+Existing templates and index-based expansion remain compatible. No runtime dependencies were added. Applications own child-data loading and expansion persistence. Details remain incompatible with pinned columns and flat remote virtual windows; local virtualization requires fixed detail heights. This release does not claim complete APG or WCAG conformance.
 
 ## Available feature guides
 
+- [Master-detail](docs/guides/master-detail.md): nested grids, conditional display, keyed expansion, events and keyboard support.
 - [Scrolling and virtualization](docs/guides/scrolling.md): local rows, remote windows, complete grouped trees and fixed-height details, with explicit compatibility limits.
 - [Saved views and Undo/Redo](docs/guides/saved-views.md): configuration snapshots, optional persistence and committed-edit history.
 - [Cell ranges](docs/guides/cell-ranges.md) and [batch editing](docs/guides/batch-editing.md): clipboard drafts, validation and atomic history for supported regular-table layouts.

@@ -411,7 +411,7 @@
                 [grid]="gridHost"
                 [row]="item.row"
                 [index]="item.pagedIndex"
-                [attr.id]="'dg-row-detail-' + item.pagedIndex"
+                [attr.id]="detailRowId(item.pagedIndex)"
               ></tr>
               }
             }

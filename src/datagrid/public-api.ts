@@ -54,3 +54,5 @@ export * from './src/batch/batch-types';
 export * from './src/batch/clipboard';
 export * from './src/batch/datagrid-batch.directive';
 export * from './src/batch/datagrid-batch-tool.directive';
+
+export * from './src/models/row-detail';

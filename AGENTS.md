@@ -68,3 +68,7 @@ corepack pnpm --ignore-workspace audit --audit-level=moderate
 ## Before publishing
 
 Follow [RELEASE_PLAN.md](RELEASE_PLAN.md). Use the existing tag-triggered GitHub workflow and npm trusted publishing, not a second manual publish or new token. Align package version, release notes and changelog; verify the package and an isolated consumer. After publication, verify registry installation, GitHub release and separately deployed docs/Ask versions. Keep planned capabilities distinct from released ones.
+
+## Example presentation convention
+
+Use the feature name as each example heading (for example, Nested grids or Conditional display). Introductions explain the capability and configuration being demonstrated, rather than naming the sample business scenario. Use enough realistic records to exercise paging and state changes; keep sample domain names in data, not feature headings.

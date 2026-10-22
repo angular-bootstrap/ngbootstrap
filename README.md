@@ -1,6 +1,6 @@
 # @angular-bootstrap/ngbootstrap
 
-> Latest patch: v2.5.2 improves Typeahead accessibility semantics and updates development dependencies. See [release notes](./RELEASE_NOTES.md).
+> Latest release: v2.6.0 adds conditional master-detail rows, stable-key expansion and nested-grid keyboard navigation. See [release notes](./RELEASE_NOTES.md).
 
 Angular UI for data-heavy apps, with a focus on DataGrid depth, Angular-native Form Builder workflows, and practical standalone components that fit naturally into Bootstrap-based Angular projects.
 

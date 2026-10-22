@@ -63,7 +63,7 @@ assert(typeof bundle.NgbGridHighlightDirective === 'function', 'Built package mu
 for (const name of ['NgbGridBatchEditingDirective', 'NgbGridBatchApplyToolDirective', 'NgbGridBatchDiscardToolDirective', 'ngbParseGridClipboard', 'ngbSerializeGridClipboard', 'NgbDatagridToolbarComponent', 'NgbGridUndoToolDirective', 'NgbGridRedoToolDirective', 'NgbDataGridHistoryDirective', 'NgbDataGridViewsComponent', 'NgbMemoryGridViewStore', 'NgbLocalStorageGridViewStore', 'ngbSerializeGridView', 'ngbDeserializeGridView', 'NgbPromptBoxComponent', 'NgbAiChatComponent', 'NgbAiPromptComponent', 'NgbInlineAiPromptComponent', 'NgbSmartPasteComponent']) {
   assert(typeof bundle[name] === 'function', `Built package must export ${name}.`);
 }
-for (const asset of ['docs/guides/README.md', 'docs/guides/scrolling.md', 'docs/guides/batch-editing.md', 'docs/guides/cell-ranges.md', 'docs/guides/saved-views.md', 'docs/guides/theming.md', 'src/ai/README.md', 'src/styles/themes.scss', 'src/styles/_tokens.scss', 'src/styles/integrations/tailwind.css']) {
+for (const asset of ['docs/guides/master-detail.md', 'docs/guides/README.md', 'docs/guides/scrolling.md', 'docs/guides/batch-editing.md', 'docs/guides/cell-ranges.md', 'docs/guides/saved-views.md', 'docs/guides/theming.md', 'src/ai/README.md', 'src/styles/themes.scss', 'src/styles/_tokens.scss', 'src/styles/integrations/tailwind.css']) {
   assert(existsSync(join(distDir, asset)), `Missing packaged asset: ${asset}`);
 }
 assert(distPkg.exports?.['./styles/tailwind.css'] === './src/styles/integrations/tailwind.css', 'Tailwind utility export must resolve to the shipped stylesheet.');

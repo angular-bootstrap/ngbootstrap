@@ -2,6 +2,15 @@
 
 Published history is preserved below. See [release notes](RELEASE_NOTES.md) for the current summary and [release checklist](https://github.com/angular-bootstrap/ngbootstrap/blob/main/RELEASE_PLAN.md) for maintainer verification.
 
+## 2.6.0 - 2026-10-21
+
+- Add optional stable-key expansion with `detailRowKey`, `expandedDetailKeys` and `expandedDetailKeysChange`, preserving expansion through paging, sorting and immutable data refreshes.
+- Add Enter/Escape keyboard handoff for nested grids and isolate parent focus lookup from child cells.
+- Add conditional detail rows, typed expansion notifications and idempotent current-page expand/collapse methods.
+- Give detail disclosures grid-scoped IDs and relationships only to rendered targets; restore disclosure focus when collapsing focused detail content.
+- Preserve existing templates, accordion mode and page-position expansion semantics. Details remain incompatible with pinned columns and flat remote virtual windows.
+- Add regression coverage for nested grids, predicate changes, event counts, focus and virtual offsets.
+
 ## 2.5.2 - 2026-10-21
 
 - Correct Typeahead suggestion semantics with option roles and listbox multi-selection state. Suggestions stay out of the tab order while the combobox retains active-descendant navigation.

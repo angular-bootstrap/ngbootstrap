@@ -1,3 +1,5 @@
+import { NgbDataGridDetailChange, NgbDataGridDetailPredicate, NgbDataGridDetailKey, NgbDataGridDetailKeySelector } from '../models/row-detail';
+import { NgbGridDetailIds } from '../services/detail-id.service';
 import { NgbGridBatchController, NgbGridBatchCellError, NgbGridBatchSaveEvent } from '../batch/batch-types';
 import { NgbGridCellRange } from '../models/cell-range';
 import type { NgbDataGridHistoryResult } from '../views/datagrid-history.directive';
@@ -787,6 +789,27 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   @Input() editMode: NgbEditMode = 'inline';
   /** Hint shown in toolbar editing mode when a row is selected. */
   @Input() toolbarEditHint = 'Row selected — click Edit to modify or Delete to remove';
+  /** Optional pure predicate restricting which current-page rows offer details. */
+  @Input() detailRowPredicate?: NgbDataGridDetailPredicate<T>;
+  /** Emits once per changed row, including accordion-driven collapses. */
+  @Output() detailChange = new EventEmitter<NgbDataGridDetailChange<T>>();
+  /** Opt into record-key expansion across paging, sorting and immutable row reloads. */
+  @Input() detailRowKey?: NgbDataGridDetailKeySelector<T>;
+  private detailKeys: readonly NgbDataGridDetailKey[] = [];
+  private detailKeySet = new Set<NgbDataGridDetailKey>();
+  /** Initial or application-controlled keys. Requires detailRowKey; use immutable updates. */
+  @Input() get expandedDetailKeys(): readonly NgbDataGridDetailKey[] { return this.detailKeys; }
+  set expandedDetailKeys(keys: readonly NgbDataGridDetailKey[]) {
+    this.detailKeySet = new Set(Array.isArray(keys) ? keys.filter(key => this.validDetailKey(key)) : []);
+    this.detailKeys = [...this.detailKeySet];
+    this.offsetSource = null;
+    this.renderTick++;
+    this.cdr.markForCheck();
+  }
+  /** Updated keys after explicit expansion changes; suitable for two-way binding. */
+  @Output() expandedDetailKeysChange = new EventEmitter<readonly NgbDataGridDetailKey[]>();
+  private readonly detailIdPrefix = inject(NgbGridDetailIds).allocate();
+
   @Input() singleExpand = false;  // accordion mode: one row expanded at a time
   private _exportOptions: NgbDataGridExportOptions = {
     enabled: false,
@@ -4650,9 +4673,11 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   private focusFocusedCellElement(): void {
     const cell = this.focusedCell;
     if (!cell) return;
-    const root = this.hostEl?.nativeElement;
-    const row = root?.querySelector(`tbody tr.grid-data-row[data-row-index="${cell.rowIndex}"]`) as HTMLElement | undefined;
-    const el = row?.querySelector(`td[data-col-index="${cell.colIndex}"]`) as HTMLElement | null;
+    const root: HTMLElement = this.hostEl.nativeElement;
+    // A nested grid may have the same page/column indexes. Never focus its cells from the parent.
+    const row = Array.from(root.querySelectorAll<HTMLElement>(`tbody tr.grid-data-row[data-row-index="${cell.rowIndex}"]`))
+      .find(candidate => candidate.closest('.ngb-grid') === root.querySelector('.ngb-grid'));
+    const el = row?.querySelector<HTMLElement>(`td[data-col-index="${cell.colIndex}"]`);
     el?.focus?.();
   }
 
@@ -4866,6 +4891,10 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     }
     if (ch['data']) {
       this.invalidateDataCaches();
+    }
+    if (ch['detailRowPredicate'] || ch['detailRowKey']) {
+      this.offsetSource = null;
+      this.renderTick++;
     }
     if (ch['columns'] || ch['filter']) {
       this.validateColumnConfig();
@@ -5332,24 +5361,85 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.emitDataStateChange();
   }
 
-  toggleExpand(i: number): void {
-    this.offsetSource = null;
-    const isOpen = this.expanded.has(i);
-
-    if (this.singleExpand) {
-      this.expanded.clear();
-      if (!isOpen) this.expanded.add(i); // open the clicked row, or close all if it was open
-    } else {
-      if (isOpen) {
-        this.expanded.delete(i);
-      } else {
-        this.expanded.add(i);
-      }
-    }
+  /** Whether a current-page row can display the projected detail template. */
+  canExpandRow(index: number): boolean {
+    return Number.isInteger(index) && index >= 0 && index < this.paged.length &&
+      (!this.detailRowKey || this.rowDetailKey(index) !== null) &&
+      (!this.detailRowPredicate || this.detailRowPredicate(this.paged[index], index));
   }
 
-  isExpanded(i: number): boolean {
-    return this.expanded.has(i);
+  /** Stable within this grid instance, including nested grids and SSR rendering. */
+  detailRowId(index: number): string { return `${this.detailIdPrefix}-${index}`; }
+
+  /** Expand a current-page row. Returns false for an unavailable row or a no-op. */
+  expandRow(index: number): boolean {
+    if (!this.canExpandRow(index) || this.detailStoredExpanded(index)) return false;
+    if (this.singleExpand) {
+      const openIndexes = this.detailRowKey ? this.paged.map((_, i) => i).filter(i => this.detailStoredExpanded(i)) : [...this.expanded];
+      for (const openIndex of openIndexes) this.collapseRow(openIndex);
+    }
+    if (this.detailRowKey) {
+      const key = this.rowDetailKey(index)!;
+      this.updateDetailKeys(this.singleExpand ? [key] : [...this.detailKeys, key]);
+    } else this.expanded.add(index);
+    this.offsetSource = null;
+    this.renderTick++;
+    this.cdr.markForCheck();
+    this.detailChange.emit({ row: this.paged[index], index, expanded: true });
+    return true;
+  }
+
+  /** Collapse a current-page detail, restoring its disclosure focus when needed. */
+  collapseRow(index: number): boolean {
+    if (!Number.isInteger(index) || !this.detailStoredExpanded(index)) return false;
+    const host: HTMLElement = this.hostEl.nativeElement;
+    // ownerDocument is only consulted for an explicit collapse, never during SSR layout.
+    const document = host.ownerDocument;
+    const detail = document?.getElementById(this.detailRowId(index));
+    if (detail?.contains(document.activeElement)) {
+      const controls = host.querySelectorAll<HTMLButtonElement>('.grid-detail-toggle');
+      for (const control of Array.from(controls)) {
+        if (control.getAttribute('aria-controls') === this.detailRowId(index)) { control.focus(); break; }
+      }
+    }
+    if (this.detailRowKey) this.updateDetailKeys(this.detailKeys.filter(key => key !== this.rowDetailKey(index)));
+    else this.expanded.delete(index);
+    this.offsetSource = null;
+    this.renderTick++;
+    this.cdr.markForCheck();
+    if (index >= 0 && index < this.paged.length) this.detailChange.emit({ row: this.paged[index], index, expanded: false });
+    return true;
+  }
+
+  /** Compatibility toggle using processed current-page indexes. */
+  toggleExpand(index: number): void {
+    if (this.detailStoredExpanded(index)) this.collapseRow(index);
+    else this.expandRow(index);
+  }
+
+  isExpanded(index: number): boolean {
+    return this.detailStoredExpanded(index) && this.canExpandRow(index);
+  }
+
+  private validDetailKey(key: unknown): key is NgbDataGridDetailKey {
+    return (typeof key === 'string' && key.length > 0) || (typeof key === 'number' && Number.isFinite(key));
+  }
+
+  private rowDetailKey(index: number): NgbDataGridDetailKey | null {
+    if (!this.detailRowKey || !Number.isInteger(index) || index < 0 || index >= this.paged.length) return null;
+    const key = this.detailRowKey(this.paged[index]);
+    return this.validDetailKey(key) ? key : null;
+  }
+
+  private detailStoredExpanded(index: number): boolean {
+    if (!this.detailRowKey) return this.expanded.has(index);
+    const key = this.rowDetailKey(index);
+    return key !== null && this.detailKeySet.has(key);
+  }
+
+  private updateDetailKeys(keys: readonly NgbDataGridDetailKey[]): void {
+    this.expandedDetailKeys = keys;
+    this.expandedDetailKeysChange.emit([...this.detailKeys]);
   }
 
   onRowClick(ev: MouseEvent, i: number) {

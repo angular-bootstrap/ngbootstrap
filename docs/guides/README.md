@@ -4,6 +4,7 @@ Practical setup, workflow and compatibility guidance for `@angular-bootstrap/ngb
 
 | Guide | Covers |
 | --- | --- |
+| [Master-detail](master-detail.md) | Nested grids, conditional details, keyed expansion, events and keyboard support |
 | [Saved views](saved-views.md) | Configuration snapshots, persistence, schema changes and Undo/Redo |
 | [Scrolling](scrolling.md) | Scroll modes, remote windows, fixed-height virtualization and limits |
 | [Theming](theming.md) | Shared tokens, palettes, framework integrations and custom styles |
