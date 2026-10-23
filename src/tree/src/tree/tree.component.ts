@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  OnChanges,
   Input,
   Output,
   EventEmitter,
@@ -35,7 +36,14 @@ import { NgbTreeNode, NgbTreeType, NgbTreeI18n } from './tree.types';
 
     <ng-template #renderNode let-node let-level="level" let-index="index">
       <li
-        class="d-flex align-items-start"
+        class="d-flex align-items-start flex-wrap"
+        #nodeItem
+        [attr.tabindex]="activeNodeId === node.id || (activeNodeId === null && level === 1 && index === 0) ? 0 : -1"
+        [attr.aria-label]="node.label"
+        [attr.aria-checked]="showCheckbox ? !!node.selected : null"
+        [attr.aria-disabled]="node.disabled || null"
+        (focus)="activeNodeId = node.id"
+        (keydown)="onNodeKeydown($event, node)"
         role="treeitem"
         [attr.aria-expanded]="hasChildren(node) ? !!node.expanded : null"
         [attr.aria-level]="level"
@@ -46,7 +54,7 @@ import { NgbTreeNode, NgbTreeType, NgbTreeI18n } from './tree.types';
             type="button"
             class="btn btn-sm px-1"
             (click)="toggleNode(node)"
-            (keydown)="onNodeKeydown($event, node)"
+            tabindex="-1"
             [attr.aria-label]="(node.expanded ? i18n?.collapse || 'Collapse' : i18n?.expand || 'Expand') + ' ' + node.label"
           >
             @if (type === 'json') {
@@ -63,6 +71,7 @@ import { NgbTreeNode, NgbTreeType, NgbTreeI18n } from './tree.types';
           @if (showCheckbox) {
           <input
             type="checkbox"
+            tabindex="-1"
             class="form-check-input"
             [checked]="!!node.selected"
             [disabled]="node.disabled"
@@ -72,11 +81,9 @@ import { NgbTreeNode, NgbTreeType, NgbTreeI18n } from './tree.types';
           }
           <span class="form-check-label">{{ node.label }}</span>
         </label>
-      </li>
-
       @if (node.expanded && hasChildren(node)) {
       <ul
-        class="list-unstyled ms-4"
+        class="list-unstyled ms-4 w-100"
         role="group"
       >
         @for (child of node.children; track trackById($index, child); let ci = $index) {
@@ -84,10 +91,18 @@ import { NgbTreeNode, NgbTreeType, NgbTreeI18n } from './tree.types';
         }
       </ul>
       }
+      </li>
     </ng-template>
   `,
 })
-export class NgbTreeComponent {
+export class NgbTreeComponent implements OnChanges {
+  protected activeNodeId: NgbTreeNode['id'] | null = null;
+  private searchText = '';
+  private searchTime = 0;
+
+  ngOnChanges(): void {
+    if (!this.visibleNodes().some(node => node.id === this.activeNodeId)) this.activeNodeId = null;
+  }
   @Input() nodes: NgbTreeNode[] = [];
   @Input() type: NgbTreeType = 'text';
   @Input() showCheckbox = false;
@@ -113,11 +128,13 @@ export class NgbTreeComponent {
 
   toggleNode(node: NgbTreeNode) {
     if (!this.hasChildren(node)) return;
+    if (node.expanded && this.containsNode(node.children ?? [], this.activeNodeId)) this.activeNodeId = node.id;
     node.expanded = !node.expanded;
     node.expanded ? this.expand.emit(node) : this.collapse.emit(node);
   }
 
   toggleSelection(node: NgbTreeNode, value: boolean) {
+    if (node.disabled) return;
     node.selected = value;
     this.selectionChange.emit(this.collectSelection(this.nodes));
   }
@@ -128,40 +145,70 @@ export class NgbTreeComponent {
   }
 
   collapseAllNodes() {
+    this.activeNodeId = null;
     this.setExpanded(this.nodes, false);
     this.collapseAll.emit();
   }
 
-  onNodeKeydown(event: KeyboardEvent, node: NgbTreeNode) {
-    const key = event.key;
-    const target = event.target as HTMLElement;
-    if (key === 'Enter' || key === ' ') {
-      event.preventDefault();
-      this.toggleNode(node);
-    } else if (key === 'ArrowRight') {
-      if (this.hasChildren(node) && !node.expanded) {
-        event.preventDefault();
-        node.expanded = true;
-        this.expand.emit(node);
-      }
-    } else if (key === 'ArrowLeft') {
-      if (this.hasChildren(node) && node.expanded) {
-        event.preventDefault();
-        node.expanded = false;
-        this.collapse.emit(node);
-      }
-    } else if (key === 'ArrowDown' || key === 'ArrowUp') {
-      event.preventDefault();
-      this.focusSibling(target, key === 'ArrowDown' ? 1 : -1);
+  private visibleNodes(nodes = this.nodes): NgbTreeNode[] {
+    const visible: NgbTreeNode[] = [];
+    for (const node of nodes) {
+      visible.push(node);
+      if (node.expanded) visible.push(...this.visibleNodes(node.children ?? []));
     }
+    return visible;
   }
 
-  private focusSibling(current: HTMLElement, direction: 1 | -1) {
-    const buttons = this.nodeButtons?.toArray().map((b) => b.nativeElement) || [];
-    const idx = buttons.indexOf(current as HTMLButtonElement);
-    if (idx === -1) return;
-    const next = buttons[idx + direction];
-    next?.focus();
+  private containsNode(nodes: NgbTreeNode[], id: NgbTreeNode['id'] | null): boolean {
+    return nodes.some(node => node.id === id || this.containsNode(node.children ?? [], id));
+  }
+
+  onNodeKeydown(event: KeyboardEvent, node: NgbTreeNode): void {
+    // Nested tree items bubble; only the owning item handles its event.
+    const target = event.target as HTMLElement;
+    const owner = target.closest('[role="treeitem"]');
+    if (owner !== event.currentTarget || target.matches('input')) return;
+    const key = event.key;
+    const nodes = this.visibleNodes();
+    const index = nodes.indexOf(node);
+    let next = index;
+    if (key === 'Enter' || key === ' ') {
+      if (target.matches('button')) return;
+      event.preventDefault();
+      if (key === ' ' && this.showCheckbox) this.toggleSelection(node, !node.selected);
+      else this.toggleNode(node);
+      return;
+    }
+    if (key === 'ArrowRight') {
+      if (this.hasChildren(node) && !node.expanded) this.toggleNode(node);
+      else if (this.hasChildren(node)) next = index + 1;
+    } else if (key === 'ArrowLeft') {
+      if (this.hasChildren(node) && node.expanded) this.toggleNode(node);
+      else {
+        const parent = nodes.find(item => item.children?.includes(node));
+        if (parent) next = nodes.indexOf(parent);
+      }
+    } else if (key === 'ArrowDown') next = Math.min(index + 1, nodes.length - 1);
+    else if (key === 'ArrowUp') next = Math.max(index - 1, 0);
+    else if (key === 'Home') next = 0;
+    else if (key === 'End') next = nodes.length - 1;
+    else if (key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing) {
+      const now = Date.now();
+      this.searchText = (now - this.searchTime < 700 ? this.searchText : '') + key.toLocaleLowerCase();
+      this.searchTime = now;
+      const query = [...this.searchText].every(char => char === this.searchText[0]) ? this.searchText[0] : this.searchText;
+      for (let offset = 1; offset <= nodes.length; offset++) {
+        const candidate = (index + offset) % nodes.length;
+        if (nodes[candidate].label.toLocaleLowerCase().startsWith(query)) { next = candidate; break; }
+      }
+    } else return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.activeNodeId = nodes[next]?.id ?? null;
+    const tree = owner?.closest('[role="tree"]');
+    const items = [...(tree?.querySelectorAll<HTMLElement>('[role="treeitem"]') ?? [])]
+      .filter(item => item.closest('[role="tree"]') === tree);
+    items[next]?.focus();
   }
 
   private setExpanded(nodes: NgbTreeNode[], expanded: boolean) {

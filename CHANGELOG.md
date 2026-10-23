@@ -2,6 +2,15 @@
 
 Published history is preserved below. See [release notes](RELEASE_NOTES.md) for the current summary and [release checklist](https://github.com/angular-bootstrap/ngbootstrap/blob/main/RELEASE_PLAN.md) for maintainer verification.
 
+## 2.7.0 - 2026-10-23
+
+- Add standalone Numeric Input and Masked Input controls with Angular forms validation, labels, keyboard handling, fixed-mask parsing and shared theme tokens.
+- Add Typeahead native-input naming inputs and named Splitter separators with pane relationships.
+
+- Add standard/compact group heading display, an opt-in Group toolbar picker and grouping-level reorder actions with boundary checks and focus restoration.
+- Add Tree visible-node navigation, roving focus, type-ahead and correctly owned child groups.
+- Add orientation-aware Stepper arrows and Home/End navigation, respecting disabled steps and revisit restrictions.
+
 ## 2.6.0 - 2026-10-21
 
 - Add optional stable-key expansion with `detailRowKey`, `expandedDetailKeys` and `expandedDetailKeysChange`, preserving expansion through paging, sorting and immutable data refreshes.

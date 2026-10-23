@@ -1,21 +1,40 @@
-# @angular-bootstrap/ngbootstrap 2.6.0
+# @angular-bootstrap/ngbootstrap 2.7.0
 
-Build master-detail grids with conditional disclosure, controlled expansion and nested keyboard navigation.
+Configure grouping layouts, edit numeric and fixed-format values, and use improved keyboard and accessible naming APIs.
 
-- Use `detailRowPredicate` to show details only for eligible records.
-- Use `detailRowKey`, `expandedDetailKeys` and `expandedDetailKeysChange` to retain expansion through sorting, paging and immutable data refreshes.
-- Call `expandRow(index)` or `collapseRow(index)` and observe typed `detailChange` events for explicit current-page transitions.
-- Enable keyboard navigation on parent and child grids: Enter on the detail cell enters the child; Escape from a plain child cell returns to the parent. Editors keep their own shortcuts.
-- Disclosure IDs are scoped to each grid. Collapsing focused detail content restores disclosure focus, and parent cell navigation no longer targets nested-grid cells.
+## Grouping
 
-Existing templates and index-based expansion remain compatible. No runtime dependencies were added. Applications own child-data loading and expansion persistence. Details remain incompatible with pinned columns and flat remote virtual windows; local virtualization requires fixed detail heights. This release does not claim complete APG or WCAG conformance.
+- Choose standard or compact group display and opt into the Group toolbar picker.
+- Add/remove grouping fields and move a group to the previous/next level while preserving direction and aggregates.
+- Group controls support keyboard traversal, dismissal and focus restoration. Existing grouping defaults remain compatible.
 
-## Available feature guides
+## Numeric and masked inputs
 
-- [Master-detail](docs/guides/master-detail.md): nested grids, conditional display, keyed expansion, events and keyboard support.
-- [Scrolling and virtualization](docs/guides/scrolling.md): local rows, remote windows, complete grouped trees and fixed-height details, with explicit compatibility limits.
-- [Saved views and Undo/Redo](docs/guides/saved-views.md): configuration snapshots, optional persistence and committed-edit history.
-- [Cell ranges](docs/guides/cell-ranges.md) and [batch editing](docs/guides/batch-editing.md): clipboard drafts, validation and atomic history for supported regular-table layouts.
-- [Shared themes](docs/guides/theming.md) and [AI controls](src/ai/README.md): Bootstrap defaults, optional palettes and provider-independent UI.
+- Standalone Numeric Input supports decimal, currency and percentage formats, explicit locales, bounds, stepping and Angular forms validation.
+- Valid numeric drafts commit on blur/Enter. Invalid drafts preserve the previous model and expose validation errors.
+- Standalone Masked Input supports fixed ASCII digit/letter/alphanumeric masks, escaped literals, raw/formatted models and Angular forms.
+- Both controls support native input naming, keyboard/composition handling and shared theme tokens.
+- Use custom numeric DataGrid editors with saved-edit Undo/Redo and same-currency aggregates. Persistence remains application-owned.
 
-See [CHANGELOG.md](CHANGELOG.md) for earlier releases. Angular 21/22 are supported peers. All features, themes and examples remain MIT-licensed, with no paid tier or mandatory hosted service. Applications own backend and AI-provider costs.
+## Accessibility
+
+- Tree adds visible-node navigation, roving focus, parent/child arrows, Home/End, type-ahead and correctly owned child groups.
+- Stepper adds orientation-aware arrows and Home/End, respecting disabled steps and revisit restrictions.
+- Typeahead adds inputId, ariaLabel, ariaLabelledBy and ariaDescribedBy for its native input, including chips mode.
+- Splitter panes add paneId and ariaLabel; resize separators name and reference the preceding pane.
+
+## Compatibility and limits
+
+Angular 21/22 remain supported peers. No runtime dependencies were added. Existing default grid editors and Bootstrap styling remain unchanged.
+
+Numeric models use JavaScript numbers, not arbitrary-precision decimals; percentage models use fractions. Masks validate fixed ASCII formats, not the existence of a phone number or identifier. Dynamic masks, country detection and arbitrary precision are deferred. Broader DataGrid APG coverage and Typeahead virtual/multi-select accessibility work remain planned. Manual screen-reader checks were optional and were not performed; no blanket WCAG certification is claimed.
+
+## Guides
+
+- [Grouping display modes](docs/guides/grouping-display-modes.md)
+- [Numeric and masked inputs](docs/guides/inputs.md)
+- [Saved views and Undo/Redo](docs/guides/saved-views.md)
+- [Master-detail](docs/guides/master-detail.md)
+- [Feature guide index](docs/guides/README.md)
+
+All features, themes and examples remain MIT-licensed. Applications own backend and AI-provider costs. See [CHANGELOG.md](CHANGELOG.md) for previous releases.

@@ -1,5 +1,8 @@
 import {
   afterNextRender,
+  APP_ID,
+  Injectable,
+  inject,
   signal,
   AfterContentInit,
   ChangeDetectionStrategy,
@@ -19,6 +22,13 @@ import {
 import { CommonModule } from '@angular/common';
 import { NgbSplitterPaneComponent } from './splitter-pane.component';
 import { NgbSplitterOrientation } from './splitter.types';
+
+@Injectable({ providedIn: 'root' })
+class SplitterIds {
+  private next = 0;
+  private readonly appId = inject(APP_ID);
+  allocate(): string { return this.appId + '-splitter-' + this.next++; }
+}
 
 type PaneState = {
   sizePx?: number;
@@ -112,7 +122,8 @@ type PaneState = {
       [style.height]="orientation === 'vertical' ? verticalMinHeight : null">
       <!-- Iterate through the QueryList of panes -->
       @for (pane of panes; track pane; let i = $index) {
-        <div class="pane-wrapper" [style.flex]="getPaneFlex(pane)"
+        <div class="pane-wrapper" [id]="pane.paneId || instanceId + '-pane-' + i"
+        [attr.role]="pane.ariaLabel ? 'region' : null" [attr.aria-label]="pane.ariaLabel || null" [style.flex]="getPaneFlex(pane)"
         [style.min-width]="orientation === 'horizontal' ? (pane.min || '0px') : null"
         [style.max-width]="orientation === 'horizontal' ? pane.max : null"
         [style.min-height]="orientation === 'vertical' ? (pane.min || '0px') : null"
@@ -129,6 +140,8 @@ type PaneState = {
         [style.width.px]="orientation === 'horizontal' ? handleThickness : '100%'" 
         [style.height.px]="orientation === 'vertical' ? handleThickness : '100%'" 
         role="separator"
+        [attr.aria-label]="'Resize ' + (pane.ariaLabel || 'pane ' + (i + 1))"
+        [attr.aria-controls]="pane.paneId || instanceId + '-pane-' + i"
         tabindex="0"
         [attr.aria-orientation]="getSeparatorAriaOrientation()"
         [attr.aria-valuenow]="getHandleValueNow(i)"
@@ -154,6 +167,7 @@ type PaneState = {
   `,
 })
 export class NgbSplitterComponent {
+  protected readonly instanceId = inject(SplitterIds).allocate();
   @ContentChildren(NgbSplitterPaneComponent) panes!: QueryList<NgbSplitterPaneComponent>;
   @Input() orientation: 'horizontal' | 'vertical' = 'horizontal';
   @Input() handleThickness:number = 12;

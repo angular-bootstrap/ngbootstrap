@@ -532,6 +532,71 @@ describe('Datagrid', () => {
       expect(fixture.nativeElement.querySelector('.grid-group-row__label')?.textContent).toContain('Active: No');
     });
 
+    it('reorders complete descriptors once and ignores boundary moves', () => {
+      component.group = [{ field: 'name', dir: 'desc', aggregates: [{ field: 'score', aggregate: 'sum' }] }, { field: 'active', dir: 'asc' }];
+      const initial = component.group;
+      const change = jest.spyOn(component.groupChange, 'emit');
+      const state = jest.spyOn(component.dataStateChange, 'emit');
+      component.page = 3;
+      component.moveGroupField('active', 'previous');
+      expect(component.group.map(g => g.field)).toEqual(['active', 'name']);
+      expect(component.group[1]).toEqual(initial[0]);
+      expect(initial.map(g => g.field)).toEqual(['name', 'active']);
+      expect(component.page).toBe(1);
+      expect(change).toHaveBeenCalledTimes(1);
+      expect(state).toHaveBeenCalledTimes(1);
+      component.moveGroupField('active', 'previous');
+      component.moveGroupField('name', 'next');
+      component.moveGroupField('missing', 'next');
+      expect(change).toHaveBeenCalledTimes(1);
+      component.moveGroupField('active', 'next');
+      expect(component.group).toEqual(initial);
+      expect(state).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps standard indentation by default and aligns compact groups without changing data', () => {
+      component.group = [{ field: 'active' }, { field: 'name' }];
+      const rows = component.renderRows;
+      expect(component.groupRowIndent(2)).toBe(2.2);
+      component.groupable = { displayMode: 'compact' };
+      expect(component.groupRowIndent(2)).toBe(0);
+      expect(component.renderRows).toEqual(rows);
+    });
+
+    it('offers an opt-in field picker with keyboard dismissal and add/remove state', () => {
+      expect(fixture.nativeElement.querySelector('.ngb-group-control__picker')).toBeNull();
+      component.groupable = { showGroupButton: true };
+      fixture.detectChanges();
+      const trigger: HTMLButtonElement = fixture.nativeElement.querySelector('.ngb-group-control__picker');
+      trigger.click(); fixture.detectChanges();
+      const add: HTMLButtonElement = fixture.nativeElement.querySelector('.ngb-group-control__popup button');
+      const state = jest.spyOn(component.dataStateChange, 'emit');
+      add.click(); fixture.detectChanges();
+      expect(add.getAttribute('aria-pressed')).toBe('true');
+      expect(component.group.length).toBe(1);
+      expect(state).toHaveBeenCalledTimes(1);
+      add.click(); fixture.detectChanges();
+      expect(component.group.length).toBe(0);
+      add.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.ngb-group-control__popup')).toBeNull();
+      expect(document.activeElement).toBe(trigger);
+    });
+
+    it('exposes reorder boundaries and restores focus to the actions button', () => {
+      component.group = [{ field: 'active' }, { field: 'name' }];
+      fixture.detectChanges();
+      const trigger: HTMLButtonElement = fixture.nativeElement.querySelector('.ngb-grid__group-chip ngb-datagrid-group-control button');
+      trigger.click(); fixture.detectChanges();
+      const buttons: NodeListOf<HTMLButtonElement> = fixture.nativeElement.querySelectorAll('.ngb-group-control__popup button');
+      expect(buttons[0].disabled).toBe(true);
+      expect(buttons[1].disabled).toBe(false);
+      buttons[1].click(); fixture.detectChanges();
+      expect(component.group.map(g => g.field)).toEqual(['name', 'active']);
+      expect(document.activeElement).toBe(trigger);
+      expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    });
+
     it('emits groupChange and includes group in dataStateChange', () => {
       const groupSpy = jest.spyOn(component.groupChange, 'emit');
       const stateSpy = jest.spyOn(component.dataStateChange, 'emit');

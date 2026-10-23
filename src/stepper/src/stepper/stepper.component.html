@@ -27,8 +27,7 @@
         [attr.aria-disabled]="step.disabled || (!allowRevisit && i < visitedFrom && i !== selectedIndex)"
         tabindex="{{ i === selectedIndex ? 0 : -1 }}"
         (click)="onHeaderClick(i)"
-        (keydown.enter)="onHeaderKeydown($event, i)"
-        (keydown.space)="onHeaderKeydown($event, i)"
+        (keydown)="onHeaderKeydown($event, i)"
       >
         <div
           class="ngb-stepper-indicator"

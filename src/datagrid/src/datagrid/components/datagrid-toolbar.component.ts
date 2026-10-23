@@ -1,19 +1,25 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { NgbDatagridButtonDirective } from '../../foundation/datagrid-button.directive';
 import { NgbDatagridFieldShellComponent } from '../../foundation/datagrid-field-shell.component';
+import { NgbDatagridGroupControlComponent } from './datagrid-group-control.component';
 import type { Datagrid } from '../datagrid.component';
 
 @Component({
   selector: 'ngb-datagrid-toolbar',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, NgbDatagridButtonDirective, NgbDatagridFieldShellComponent],
+  // Toolbar state is read from a mutable grid host, whose reference stays stable.
+  changeDetection: ChangeDetectionStrategy.Default,
+  imports: [NgbDatagridGroupControlComponent, CommonModule, ReactiveFormsModule, NgbDatagridButtonDirective, NgbDatagridFieldShellComponent],
   template: `
-    @if (customContent || grid.exportOptions?.enabled || (grid.enableAdd && !grid.isToolbarEditMode()) || grid.enableGlobalFilter) {
+    @if ((grid.isGroupingEnabled() && grid.groupingSettings().showGroupButton) || customContent || grid.exportOptions?.enabled || (grid.enableAdd && !grid.isToolbarEditMode()) || grid.enableGlobalFilter) {
     <div
       class="datagrid-toolbar" role="group" [attr.aria-label]="ariaLabel"
     >
+      @if (grid.isGroupingEnabled() && grid.groupingSettings().showGroupButton) {
+        <ngb-datagrid-group-control [grid]="grid"></ngb-datagrid-group-control>
+      }
       @if (customContent) {
         <div class="datagrid-toolbar__actions"><ng-content></ng-content></div>
       }

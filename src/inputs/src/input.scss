@@ -1,0 +1,9 @@
+:host { display: inline-block; max-width: 100%; font-family: var(--ngb-font-family, inherit); color: var(--ngb-on-surface, #212529); }
+label { display: block; margin-bottom: .375rem; font-weight: 500; }
+.ngb-input-shell { display: flex; align-items: stretch; border: 1px solid var(--ngb-border-color, #dee2e6); border-radius: var(--ngb-radius-md, .375rem); background: var(--ngb-surface, white); overflow: hidden; }
+.ngb-input-shell:focus-within { outline: 2px solid var(--ngb-focus-ring, #86b7fe); outline-offset: 1px; }
+input { min-width: 0; width: 100%; padding: .375rem .75rem; min-height: 2.5rem; border: 0; background: transparent; color: inherit; font: inherit; outline: none; }
+button { min-width: 2.5rem; border: 0; border-inline-start: 1px solid var(--ngb-border-color, #dee2e6); color: inherit; background: var(--ngb-surface-container, #f8f9fa); font: inherit; }
+button:focus-visible { outline: 2px solid var(--ngb-primary, #0d6efd); outline-offset: -3px; }
+button:disabled, input:disabled { opacity: var(--ngb-disabled-opacity, .65); cursor: not-allowed; }
+.ngb-input-shell.invalid { border-color: var(--ngb-danger, #dc3545); }

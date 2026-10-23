@@ -329,4 +329,32 @@ describe('NgbStepperComponent', () => {
     const secondHeader: HTMLElement = fixture.nativeElement.querySelectorAll('.ngb-stepper-step')[1];
     expect(secondHeader.classList).toContain('error');
   });
+  it('moves tab focus with orientation-aware arrows and skips disabled steps', () => {
+    host.steps[1].disabled = true;
+    fixture.detectChanges();
+    let tabs: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('[role="tab"]');
+    tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    fixture.detectChanges();
+    expect(host.selectedIndex).toBe(2);
+    expect(document.activeElement).toBe(tabs[2]);
+    tabs[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+    fixture.detectChanges();
+    expect(host.selectedIndex).toBe(0);
+    fixture.destroy();
+    fixture = TestBed.createComponent(HostTestComponent);
+    host = fixture.componentInstance;
+    host.orientation = 'vertical';
+    host.steps[1].disabled = true;
+    fixture.detectChanges();
+    tabs = fixture.nativeElement.querySelectorAll('[role="tab"]');
+    tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(host.selectedIndex).toBe(0);
+    tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    fixture.detectChanges();
+    expect(host.selectedIndex).toBe(2);
+    tabs[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    fixture.detectChanges();
+    expect(host.selectedIndex).toBe(0);
+  });
+
 });

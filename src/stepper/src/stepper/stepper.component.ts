@@ -196,8 +196,27 @@ export class NgbStepperComponent implements AfterContentInit {
   }
 
   onHeaderKeydown(event: KeyboardEvent | Event, i: number): void {
+    const key = (event as KeyboardEvent).key;
+    if (key === 'Enter' || key === ' ') {
+      event.preventDefault();
+      this.onHeaderClick(i);
+      return;
+    }
+    const forward = this.orientation === 'vertical' ? 'ArrowDown' : 'ArrowRight';
+    const backward = this.orientation === 'vertical' ? 'ArrowUp' : 'ArrowLeft';
+    if (![forward, backward, 'Home', 'End'].includes(key)) return;
+    const eligible = this.steps.map((step, index) => ({ step, index }))
+      .filter(({ step, index }) => !step.disabled && (this.allowRevisit || index >= this.visitedFrom))
+      .map(({ index }) => index);
+    if (!eligible.length) return;
     event.preventDefault();
-    this.onHeaderClick(i);
+    const current = eligible.indexOf(i);
+    const next = key === 'Home' ? eligible[0] : key === 'End' ? eligible[eligible.length - 1]
+      : eligible[(current + (key === forward ? 1 : -1) + eligible.length) % eligible.length];
+    this.onHeaderClick(next);
+    const tab = event.currentTarget as HTMLElement | null;
+    const tabs = tab?.parentElement?.querySelectorAll<HTMLElement>('[role="tab"]');
+    tabs?.[next]?.focus();
   }
 
   next(): void {

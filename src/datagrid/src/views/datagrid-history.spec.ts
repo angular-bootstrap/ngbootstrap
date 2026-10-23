@@ -36,6 +36,21 @@ describe('DataGrid configuration history', () => {
     expect(notification).toHaveBeenCalledTimes(2); expect(history.undoCount()).toBe(1);
     expect(history.redo()).toMatchObject({ reason: 'empty-history' });
   });
+  it('undoes grouping reorder with preserved descriptors and one notification', () => {
+    const { grid, history } = setup();
+    grid.groupable = true;
+    grid.addGroupField('id'); grid.addGroupField('due', 'desc');
+    const before = grid.captureView();
+    grid.moveGroupField('due', 'previous');
+    const after = grid.captureView();
+    const notification = jest.fn(); grid.dataStateChange.subscribe(notification);
+    expect(history.undo().success).toBe(true);
+    expect(grid.captureView()).toEqual(before);
+    expect(notification).toHaveBeenCalledTimes(1);
+    expect(history.redo().success).toBe(true);
+    expect(grid.captureView()).toEqual(after);
+    expect(notification).toHaveBeenCalledTimes(2);
+  });
   it('handles scoped Ctrl/Meta Undo and Redo shortcuts and emits one result per action', () => {
     const { fixture, grid, history } = setup();
     const host = fixture.nativeElement.querySelector('ngb-datagrid');

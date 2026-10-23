@@ -109,4 +109,31 @@ describe('NgbTreeComponent', () => {
     fixture.detectChanges();
     expect(firstNodeButton.query(By.css('.bi-file-minus-fill'))).toBeTruthy();
   });
+  it('navigates visible leaves, parent relationships and a single tree tab stop', () => {
+    const items = () => [...fixture.nativeElement.querySelectorAll('[role="treeitem"]')] as HTMLElement[];
+    const key = (item: HTMLElement, value: string) => {
+      item.dispatchEvent(new KeyboardEvent('keydown', { key: value, bubbles: true }));
+      fixture.detectChanges();
+    };
+    expect(items().filter(item => item.tabIndex === 0)).toHaveLength(1);
+    expect(items()[0].querySelector('[role="group"]')).not.toBeNull();
+    key(items()[0], 'ArrowDown');
+    expect(document.activeElement).toBe(items()[1]);
+    key(items()[1], 'ArrowDown');
+    expect(document.activeElement).toBe(items()[2]);
+    key(items()[2], 'ArrowLeft');
+    expect(document.activeElement).toBe(items()[0]);
+    key(items()[0], 'End');
+    expect(document.activeElement).toBe(items()[2]);
+    key(items()[2], 'Home');
+    expect(document.activeElement).toBe(items()[0]);
+    key(items()[0], 'c');
+    expect(document.activeElement).toBe(items()[1]);
+    key(items()[1], 'ArrowRight');
+    expect(items()).toHaveLength(5);
+    key(items()[1], 'ArrowRight');
+    expect(document.activeElement).toBe(items()[2]);
+    expect(items().filter(item => item.tabIndex === 0)).toHaveLength(1);
+  });
+
 });

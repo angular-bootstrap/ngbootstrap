@@ -9,6 +9,7 @@
   [class.ngb-grid--stacked-cards]="isStackedCardsLayout()"
   [class.ngb-grid--menu-open]="!!openFilterMenuField || !!openMenuOperatorField || !!openRowFilterField"
   [class.ngb-grid--row-operator-open]="!!openRowFilterField"
+  [class.ngb-grid--group-picker]="isGroupingEnabled() && groupingSettings().showGroupButton === true"
   [class.ngb-grid--zebra]="zebraStripesEnabled"
   [class.ngb-grid--resizable]="resizable && !isStackedLayout()"
   [class.ngb-grid--column-reorderable]="isColumnReorderEnabled()"
@@ -52,6 +53,7 @@
   @if (isGroupingEnabled()) {
     <div
       class="ngb-grid__group-panel"
+      tabindex="-1" role="group" aria-label="Grouping fields"
       [class.ngb-grid__group-panel--active]="groupPanelDragActive && !groupPanelDragDenied"
       [class.ngb-grid__group-panel--denied]="groupPanelDragDenied"
       (dragover)="onGroupPanelDragOver($event)"
@@ -72,10 +74,11 @@
                 <span class="ngb-grid__group-chip-label">{{ groupFieldLabel(descriptor) }}</span>
                 <span class="ngb-grid__group-chip-dir">{{ descriptor.dir === 'desc' ? '↓' : '↑' }}</span>
               </button>
+              <ngb-datagrid-group-control [grid]="gridHost" [field]="descriptor.field"></ngb-datagrid-group-control>
               <button
                 type="button"
                 class="ngb-grid__group-chip-remove"
-                (click)="removeGroupField(descriptor.field)"
+                (click)="removeGroupFromControl(descriptor.field, $event)"
                 [attr.aria-label]="groupRemoveAriaLabel(descriptor)"
               >
                 <span class="bi bi-x-lg" aria-hidden="true"></span>

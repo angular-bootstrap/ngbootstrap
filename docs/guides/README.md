@@ -4,6 +4,7 @@ Practical setup, workflow and compatibility guidance for `@angular-bootstrap/ngb
 
 | Guide | Covers |
 | --- | --- |
+| [Numeric and masked inputs](inputs.md) | Angular forms, locale-aware amounts, fixed masks, grid editors and accessibility |
 | [Master-detail](master-detail.md) | Nested grids, conditional details, keyed expansion, events and keyboard support |
 | [Saved views](saved-views.md) | Configuration snapshots, persistence, schema changes and Undo/Redo |
 | [Scrolling](scrolling.md) | Scroll modes, remote windows, fixed-height virtualization and limits |
@@ -12,3 +13,5 @@ Practical setup, workflow and compatibility guidance for `@angular-bootstrap/ngb
 | [Batch editing](batch-editing.md) | Clipboard drafts, validation, Apply/Discard and atomic history |
 
 See also the [AI controls guide](../../src/ai/README.md). Guides explain workflows and application responsibilities; public exports and source declarations define the API. Planned capabilities are not available APIs.
+
+- [Grouping display modes](grouping-display-modes.md): layouts, field picker and grouping order.

@@ -47,6 +47,10 @@ export type NgbDataGridAggregateResults = Record<
 >;
 
 export interface NgbDataGridGroupingSettings {
+  /** Standard preserves nested indentation; compact keeps group labels aligned. */
+  displayMode?: 'standard' | 'compact';
+  /** Show an accessible field picker in the existing grid toolbar. Default false. */
+  showGroupButton?: boolean;
   showFooter?: boolean;
   stickyHeaders?: boolean;
   stickyFooters?: boolean;

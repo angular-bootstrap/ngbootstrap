@@ -11,6 +11,10 @@ template: `<ng-template #content>
   styles: [`:host { display: block; position: relative; }`]
 })
 export class NgbSplitterPaneComponent {
+  /** Optional stable ID for this pane's rendered content container. */
+  @Input() paneId = '';
+  /** Names this pane and its following resize separator. */
+  @Input() ariaLabel = '';
   @Input() size: string = ''; // e.g., '30%' or '200px'
   @Input() min: string = '0px';
   @Input() max: string = '100%';

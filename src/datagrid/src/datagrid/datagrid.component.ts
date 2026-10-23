@@ -75,6 +75,7 @@ import { NgbDatagridFooterComponent } from './components/datagrid-footer.compone
 import { NgbDatagridHeaderComponent } from './components/datagrid-header.component';
 import { NgbDatagridFilterMenuPanelComponent } from './components/datagrid-filter-menu-panel.component';
 import { NgbDatagridRowFilterOperatorPanelComponent } from './components/datagrid-row-filter-operator-panel.component';
+import { NgbDatagridGroupControlComponent } from './components/datagrid-group-control.component';
 import { NgbDatagridToolbarComponent } from './components/datagrid-toolbar.component';
 import { NgbDatagridEditingToolbarComponent } from './components/datagrid-editing-toolbar.component';
 import { NgbDatagridExternalEditorComponent } from './components/datagrid-external-editor.component';
@@ -238,6 +239,7 @@ const isReasonableEmail = (value: unknown): boolean => {
     ReactiveFormsModule,
     NgbSyncColgroupDirective,
     NgbDatagridToolbarComponent,
+    NgbDatagridGroupControlComponent,
     NgbDatagridEditingToolbarComponent,
     NgbDatagridExternalEditorComponent,
     NgbDatagridColgroupComponent,
@@ -1539,6 +1541,30 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     this.setGroupDescriptors(this.group.filter((descriptor) => descriptor.field !== field), emit);
   }
 
+  /** Move a grouping level without changing its direction or aggregates. */
+  moveGroupField(field: string, direction: 'previous' | 'next'): void {
+    if (direction !== 'previous' && direction !== 'next') return;
+    const index = this.group.findIndex(descriptor => descriptor.field === field);
+    const target = index + (direction === 'previous' ? -1 : 1);
+    if (index < 0 || target < 0 || target >= this.group.length) return;
+    const next = [...this.group];
+    [next[index], next[target]] = [next[target], next[index]];
+    this.setGroupDescriptors(next);
+    this.statusMessage = `${this.groupColumnHeader(field)} grouping moved to position ${target + 1} of ${next.length}.`;
+  }
+
+  protected removeGroupFromControl(field: string, event: Event): void {
+    const button = event.currentTarget as HTMLElement;
+    const chip = button.closest('.ngb-grid__group-chip');
+    const neighbour = chip?.nextElementSibling ?? chip?.previousElementSibling;
+    const next = neighbour?.querySelector<HTMLButtonElement>('button')
+      ?? button.closest('.ngb-grid')?.querySelector<HTMLElement>('.ngb-group-control__picker, .ngb-grid__group-panel');
+    // Move focus before the currently focused chip is removed from the DOM.
+    next?.focus();
+    this.removeGroupField(field);
+    this.statusMessage = `${this.groupColumnHeader(field)} grouping removed.`;
+  }
+
   toggleGroupDirection(field: string): void {
     this.setGroupDescriptors(
       this.group.map((descriptor) =>
@@ -2195,7 +2221,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   groupRowIndent(level: number): number {
-    return level * 1.1;
+    return this.groupingSettings().displayMode === 'compact' ? 0 : level * 1.1;
   }
 
   private groupLeadColumnSpan(group: NgbDataGridGroupResult<T>): number {

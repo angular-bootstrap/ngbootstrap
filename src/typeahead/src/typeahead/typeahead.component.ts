@@ -132,6 +132,10 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
               (keyup)="onKeyup($event)"
               aria-autocomplete="list"
               role="combobox"
+              [attr.id]="inputId || null"
+              [attr.aria-label]="ariaLabel || null"
+              [attr.aria-labelledby]="ariaLabelledBy || null"
+              [attr.aria-describedby]="ariaDescribedBy || null"
               [attr.aria-expanded]="overlayVisible"
               [attr.aria-controls]="overlayId"
               [attr.aria-activedescendant]="activeDescendantId"
@@ -152,6 +156,10 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
             (keyup)="onKeyup($event)"
             aria-autocomplete="list"
             role="combobox"
+              [attr.id]="inputId || null"
+              [attr.aria-label]="ariaLabel || null"
+              [attr.aria-labelledby]="ariaLabelledBy || null"
+              [attr.aria-describedby]="ariaDescribedBy || null"
             [attr.aria-expanded]="overlayVisible"
             [attr.aria-controls]="overlayId"
             [attr.aria-activedescendant]="activeDescendantId"
@@ -263,6 +271,14 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
   `,
 })
 export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestroy, ControlValueAccessor {
+  /** ID of the native input, for an external label's for attribute. */
+  @Input() inputId = '';
+  /** Accessible name of the native input when no visible label is used. */
+  @Input() ariaLabel = '';
+  /** Space-separated IDs of elements that label the native input. */
+  @Input() ariaLabelledBy = '';
+  /** Space-separated IDs of instructions or errors for the native input. */
+  @Input() ariaDescribedBy = '';
   @Input() data: NgbTypeaheadItem[] = [];
   @Input() debounceTime = 200;
   @Input() characterTyped = 1;
