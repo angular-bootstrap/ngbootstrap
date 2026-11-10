@@ -1,6 +1,6 @@
 {
   "name": "@angular-bootstrap/ngbootstrap",
-  "version": "2.7.0",
+  "version": "2.7.1",
   "description": "Angular UI for data-heavy apps with DataGrid grouping, Angular-native Form Builder, drag-and-drop workflows, pagination, typeahead, tree, splitter, stepper, and chips.",
   "author": {
     "name": "Harmeet Singh"
@@ -112,17 +112,20 @@
   "packageManager": "pnpm@9.15.9+sha512.68046141893c66fad01c079231128e9afb89ef87e2691d69e4d40eee228988295fd4682181bae55b58418c3a253bde65a505ec7c5f9403ece5cc3cd37dcf2531",
   "pnpm": {
     "overrides": {
-      "@jest/reporters>glob": "^13.0.6",
+      "@jest/reporters>glob": "14.0.2",
       "babel-plugin-istanbul>test-exclude": "^8.0.0",
-      "jest-config>glob": "^13.0.6",
-      "jest-runtime>glob": "^13.0.6",
-      "fast-uri@>=3.0.0 <3.1.8": "3.1.8",
+      "jest-config>glob": "14.0.2",
+      "jest-runtime>glob": "14.0.2",
       "brace-expansion@>=4.0.0 <5.0.9": "^5.0.9",
       "js-yaml@>=3.0.0 <3.15.2": "^3.15.2",
       "nanoid@<3.3.18": "^3.3.18",
       "@istanbuljs/load-nyc-config>js-yaml": "4.3.2",
       "source-map-js@<1.2.2": "1.2.2",
-      "handlebars@<4.7.10": "4.7.10"
+      "handlebars@<4.7.10": "4.7.10",
+      "fast-uri@>=3.0.0 <3.1.9": "3.1.9",
+      "zod@>=4.0.0 <4.6.6": "4.6.6",
+      "glob@>=9.0.0 <14.0.2": "14.0.2",
+      "minimatch@>=7.0.0 <11.0.1": "11.0.1"
     }
   },
   "exports": {

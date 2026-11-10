@@ -4,6 +4,7 @@ Practical setup, workflow and compatibility guidance for `@angular-bootstrap/ngb
 
 | Guide | Covers |
 | --- | --- |
+| [Typeahead accessibility](typeahead-accessibility.md) | Naming, virtual options, chip focus and keyboard behavior |
 | [Numeric and masked inputs](inputs.md) | Angular forms, locale-aware amounts, fixed masks, grid editors and accessibility |
 | [Master-detail](master-detail.md) | Nested grids, conditional details, keyed expansion, events and keyboard support |
 | [Saved views](saved-views.md) | Configuration snapshots, persistence, schema changes and Undo/Redo |

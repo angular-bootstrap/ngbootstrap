@@ -78,6 +78,17 @@ describe('DataGrid advanced scrolling', () => {
     expect(fixture.nativeElement.querySelector('tr[data-row-index]').getAttribute('aria-rowindex')).toBe('4997');
     jest.useRealTimers();
   });
+  it('includes the filter row in remote placeholder indexes', () => {
+    grid.enableFiltering = true;
+    fixture.componentRef.setInput('columns', [{field: 'id', header: 'ID', filterable: true}, {field: 'team', header: 'Team'}]);
+    grid.virtualRemote = true; grid.total = 10000;
+    grid.scrollToRow(500); refresh();
+    const loading = fixture.nativeElement.querySelector('.ngb-grid__loading-row');
+    const first = grid.viewportRows.find(row => row.kind === 'loading');
+    expect(first?.kind).toBe('loading');
+    expect(loading.getAttribute('aria-rowindex')).toBe(String(first?.kind === 'loading' ? first.absoluteIndex + 3 : -1));
+  });
+
   it('coalesces obsolete requests and cancels timers on destruction', () => {
     jest.useFakeTimers();
     grid.virtualRemote = true; grid.total = 10000; grid.virtualDebounce = 50; grid.data = [];
@@ -100,6 +111,8 @@ describe('DataGrid advanced scrolling', () => {
     jest.runAllTicks(); await Promise.resolve();
     jest.runAllTicks(); await Promise.resolve();
     expect(document.activeElement?.closest('tr')?.textContent).toContain('9999');
+    expect(document.activeElement?.getAttribute('data-col-index')).toBe('1');
+    expect(emit).toHaveBeenCalledTimes(1);
     jest.useRealTimers();
   });
   it('requests one fresh remote query when typing in search, even after rebuilding columns', () => {

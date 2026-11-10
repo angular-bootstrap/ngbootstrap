@@ -43,7 +43,7 @@ import type { Datagrid } from '../datagrid.component';
       <th role="columnheader"
         [style.width.px]="grid.utilityColumnWidth('detail')"
         scope="col"
-        aria-hidden="true"
+        [attr.aria-label]="grid.expandRowAriaLabel"
         [class.column-pinned-start]="grid.shouldPinLeadingUtilityColumns()"
         [style.left.px]="grid.utilityStickyOffset('detail')"
       ></th>

@@ -4,7 +4,7 @@ import { NgbGridBatchController, NgbGridBatchCellError, NgbGridBatchSaveEvent } 
 import { NgbGridCellRange } from '../models/cell-range';
 import type { NgbDataGridHistoryResult } from '../views/datagrid-history.directive';
 import { NgbDataGridColumnView, NgbDataGridViewSnapshot, NgbDataGridViewRestoreResult, ngbCloneGridView } from '../views/grid-view';
-import { afterNextRender, DestroyRef, signal, Component, Input, EventEmitter, Output, inject, AfterContentInit, ContentChildren, QueryList, OnChanges, SimpleChanges, TemplateRef, ElementRef, ViewChild, ChangeDetectorRef, HostListener, ViewEncapsulation, forwardRef } from '@angular/core';
+import { afterNextRender, Injector, DestroyRef, signal, Component, Input, EventEmitter, Output, inject, AfterContentInit, ContentChildren, QueryList, OnChanges, SimpleChanges, TemplateRef, ElementRef, ViewChild, ChangeDetectorRef, HostListener, ViewEncapsulation, forwardRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ColumnDef, ColumnType } from '../models/column-def';
 import {
@@ -264,6 +264,7 @@ const isReasonableEmail = (value: unknown): boolean => {
 export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   private readonly browserLayoutReady = signal(false);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
   private readonly layoutReadyRef = afterNextRender(() => {
     this.browserLayoutReady.set(true);
     this.observeScrollbarGutter();
@@ -1357,6 +1358,22 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
   }
 
   private invalidatePagedCache(): void {
+    // Recover only a removed navigation cell, never an editor, nested grid or external control.
+    const host: HTMLElement = this.hostEl.nativeElement;
+    const active = host.ownerDocument?.activeElement as HTMLElement | null;
+    if ((this.keyboardNavigation || this.cellRangeEnabled()) && active?.matches('td[role="gridcell"][tabindex]') &&
+        active.closest('.ngb-grid') === host.querySelector('.ngb-grid')) {
+      afterNextRender(() => {
+        const current = host.ownerDocument.activeElement;
+        if (active.isConnected || (current !== host.ownerDocument.body && current !== active)) return;
+        if (this.paged.length && this.visibleColumns.length) {
+          this.focusCell(this.focusedCell?.rowIndex ?? 0, this.focusedCell?.colIndex ?? 0);
+          this.focusFocusedCellElement();
+        } else {
+          host.querySelector<HTMLElement>('.ngb-grid__data')?.focus();
+        }
+      }, {injector: this.injector});
+    }
     this.offsetSource = null;
     if (!this.virtualRemote) this.virtualScrollTop = 0;
     if (this.scrollable === 'virtual') this.focusedCell = null;
@@ -4554,14 +4571,14 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
 
   cellTabIndex(rowIndex: number, colIndex: number): number | null {
     if (!(this.keyboardNavigation || this.cellRangeEnabled()) || this.isStackedLayout()) return null;
-    if (!this.focusedCell || (this.virtualScrollActive && !this.viewportRows.some(row => row.kind === 'data' && row.pagedIndex === this.focusedCell!.rowIndex))) {
+    if (!this.focusedCell || this.focusedCell.rowIndex >= this.paged.length || this.focusedCell.colIndex >= this.visibleColumns.length || (this.virtualScrollActive && !this.viewportRows.some(row => row.kind === 'data' && row.pagedIndex === this.focusedCell!.rowIndex))) {
       return rowIndex === (this.virtualScrollActive ? this.viewportRows.find(row => row.kind === 'data')?.pagedIndex ?? 0 : 0) && colIndex === 0 ? 0 : -1;
     }
     return this.isCellFocused(rowIndex, colIndex) ? 0 : -1;
   }
 
   focusCell(rowIndex: number, colIndex: number): void {
-    if (!(this.keyboardNavigation || this.cellRangeEnabled())) return;
+    if (!(this.keyboardNavigation || this.cellRangeEnabled()) || !this.paged.length || !this.visibleColumns.length) return;
     const maxRow = Math.max(0, this.paged.length - 1);
     const maxCol = Math.max(0, this.visibleColumns.length - 1);
     this.focusedCell = {
@@ -4576,7 +4593,7 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
       this.cdr.detectChanges();
     }
     this.cdr.markForCheck();
-    queueMicrotask(() => this.focusFocusedCellElement());
+    queueMicrotask(() => { if (!this.destroyRef.destroyed) this.focusFocusedCellElement(); });
   }
 
   onDataCellFocus(rowIndex: number, colIndex: number): void {
@@ -4647,9 +4664,10 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     if (this.virtualRemote && ((ev.ctrlKey && (key === 'Home' || key === 'End')) || (key === 'ArrowDown' && rowIndex === this.paged.length - 1) || (key === 'ArrowUp' && rowIndex === 0))) {
       ev.preventDefault();
       const absolute = ev.ctrlKey ? (key === 'Home' ? 0 : this.recordTotal() - 1) : this.virtualSkip + rowIndex + (key === 'ArrowDown' ? 1 : -1);
+      const targetColumn = ev.ctrlKey ? (key === 'Home' ? 0 : Math.max(0, this.visibleColumns.length - 1)) : colIndex;
       if (absolute >= 0 && absolute < this.recordTotal()) {
-        if (absolute >= this.virtualSkip && absolute < this.virtualSkip + this.data.length) this.focusCell(absolute - this.virtualSkip, colIndex);
-        else { this.pendingVirtualFocus = {row: absolute, column: colIndex}; this.scrollToRow(absolute); }
+        if (absolute >= this.virtualSkip && absolute < this.virtualSkip + this.data.length) this.focusCell(absolute - this.virtualSkip, targetColumn);
+        else { this.pendingVirtualFocus = {row: absolute, column: targetColumn}; this.scrollToRow(absolute); }
       }
       return;
     }
@@ -4665,9 +4683,11 @@ export class Datagrid<T = any> implements AfterContentInit, OnChanges {
     else if (key === 'Home' && ev.ctrlKey) {
       ev.preventDefault();
       nextRow = 0;
+      nextCol = 0;
     } else if (key === 'End' && ev.ctrlKey) {
       ev.preventDefault();
       nextRow = Math.max(0, rowCount - 1);
+      nextCol = Math.max(0, colCount - 1);
     } else if (key === 'Home') {
       ev.preventDefault();
       nextCol = 0;

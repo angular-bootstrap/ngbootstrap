@@ -94,7 +94,7 @@
     <p class="ngb-grid__scroll-notice small p-2 mb-0" role="status">{{ reason }} Regular scrolling is active.</p>
   }
   <div class="table-wrapper" [ngClass]="responsiveWrapperClasses">
-    <div class="ngb-grid__data" role="grid" [attr.aria-multiselectable]="cellRangeEnabled() ? true : null" [attr.aria-rowcount]="ariaRowCount()" [attr.aria-colcount]="ariaColCount()"
+    <div class="ngb-grid__data" role="grid" tabindex="-1" [attr.aria-multiselectable]="cellRangeEnabled() || selectionMode === 'multiple' ? true : null" [attr.aria-rowcount]="ariaRowCount()" [attr.aria-colcount]="ariaColCount()"
     [attr.aria-readonly]="enableEdit || enableAdd ? 'false' : 'true'"
     [attr.aria-label]="tableOptions?.caption || 'Data grid'">
     @if (loading) {
@@ -267,7 +267,7 @@
           }
           @for (item of viewportRows; track item.key) {
             @if (item.kind === 'loading') {
-              <tr class="grid-data-row ngb-grid__loading-row" role="row" [attr.aria-rowindex]="item.absoluteIndex + 2">
+              <tr class="grid-data-row ngb-grid__loading-row" role="row" [attr.aria-rowindex]="item.absoluteIndex + 2 + (anyFilterable ? 1 : 0)">
                 @if (showSelectionColumn()) { <td role="gridcell"></td> }
                 @for (col of visibleColumns; track col.field) {
                   <td role="gridcell"><div class="grid-cell-viewport">

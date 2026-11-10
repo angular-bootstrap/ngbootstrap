@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Datagrid } from './datagrid.component';
 import { ColumnDef } from '../models/column-def';
@@ -90,6 +90,7 @@ describe('Datagrid accessibility', () => {
   it('exposes aria-rowcount and aria-colcount on the data grid', () => {
     const grid = fixture.nativeElement.querySelector('.ngb-grid__data[role="grid"]') as HTMLElement;
     expect(grid.getAttribute('aria-rowcount')).toBe(String(component.ariaRowCount()));
+    expect(grid.getAttribute('aria-multiselectable')).toBe('true');
     expect(grid.getAttribute('aria-colcount')).toBe(String(component.ariaColCount()));
     expect(component.ariaRowCount()).toBe(Math.max(1, component.recordTotal()) + 1 + (component.anyFilterable ? 1 : 0));
     expect(fixture.nativeElement.querySelector('.grid-data-row').getAttribute('aria-rowindex')).toBe(String(component.ariaDataRowIndex(0)));
@@ -141,6 +142,73 @@ describe('Datagrid keyboard navigation', () => {
     component.selectionBehavior = 'both';
     component.keyboardNavigation = true;
     fixture.detectChanges();
+  });
+
+  it('moves Ctrl+Home and Ctrl+End to corner cells, including DOM focus', fakeAsync(() => {
+    component.pageSize = 5;
+    fixture.componentRef.setInput('data', createRows());
+    fixture.detectChanges();
+    component.onDataCellKeydown(new KeyboardEvent('keydown', {key: 'End', ctrlKey: true}), 0, 1, component.visibleColumns[1]);
+    fixture.detectChanges();
+    flushMicrotasks();
+    expect(component.focusedCell).toEqual({rowIndex: 1, colIndex: 5});
+    expect(document.activeElement?.textContent).toContain('2024');
+    component.onDataCellKeydown(new KeyboardEvent('keydown', {key: 'Home', ctrlKey: true}), 1, 5, component.visibleColumns[5]);
+    fixture.detectChanges();
+    flushMicrotasks();
+    expect(component.focusedCell).toEqual({rowIndex: 0, colIndex: 0});
+  }));
+
+  it('keeps a data-cell tab entry after a focused column disappears', () => {
+    component.focusCell(0, 5);
+    fixture.componentRef.setInput('columns', baseColumns.slice(0, 2));
+    fixture.detectChanges();
+    const cells = fixture.nativeElement.querySelectorAll('.grid-data-row [role="gridcell"][tabindex="0"]');
+    expect(cells.length).toBe(1);
+    expect(component.cellTabIndex(0, 0)).toBe(0);
+  });
+
+  it('recovers a removed navigation cell after data replacement without stealing external focus', fakeAsync(() => {
+    component.pageSize = 5;
+    fixture.componentRef.setInput('data', createRows());
+    fixture.detectChanges();
+    component.focusCell(1, 1);
+    fixture.detectChanges();
+    flushMicrotasks();
+    const original = document.activeElement;
+    fixture.componentRef.setInput('data', [{...createRows()[1], id: 9}]);
+    fixture.detectChanges();
+    flushMicrotasks();
+    expect(document.activeElement).not.toBe(original);
+    expect(fixture.nativeElement.contains(document.activeElement)).toBe(true);
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    fixture.componentRef.setInput('data', createRows());
+    outside.focus();
+    fixture.detectChanges();
+    flushMicrotasks();
+    expect(document.activeElement).toBe(outside);
+    outside.remove();
+  }));
+
+  it('focuses the named grid when filtering removes every focused row', fakeAsync(() => {
+    component.focusCell(0, 1);
+    fixture.detectChanges();
+    flushMicrotasks();
+    fixture.componentRef.setInput('data', []);
+    fixture.detectChanges();
+    flushMicrotasks();
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('.ngb-grid__data'));
+  }));
+
+  it('does not intercept native editor or IME navigation', () => {
+    const input = document.createElement('input');
+    const event = new KeyboardEvent('keydown', {key: 'ArrowRight', cancelable: true});
+    Object.defineProperty(event, 'target', {value: input});
+    component.onDataCellKeydown(event, 0, 0, component.visibleColumns[0]);
+    expect(event.defaultPrevented).toBe(false);
+    component.onDataCellKeydown(new KeyboardEvent('keydown', {key: 'ArrowRight', isComposing: true}), 0, 0, component.visibleColumns[0]);
+    expect(component.focusedCell).toBeNull();
   });
 
   it('moves focused cell with arrow keys', () => {

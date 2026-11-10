@@ -1,40 +1,12 @@
-# @angular-bootstrap/ngbootstrap 2.7.0
+# @angular-bootstrap/ngbootstrap 2.7.1
 
-Configure grouping layouts, edit numeric and fixed-format values, and use improved keyboard and accessible naming APIs.
+Accessibility, keyboard behavior and package maintenance. Released November 10, 2026.
 
-## Grouping
+- Typeahead announces virtual option positions, retains stable active-item identity and uses hydration-safe IDs. Chip removal returns input focus; empty/rejected Tab and Shift+Tab leave normally, and IME composition is preserved.
+- DataGrid Ctrl+Home/End reach corner cells. Removed navigation cells recover focus without taking it from external controls. Correct multiple-selection state, detail column naming and remote loading-row indexes.
+- Package the MIT LICENSE and validate it against the source file.
+- Patch vulnerable build/test dependencies. Runtime dependencies and Angular 21/22 peers are unchanged. One low-severity deepmerge advisory remains in Jest tooling; full APG navigation and manual screen-reader certification are not claimed.
 
-- Choose standard or compact group display and opt into the Group toolbar picker.
-- Add/remove grouping fields and move a group to the previous/next level while preserving direction and aggregates.
-- Group controls support keyboard traversal, dismissal and focus restoration. Existing grouping defaults remain compatible.
+No application migration is required. Code should not rely on generated Typeahead popup ID strings. Existing Tab-to-add still works when a token is added; set `updateOnTab=false` for ordinary form Tab behavior.
 
-## Numeric and masked inputs
-
-- Standalone Numeric Input supports decimal, currency and percentage formats, explicit locales, bounds, stepping and Angular forms validation.
-- Valid numeric drafts commit on blur/Enter. Invalid drafts preserve the previous model and expose validation errors.
-- Standalone Masked Input supports fixed ASCII digit/letter/alphanumeric masks, escaped literals, raw/formatted models and Angular forms.
-- Both controls support native input naming, keyboard/composition handling and shared theme tokens.
-- Use custom numeric DataGrid editors with saved-edit Undo/Redo and same-currency aggregates. Persistence remains application-owned.
-
-## Accessibility
-
-- Tree adds visible-node navigation, roving focus, parent/child arrows, Home/End, type-ahead and correctly owned child groups.
-- Stepper adds orientation-aware arrows and Home/End, respecting disabled steps and revisit restrictions.
-- Typeahead adds inputId, ariaLabel, ariaLabelledBy and ariaDescribedBy for its native input, including chips mode.
-- Splitter panes add paneId and ariaLabel; resize separators name and reference the preceding pane.
-
-## Compatibility and limits
-
-Angular 21/22 remain supported peers. No runtime dependencies were added. Existing default grid editors and Bootstrap styling remain unchanged.
-
-Numeric models use JavaScript numbers, not arbitrary-precision decimals; percentage models use fractions. Masks validate fixed ASCII formats, not the existence of a phone number or identifier. Dynamic masks, country detection and arbitrary precision are deferred. Broader DataGrid APG coverage and Typeahead virtual/multi-select accessibility work remain planned. Manual screen-reader checks were optional and were not performed; no blanket WCAG certification is claimed.
-
-## Guides
-
-- [Grouping display modes](docs/guides/grouping-display-modes.md)
-- [Numeric and masked inputs](docs/guides/inputs.md)
-- [Saved views and Undo/Redo](docs/guides/saved-views.md)
-- [Master-detail](docs/guides/master-detail.md)
-- [Feature guide index](docs/guides/README.md)
-
-All features, themes and examples remain MIT-licensed. Applications own backend and AI-provider costs. See [CHANGELOG.md](CHANGELOG.md) for previous releases.
+See [Typeahead accessibility](docs/guides/typeahead-accessibility.md), the [feature guides](docs/guides/README.md), and [changelog](CHANGELOG.md). All features remain MIT-licensed.

@@ -2,6 +2,14 @@
 
 Published history is preserved below. See [release notes](RELEASE_NOTES.md) for the current summary and [release checklist](https://github.com/angular-bootstrap/ngbootstrap/blob/main/RELEASE_PLAN.md) for maintainer verification.
 
+## 2.7.1 - 2026-11-10
+
+- Correct Typeahead virtual option positions and active-descendant identity; use application-scoped IDs for SSR/hydration.
+- Keep chip removal named and return focus to the input. Let empty/rejected Tab and Shift+Tab leave chips; preserve IME composition.
+- Correct DataGrid Ctrl+Home/End corner navigation, stale cell tab stops, removed-cell focus recovery, multiple-selection metadata, detail header naming and remote loading row indexes.
+- Include the MIT LICENSE in the npm package and verify its contents during package validation.
+- Update vulnerable build/test dependencies and Ask body-parser; an unpatched low-severity deepmerge advisory remains in Jest tooling.
+
 ## 2.7.0 - 2026-10-23
 
 - Add standalone Numeric Input and Masked Input controls with Angular forms validation, labels, keyboard handling, fixed-mask parsing and shared theme tokens.

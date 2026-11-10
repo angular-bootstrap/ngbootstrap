@@ -6,6 +6,7 @@
   },
   "allowedNonPeerDependencies": [],
   "assets": [
+    "LICENSE",
     "CHANGELOG.md",
     "RELEASE_NOTES.md",
     "src/styles/**/*.scss",

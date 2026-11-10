@@ -73,7 +73,7 @@ export type NgbChip = {
               class="ngb-chip-remove"
               [disabled]="!!item.disabled"
               (click)="remove.emit(item)"
-              [attr.aria-label]="removeLabel || 'Remove'"
+              [attr.aria-label]="removeLabel || ('Remove ' + item.label)"
             >
               &times;
             </button>

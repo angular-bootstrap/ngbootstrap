@@ -9,6 +9,7 @@ import {
   forwardRef,
   HostListener,
   Input,
+  inject,
   OnChanges,
   OnDestroy,
   Output,
@@ -18,6 +19,7 @@ import {
   ViewChild,
   ViewChildren,
 } from '@angular/core';
+import { NgbTypeaheadIds } from './typeahead-ids.service';
 import { CommonModule } from '@angular/common';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { NgbTypeaheadItem, NgbTypeaheadI18n } from './typeahead.types';
@@ -115,8 +117,8 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
           <div class="form-control typeahead-chips-control" (click)="disabled ? null : focusInput()">
             <ngb-chips
               [items]="selected"
-              [removable]="true"
-              (remove)="removeSelected($event)"
+              [removable]="!disabled"
+              (remove)="removeChip($event)"
               ariaLabel="Selected items"
             ></ngb-chips>
             <input
@@ -126,6 +128,8 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
               [attr.placeholder]="selected.length ? '' : (i18n?.placeholder || 'Type to search')"
               [value]="query"
               (input)="onNativeInput($event)"
+              (compositionstart)="composing = true"
+              (compositionend)="onCompositionEnd($event)"
               (focus)="onInputFocus($event)"
               (blur)="onInputBlur($event)"
               (keydown)="onKeydown($event)"
@@ -150,6 +154,8 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
             [attr.placeholder]="i18n?.placeholder || 'Type to search'"
             [value]="displayQuery"
             (input)="onNativeInput($event)"
+            (compositionstart)="composing = true"
+            (compositionend)="onCompositionEnd($event)"
             (focus)="onInputFocus($event)"
             (blur)="onInputBlur($event)"
             (keydown)="onKeydown($event)"
@@ -198,10 +204,12 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
         [id]="overlayId"
         role="listbox"
         [attr.aria-multiselectable]="multiSelect ? true : null"
+        [attr.aria-label]="ariaLabelledBy ? null : (ariaLabel || i18n?.placeholder || 'Suggestions')"
+        [attr.aria-labelledby]="ariaLabelledBy || null"
         (scroll)="onScroll($event)"
       >
         @if (vScroll) {
-          <div [style.height.px]="beforePadding"></div>
+          <div aria-hidden="true" [style.height.px]="beforePadding"></div>
         }
 
         @for (item of visible; track trackById($index, item); let idx = $index) {
@@ -213,21 +221,20 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
           [class.active]="idx === activeIndex"
           [class.fw-semibold]="isSelected(item)"
           [attr.aria-selected]="isSelected(item)"
+          [attr.aria-posinset]="viewportStartIndex + idx + 1"
+          [attr.aria-setsize]="filtered.length"
           [attr.id]="getOptionId(idx)"
+          (mousedown)="$event.preventDefault()"
           (click)="selectItem(item)"
           [disabled]="item.disabled"
         >
           <div class="typeahead-item">
             @if (multiSelect) {
             <span class="typeahead-item-checkbox">
-              <input
-                type="checkbox"
-                class="form-check-input m-0"
-                [checked]="isSelected(item)"
-                [disabled]="item.disabled"
-                tabindex="-1"
-                aria-hidden="true"
-              />
+              <span class="form-check-input m-0" aria-hidden="true"
+                [style.background-color]="isSelected(item) ? 'var(--ngb-primary, #0d6efd)' : null"
+                [style.color]="isSelected(item) ? 'var(--ngb-on-primary, #fff)' : null"
+              >{{ isSelected(item) ? '✓' : '' }}</span>
             </span>
             }
             @if (resolvedItemTemplate; as tpl) {
@@ -249,7 +256,7 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
         }
 
         @if (vScroll) {
-          <div [style.height.px]="afterPadding"></div>
+          <div aria-hidden="true" [style.height.px]="afterPadding"></div>
         }
 
         @if (showNoResults) {
@@ -259,10 +266,11 @@ import { NgbChipsComponent } from '../../../chips/src/chips/chips.component';
         }
       </div>
 
+      <span class="visually-hidden" role="status" aria-live="polite" aria-atomic="true">{{ multiSelect ? selected.length : '' }}{{ multiSelect ? ' selected' : '' }}</span>
       @if (multiSelect && selected.length) {
       <div class="mt-2 small text-muted">
-        {{ selectionSummary }}
-        <button type="button" class="btn btn-link btn-sm ps-1" (click)="clearSelection()">
+        <span>{{ selectionSummary }}</span>
+        <button type="button" class="btn btn-link btn-sm ps-1" [disabled]="disabled" (click)="clearSelection(); focusInput()">
           {{ i18n?.clearSelection || 'Clear' }}
         </button>
       </div>
@@ -337,13 +345,14 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
   private pointerDownInside = false;
   private lastFilterTerm = '';
   private keepOpenOnEmpty = false;
-  readonly overlayId = `ngb-typeahead-overlay-${Math.random().toString(36).slice(2)}`;
+  readonly overlayId = inject(NgbTypeaheadIds).allocate();
+  protected composing = false;
 
   viewportHeight = 240;
   itemHeight = 40;
   beforePadding = 0;
   afterPadding = 0;
-  private viewportStartIndex = 0;
+  protected viewportStartIndex = 0;
   private debounceId?: ReturnType<typeof setTimeout>;
 
   private onControlChange: (value: any) => void = () => {};
@@ -546,7 +555,13 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
     }
   }
 
+  protected onCompositionEnd(event: Event) {
+    this.composing = false;
+    this.onNativeInput(event);
+  }
+
   onNativeInput(event: Event) {
+    if (this.composing) return;
     const target = event.target as HTMLInputElement | null;
     const value = target?.value ?? '';
     if (this.multiSelect && !this.chips && this.selected.length) {
@@ -565,13 +580,20 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
   onKeydown(event: KeyboardEvent) {
     if (this.disabled) return;
     this.onInputKeydown.emit(event);
+    if (event.defaultPrevented || event.isComposing || this.composing) return;
     if (this.chips && this.multiSelect && event.key === 'Tab' && this.updateOnTab) {
-      event.preventDefault();
+      if (event.shiftKey) return;
+      const previousLength = this.selected.length;
       this.addToken((this.query || '').trim());
-      this.focusInput();
+      if (this.selected.length !== previousLength) {
+        event.preventDefault();
+        this.focusInput();
+      } else {
+        this.hideOverlay(event);
+      }
       return;
     }
-    if (event.key === 'Tab' && this.overlayVisible) {
+    if (event.key === 'Tab' && !event.shiftKey && this.overlayVisible) {
       const active = this.visible[this.activeIndex];
       if (active) {
         this.selectItem(active);
@@ -700,9 +722,15 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
     this.inputEl?.nativeElement?.focus();
   }
 
+  protected removeChip(item: NgbTypeaheadItem) {
+    this.removeSelected(item);
+    this.cdr.detectChanges();
+    this.focusInput();
+  }
+
   removeSelected(item: NgbTypeaheadItem) {
     if (this.disabled) return;
-    if (!item) return;
+    if (!item || item.disabled) return;
     const exists = this.selected.find((s) => s.id === item.id);
     if (!exists) return;
     this.selected = this.selected.filter((s) => s.id !== item.id);
@@ -714,6 +742,7 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
   }
 
   clearSelection() {
+    if (this.disabled) return;
     const previous = [...this.selected];
     this.selected = [];
     this.selectedItems.emit(this.selected);
@@ -732,7 +761,7 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
   trackById = (_: number, item: NgbTypeaheadItem) => item.id;
 
   getOptionId(index: number): string {
-    return `${this.overlayId}-opt-${index}`;
+    return `${this.overlayId}-opt-${this.viewportStartIndex + index}`;
   }
 
   onDropdownButtonClick(event: MouseEvent) {
@@ -779,11 +808,15 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
 
     const base = meetsThreshold ? this.data.filter((d) => (d.label || '').toLowerCase().includes(term)) : [];
     const limited = this.limit ? base.slice(0, this.limit) : base;
+    const activeId = this.visible[this.activeIndex]?.id;
     this.filtered = limited;
     if (this.selectExact && limited.length === 1) {
       this.selectItem(limited[0]);
     }
     this.updateViewport(this.scroller?.nativeElement.scrollTop || 0);
+    const retainedIndex = limited.findIndex(item => item.id === activeId);
+    if (retainedIndex >= 0) this.setActiveGlobalIndex(retainedIndex);
+    else this.activeIndex = -1;
 
     if (meetsThreshold && !this.overlayVisible && (this.inputFocused || this.openedByDropdown)) {
       this.showOverlay();
@@ -795,6 +828,7 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
   }
 
   private updateViewport(scrollTop: number) {
+    const activeGlobal = this.activeGlobalIndex();
     if (!this.vScroll) {
       this.beforePadding = 0;
       this.afterPadding = 0;
@@ -805,13 +839,13 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
     }
     const total = this.filtered.length;
     const visibleCount = Math.ceil(this.viewportHeight / this.itemHeight) + 2;
-    const start = Math.max(Math.floor(scrollTop / this.itemHeight), 0);
+    const start = Math.min(Math.max(Math.floor(scrollTop / this.itemHeight), 0), Math.max(0, total - 1));
     const end = Math.min(start + visibleCount, total);
     this.beforePadding = start * this.itemHeight;
     this.afterPadding = Math.max(total - end, 0) * this.itemHeight;
     this.visible = this.filtered.slice(start, end);
     this.viewportStartIndex = start;
-    this.activeIndex = this.visible.length ? Math.min(this.activeIndex, this.visible.length - 1) : -1;
+    this.activeIndex = activeGlobal >= start && activeGlobal < end ? activeGlobal - start : -1;
   }
 
   private activatePreferredOption() {
@@ -838,7 +872,7 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
     this.scroller.nativeElement.scrollTop = scrollTop;
     this.updateViewport(scrollTop);
 
-    const start = Math.max(Math.floor(scrollTop / this.itemHeight), 0);
+    const start = this.viewportStartIndex;
     this.activeIndex = Math.max(0, Math.min(preferredIndex - start, this.visible.length - 1));
   }
 
@@ -971,6 +1005,8 @@ export class NgbTypeaheadComponent implements AfterViewInit, OnChanges, OnDestro
 
     const match = this.data.find((d) => (d.label || '').trim().toLowerCase() === token.toLowerCase());
     const item: NgbTypeaheadItem = match ?? { id: token, label: token, value: token };
+
+    if (item.disabled) return;
 
     if (this.matchSelection && !match) {
       this.query = '';

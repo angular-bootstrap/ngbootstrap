@@ -39,6 +39,8 @@ assert(sourcePkg.sideEffects === false, 'sideEffects must remain false for tree-
 for (const peerName of forbiddenPeerNames) {
   assert(!sourcePkg.peerDependencies?.[peerName], `${peerName} must not be published as a supported optional peer.`);
 }
+assert(existsSync(join(distDir, 'LICENSE')), 'Dist package MIT LICENSE is missing.');
+assert(readFileSync(join(distDir, 'LICENSE'), 'utf8') === readFileSync(join(root, 'LICENSE'), 'utf8'), 'Packaged LICENSE must match the source license.');
 assert(existsSync(join(distDir, 'README.md')), 'Dist package README.md is missing.');
 assert(!readFileSync(join(distDir, 'README.md'), 'utf8').includes('This working-tree version is not yet published.'), 'Remove the unpublished-version note from the README before releasing.');
 assert(existsSync(join(distDir, 'fesm2022')), 'Dist package fesm2022 output is missing.');

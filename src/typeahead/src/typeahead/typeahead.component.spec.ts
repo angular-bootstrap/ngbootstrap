@@ -1,4 +1,4 @@
-import { Component, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ViewChild } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
@@ -6,6 +6,7 @@ import { NgbTypeaheadComponent } from './typeahead.component';
 import { NgbTypeaheadItem } from './typeahead.types';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   standalone: true,
   imports: [NgbTypeaheadComponent],
   template: `
@@ -123,6 +124,120 @@ describe('NgbTypeaheadComponent', () => {
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     fixture.detectChanges();
     expect(options.some(option => option.id === input.getAttribute('aria-activedescendant'))).toBe(true);
+  });
+
+  it('reports virtual positions and never retargets an active option on scroll', () => {
+    host.vScroll = true;
+    host.limit = 0;
+    host.items = Array.from({length: 100}, (_, id) => ({id, label: `Account ${id}`}));
+    fixture.detectChanges();
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+    input.focus();
+    input.value = 'Account';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    const list: HTMLElement = fixture.nativeElement.querySelector('[role="listbox"]');
+    expect(list.querySelector('[role="option"]')!.getAttribute('aria-setsize')).toBe('100');
+    list.scrollTop = 40 * 30;
+    list.dispatchEvent(new Event('scroll'));
+    fixture.detectChanges();
+    expect(list.querySelector('[role="option"]')!.getAttribute('aria-posinset')).toBe('31');
+    expect(input.hasAttribute('aria-activedescendant')).toBe(false);
+    input.dispatchEvent(new KeyboardEvent('keydown', {key: 'End'}));
+    fixture.detectChanges();
+    const active = document.getElementById(input.getAttribute('aria-activedescendant')!);
+    expect(active?.getAttribute('aria-posinset')).toBe('100');
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('lets empty Tab and Shift+Tab leave chips without selecting a token', () => {
+    host.multi = host.chips = true;
+    fixture.detectChanges();
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+    for (const shiftKey of [false, true]) {
+      const event = new KeyboardEvent('keydown', {key: 'Tab', shiftKey, cancelable: true});
+      input.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+    }
+    input.value = 'India';
+    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new KeyboardEvent('keydown', {key: 'Tab', shiftKey: true, cancelable: true}));
+    expect(host.selected).toEqual([]);
+  });
+
+  it('does not commit tokens during IME composition', () => {
+    host.multi = host.chips = true;
+    fixture.detectChanges();
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+    input.dispatchEvent(new CompositionEvent('compositionstart'));
+    input.value = 'India';
+    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', isComposing: true}));
+    expect(host.selected).toEqual([]);
+    input.dispatchEvent(new CompositionEvent('compositionend'));
+    expect(host.typeahead.query).toBe('India');
+  });
+
+  it('names chip removal and returns focus to the input', () => {
+    host.multi = host.chips = true;
+    fixture.detectChanges();
+    host.typeahead.selectItem(host.items[1]);
+    fixture.detectChanges();
+    const remove: HTMLButtonElement = fixture.nativeElement.querySelector('button[aria-label="Remove India"]');
+    expect(remove).toBeTruthy();
+    remove.focus();
+    remove.click();
+    fixture.detectChanges();
+    expect(host.selected).toEqual([]);
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('input'));
+  });
+
+  it('keeps a retained active item by ID after replacement and clears a removed item', () => {
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+    input.focus(); input.value = 'a'; input.dispatchEvent(new Event('input'));
+    fixture.changeDetectorRef.markForCheck(); fixture.detectChanges();
+    input.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowDown'}));
+    fixture.changeDetectorRef.markForCheck(); fixture.detectChanges();
+    expect(host.typeahead.visible[host.typeahead.activeIndex].id).toBe(2);
+    host.items = [host.items[1], host.items[0]];
+    fixture.changeDetectorRef.markForCheck(); fixture.detectChanges();
+    expect(host.typeahead.visible[host.typeahead.activeIndex].id).toBe(2);
+    host.items = [host.items[1]];
+    fixture.changeDetectorRef.markForCheck(); fixture.detectChanges();
+    expect(host.typeahead.data).toEqual(host.items);
+    expect(host.typeahead.activeIndex).toBe(-1);
+    expect(input.hasAttribute('aria-activedescendant')).toBe(false);
+  });
+
+  it.each([0, 1, 2])('returns input focus after removing chip %i with one selection event', (index) => {
+    host.multi = host.chips = true;
+    fixture.detectChanges();
+    host.items.forEach(item => host.typeahead.selectItem(item));
+    fixture.detectChanges();
+    const before = host.selectionChanges;
+    const button: HTMLButtonElement = fixture.nativeElement.querySelectorAll('ngb-chips button')[index];
+    button.focus(); button.click(); fixture.detectChanges();
+    expect(host.selected.map(item => item.id)).toEqual(host.items.filter((_, i) => i !== index).map(item => item.id));
+    expect(host.selectionChanges).toBe(before + 1);
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('input'));
+  });
+
+  it('prevents disabled selection changes and names removal actions for each chip', () => {
+    host.multi = host.chips = true;
+    fixture.changeDetectorRef.markForCheck(); fixture.detectChanges();
+    expect(host.typeahead.multiSelect).toBe(true);
+    host.items.forEach((item, index) => {host.typeahead.selectItem(item); expect(host.typeahead.selected.length).toBe(index + 1);});
+    fixture.changeDetectorRef.markForCheck(); fixture.detectChanges();
+    expect([...fixture.nativeElement.querySelectorAll('ngb-chips button')].map((button: any) => button.getAttribute('aria-label')))
+      .toEqual(['Remove USA', 'Remove India', 'Remove UAE']);
+    const events = host.selectionChanges;
+    host.typeahead.setDisabledState(true);
+    host.typeahead.removeSelected(host.items[0]);
+    host.typeahead.clearSelection();
+    fixture.changeDetectorRef.markForCheck(); fixture.detectChanges();
+    expect(host.selected.length).toBe(3);
+    expect(host.selectionChanges).toBe(events);
+    expect(fixture.nativeElement.querySelectorAll('ngb-chips button').length).toBe(0);
   });
 
   it('filters on input and selects single item', () => {
