@@ -6,6 +6,8 @@ This repository publishes `@angular-bootstrap/ngbootstrap`, MIT-licensed **Angul
 
 Public exports, implementations and tests in `src/**` define behavior. The separate private docs workspace owns ngbootstrap.com, SEO, demos and Ask ngbootstrap. Implement library features here before documenting them as available there. Do not copy proprietary implementations or examples.
 
+Component-specific constraints supplement these shared rules: [DataGrid](src/datagrid/AGENTS.md), [AI controls](src/ai/AGENTS.md), [Inputs](src/inputs/AGENTS.md), [Tree](src/tree/AGENTS.md), [Typeahead](src/typeahead/AGENTS.md), [Splitter](src/splitter/AGENTS.md), and [Stepper](src/stepper/AGENTS.md). Read the relevant file when working in that subtree; for cross-component changes, read all affected scopes. Other components inherit these root rules.
+
 ## Before changing any code
 
 1. Read this file, any narrower instructions, and the relevant feature guide. Inspect `git status`, branch and diff; preserve unrelated work and never reset it.
