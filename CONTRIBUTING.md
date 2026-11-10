@@ -16,7 +16,7 @@ Build output is `dist/ngbootstrap`. Keep the existing pnpm lockfile; do not inst
 
 ## Make a focused change
 
-1. Check the working tree and read the affected component and feature guides.
+1. Check the working tree and read the affected component and feature guides. Follow any component-level `AGENTS.md` alongside the root rules; cross-component changes must respect each affected component's contracts.
 2. Reproduce the issue or describe the intended behavior and supported combinations.
 3. Implement against real public exports, preserving Angular 21/22 and existing event contracts.
 4. Add focused regression coverage, including relevant keyboard, error and async paths. For example: `corepack pnpm test -- src/ai --runInBand`.
